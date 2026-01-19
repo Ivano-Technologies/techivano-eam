@@ -29,23 +29,36 @@ import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { NotificationCenter } from "./NotificationCenter";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: Package, label: "Assets", path: "/assets" },
-  { icon: Scan, label: "Asset Scanner", path: "/scanner" },
-  { icon: Map, label: "Asset Map", path: "/asset-map" },
-  { icon: Wrench, label: "Work Orders", path: "/work-orders" },
-  { icon: Calendar, label: "Maintenance", path: "/maintenance" },
-  { icon: TrendingUp, label: "Inventory", path: "/inventory" },
-  { icon: Building2, label: "Vendors", path: "/vendors" },
-  { icon: DollarSign, label: "Financial", path: "/financial" },
-  { icon: FileText, label: "Compliance", path: "/compliance" },
-  { icon: FileText, label: "Reports", path: "/reports" },
-  { icon: MapPin, label: "Sites", path: "/sites" },
-  { icon: Users, label: "Users", path: "/users" },
-  { icon: DollarSign, label: "QuickBooks", path: "/quickbooks" },
-  { icon: Mail, label: "Email Notifications", path: "/email-notifications" },
+const allMenuItems = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: false, sortOrder: 0 },
+  { icon: Package, label: "Assets", path: "/assets", adminOnly: false },
+  { icon: Map, label: "Asset Map", path: "/asset-map", adminOnly: false },
+  { icon: Scan, label: "Asset Scanner", path: "/scanner", adminOnly: false },
+  { icon: FileText, label: "Compliance", path: "/compliance", adminOnly: false },
+  { icon: Mail, label: "Email Notifications", path: "/email-notifications", adminOnly: true },
+  { icon: DollarSign, label: "Financial", path: "/financial", adminOnly: false },
+  { icon: TrendingUp, label: "Inventory", path: "/inventory", adminOnly: false },
+  { icon: Calendar, label: "Maintenance", path: "/maintenance", adminOnly: false },
+  { icon: DollarSign, label: "QuickBooks", path: "/quickbooks", adminOnly: true },
+  { icon: FileText, label: "Reports", path: "/reports", adminOnly: false },
+  { icon: MapPin, label: "Sites", path: "/sites", adminOnly: false },
+  { icon: Users, label: "Users", path: "/users", adminOnly: true },
+  { icon: Building2, label: "Vendors", path: "/vendors", adminOnly: false },
+  { icon: Wrench, label: "Work Orders", path: "/work-orders", adminOnly: false },
 ];
+
+const getMenuItems = (userRole?: string) => {
+  const filtered = allMenuItems.filter(item => 
+    !item.adminOnly || userRole === 'admin'
+  );
+  
+  // Sort alphabetically, but keep Dashboard first
+  return filtered.sort((a, b) => {
+    if (a.sortOrder !== undefined) return -1;
+    if (b.sortOrder !== undefined) return 1;
+    return a.label.localeCompare(b.label);
+  });
+};
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
@@ -152,7 +165,8 @@ function DashboardLayoutContent({
   const { state } = useSidebar();
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
+  const menuItems = getMenuItems(user?.role);
+  const activeMenuItem = menuItems.find((item: any) => item.path === location);
   const isMobile = useIsMobile();
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -276,7 +290,7 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
+              {menuItems.map((item: any) => {
                 const isActive = location === item.path;
                 return (
                   <SidebarMenuItem key={item.path}>

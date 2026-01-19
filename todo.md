@@ -407,3 +407,10 @@
 - [x] Remove collapse-related state and logic
 - [x] Keep width presets and resize functionality
 - [x] Test sidebar without collapse feature
+
+## Phase 44: Role-Based Menu Visibility & Alphabetical Sorting
+- [x] Add adminOnly flag to menu items
+- [x] Filter menu items based on user role
+- [x] Arrange menu items alphabetically
+- [x] Keep Dashboard at the top
+- [x] Test with admin and non-admin users
