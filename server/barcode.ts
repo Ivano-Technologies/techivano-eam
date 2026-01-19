@@ -1,5 +1,11 @@
 import JsBarcode from 'jsbarcode';
-import { createCanvas } from 'canvas';
+
+let createCanvas: any = null;
+try {
+  createCanvas = require('canvas').createCanvas;
+} catch (e) {
+  console.warn('Canvas not available - barcode generation disabled');
+}
 
 /**
  * Generate barcode image for an asset
@@ -9,6 +15,10 @@ export function generateBarcode(
   value: string,
   format: 'CODE128' | 'CODE39' | 'EAN13' = 'CODE128'
 ): string {
+  if (!createCanvas) {
+    throw new Error('Barcode generation not available in this environment');
+  }
+  
   const canvas = createCanvas(200, 100);
   
   try {
