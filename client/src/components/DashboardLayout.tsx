@@ -21,9 +21,10 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { NotificationCenter } from "./NotificationCenter";
@@ -48,17 +49,30 @@ const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
+const PRESET_WIDTHS = {
+  narrow: 200,
+  medium: 280,
+  wide: 380,
+};
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { loading, user } = useAuth();
+  const { data: userPrefs } = trpc.userPreferences.get.useQuery(undefined, { enabled: !!user });
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
-  const { loading, user } = useAuth();
+
+  // Sync sidebar width with user preferences from backend
+  useEffect(() => {
+    if (userPrefs?.sidebarWidth) {
+      setSidebarWidth(userPrefs.sidebarWidth);
+    }
+  }, [userPrefs]);
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
@@ -139,6 +153,53 @@ function DashboardLayoutContent({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showWidthPresets, setShowWidthPresets] = useState(false);
+
+  const updatePrefsMutation = trpc.userPreferences.update.useMutation();
+
+  const applyWidthPreset = (preset: keyof typeof PRESET_WIDTHS) => {
+    const newWidth = PRESET_WIDTHS[preset];
+    setSidebarWidth(newWidth);
+    setShowWidthPresets(false);
+    if (user) {
+      updatePrefsMutation.mutate({ sidebarWidth: newWidth });
+    }
+  };
+
+  // Keyboard shortcut for sidebar toggle (Ctrl/Cmd+B)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        toggleSidebar();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [toggleSidebar]);
+
+  // PWA install prompt
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallPrompt(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setShowInstallPrompt(false);
+    }
+    setDeferredPrompt(null);
+  };
 
   useEffect(() => {
     if (isCollapsed) {
@@ -209,6 +270,30 @@ function DashboardLayoutContent({
                   className="h-10 w-10"
                 />
               )}
+              {!isCollapsed && (
+                <DropdownMenu open={showWidthPresets} onOpenChange={setShowWidthPresets}>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 border border-sidebar-border hover:border-primary/50"
+                      aria-label="Sidebar width presets"
+                      title="Sidebar width presets"
+                    >
+                      <Maximize2 className="h-3.5 w-3.5 text-sidebar-foreground" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-36">
+                    <DropdownMenuItem onClick={() => applyWidthPreset('narrow')} className="cursor-pointer">
+                      <span className="text-xs">Narrow (200px)</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => applyWidthPreset('medium')} className="cursor-pointer">
+                      <span className="text-xs">Medium (280px)</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => applyWidthPreset('wide')} className="cursor-pointer">
+                      <span className="text-xs">Wide (380px)</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
               <button
                 onClick={toggleSidebar}
                 className="h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 ml-auto border border-sidebar-border hover:border-primary/50"
@@ -243,7 +328,18 @@ function DashboardLayoutContent({
             </SidebarMenu>
           </SidebarContent>
 
-          <SidebarFooter className="p-3">
+          <SidebarFooter className="p-3 space-y-2">
+            {showInstallPrompt && (
+              <Button 
+                onClick={handleInstallClick}
+                variant="outline"
+                size="sm"
+                className="w-full justify-start gap-2 text-xs h-9 border-primary/30 hover:bg-primary/10"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span className="group-data-[collapsible=icon]:hidden">Install App</span>
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">

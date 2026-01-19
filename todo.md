@@ -359,3 +359,15 @@
 ## Phase 37: Bug Fixes
 - [x] Fix QuickBooks getConfig query returning undefined error
 - [x] Fix dashboard sidebar collapse/expand toggle functionality
+
+## Phase 38: Sidebar Enhancements & Revenue Tracking
+- [x] Add keyboard shortcuts (Ctrl/Cmd+B) for sidebar toggle
+- [x] Add sidebar width presets (narrow, medium, wide)
+- [x] Implement user-specific sidebar state persistence in database
+- [x] Add revenue transaction type to financial schema
+- [x] Update Financial backend to support revenue tracking
+- [x] Update Financial UI to display revenue vs expenses
+- [x] Add revenue entry form
+- [x] Add install app button/prompt in sidebar
+- [x] Test all new features
+- [ ] Publish application

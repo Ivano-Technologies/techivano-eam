@@ -626,13 +626,13 @@ export const appRouter = router({
     
     create: managerOrAdminProcedure
       .input(z.object({
-        transactionType: z.enum(["acquisition", "maintenance", "repair", "disposal", "depreciation", "other"]),
+        transactionType: z.enum(["acquisition", "maintenance", "repair", "disposal", "depreciation", "revenue", "other"]),
         assetId: z.number().optional(),
         workOrderId: z.number().optional(),
         amount: z.string(),
         currency: z.string().default("NGN"),
         description: z.string().optional(),
-        transactionDate: z.date(),
+        transactionDate: z.string(),
         vendorId: z.number().optional(),
         receiptNumber: z.string().optional(),
         approvedBy: z.number().optional(),
@@ -640,6 +640,7 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         return await db.createFinancialTransaction({
           ...input,
+          transactionDate: new Date(input.transactionDate),
           createdBy: ctx.user.id,
         });
       }),
@@ -1413,6 +1414,25 @@ export const appRouter = router({
       
       return { connected };
     }),
+  }),
+
+  // ============= USER PREFERENCES =============
+  userPreferences: router({
+    get: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getUserPreferences(ctx.user.id);
+    }),
+    
+    update: protectedProcedure
+      .input(z.object({
+        sidebarWidth: z.number().optional(),
+        sidebarCollapsed: z.number().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.upsertUserPreferences({
+          userId: ctx.user.id,
+          ...input,
+        });
+      }),
   }),
 });
 export type AppRouter = typeof appRouter;

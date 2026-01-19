@@ -6,7 +6,8 @@ import {
   inventoryItems, InsertInventoryItem, inventoryTransactions, vendors, InsertVendor,
   financialTransactions, complianceRecords, auditLogs, documents,
   notifications, notificationPreferences, assetPhotos, InsertAssetPhoto,
-  scheduledReports, InsertScheduledReport, assetTransfers, quickbooksConfig, InsertQuickBooksConfig
+  scheduledReports, InsertScheduledReport, assetTransfers, quickbooksConfig, InsertQuickBooksConfig,
+  userPreferences, InsertUserPreferences
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -853,4 +854,32 @@ export async function updateQuickBooksLastSync(id: number) {
     .where(eq(quickbooksConfig.id, id));
   
   return true;
+}
+
+
+// ============= User Preferences =============
+export async function getUserPreferences(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function upsertUserPreferences(prefs: InsertUserPreferences) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const existing = await getUserPreferences(prefs.userId);
+  
+  if (existing) {
+    await db.update(userPreferences)
+      .set({ ...prefs, updatedAt: new Date() })
+      .where(eq(userPreferences.userId, prefs.userId));
+    return await getUserPreferences(prefs.userId);
+  } else {
+    const result = await db.insert(userPreferences).values(prefs);
+    const insertId = result[0].insertId;
+    return await db.select().from(userPreferences).where(eq(userPreferences.id, Number(insertId))).limit(1).then(r => r[0]);
+  }
 }

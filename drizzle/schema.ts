@@ -191,7 +191,7 @@ export const vendors = mysqlTable("vendors", {
  */
 export const financialTransactions = mysqlTable("financialTransactions", {
   id: int("id").autoincrement().primaryKey(),
-  transactionType: mysqlEnum("transactionType", ["acquisition", "maintenance", "repair", "disposal", "depreciation", "other"]).notNull(),
+  transactionType: mysqlEnum("transactionType", ["acquisition", "maintenance", "repair", "disposal", "depreciation", "revenue", "other"]).notNull(),
   assetId: int("assetId"),
   workOrderId: int("workOrderId"),
   amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
@@ -421,3 +421,17 @@ export const quickbooksConfig = mysqlTable("quickbooksConfig", {
 
 export type QuickBooksConfig = typeof quickbooksConfig.$inferSelect;
 export type InsertQuickBooksConfig = typeof quickbooksConfig.$inferInsert;
+
+/**
+ * User Preferences for UI state
+ */
+export const userPreferences = mysqlTable("userPreferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  sidebarWidth: int("sidebarWidth").default(280),
+  sidebarCollapsed: int("sidebarCollapsed").default(0), // 0 = expanded, 1 = collapsed
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type InsertUserPreferences = typeof userPreferences.$inferInsert;

@@ -57,6 +57,20 @@
       "when": 1768855208246,
       "tag": "0007_shallow_spectrum",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1768858625157,
+      "tag": "0008_outgoing_misty_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1768858832295,
+      "tag": "0009_romantic_switch",
+      "breakpoints": true
     }
   ]
 }
