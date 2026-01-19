@@ -74,7 +74,7 @@ export default function DashboardLayout({
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full bg-white rounded-2xl shadow-2xl border border-border">
           <div className="flex flex-col items-center gap-6">
             <img 
-              src="/NRCSLogo.png" 
+              src="/nrcs-logo.png" 
               alt="Nigerian Red Cross Society" 
               className="h-24 w-24"
             />
@@ -189,7 +189,7 @@ function DashboardLayoutContent({
               {!isCollapsed ? (
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <img 
-                    src="/NRCSLogo.png" 
+                    src="/nrcs-logo.png" 
                     alt="Nigerian Red Cross Society" 
                     className="h-12 w-12 shrink-0"
                   />
@@ -204,7 +204,7 @@ function DashboardLayoutContent({
                 </div>
               ) : (
                 <img 
-                  src="/NRCSLogo.png" 
+                  src="/nrcs-logo.png" 
                   alt="NRCS" 
                   className="h-10 w-10"
                 />
