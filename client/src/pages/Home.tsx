@@ -23,32 +23,36 @@ export default function Home() {
       value: stats?.totalAssets || 0,
       icon: Package,
       description: `${stats?.operationalAssets || 0} operational`,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
+      color: "text-blue-700",
+      bgColor: "bg-blue-100",
+      iconBg: "bg-gradient-to-br from-blue-500 to-blue-600",
     },
     {
       title: "Assets in Maintenance",
       value: stats?.maintenanceAssets || 0,
       icon: Wrench,
       description: "Currently being serviced",
-      color: "text-orange-600",
+      color: "text-orange-700",
       bgColor: "bg-orange-50",
+      iconBg: "bg-gradient-to-br from-orange-500 to-orange-600",
     },
     {
       title: "Pending Work Orders",
       value: stats?.pendingWorkOrders || 0,
       icon: AlertTriangle,
       description: `${stats?.inProgressWorkOrders || 0} in progress`,
-      color: "text-red-600",
+      color: "text-red-700",
       bgColor: "bg-red-50",
+      iconBg: "bg-gradient-to-br from-red-600 to-red-700",
     },
     {
       title: "Low Stock Items",
       value: stats?.lowStockItems || 0,
       icon: TrendingUp,
       description: "Need reordering",
-      color: "text-purple-600",
+      color: "text-purple-700",
       bgColor: "bg-purple-50",
+      iconBg: "bg-gradient-to-br from-purple-500 to-purple-600",
     },
   ];
 
@@ -66,13 +70,13 @@ export default function Home() {
         {metrics.map((metric) => {
           const Icon = metric.icon;
           return (
-            <Card key={metric.title}>
+            <Card key={metric.title} className="border-l-4 border-l-primary/20 hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-white to-gray-50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
+                <CardTitle className="text-sm font-medium text-foreground">
                   {metric.title}
                 </CardTitle>
-                <div className={`p-2 rounded-lg ${metric.bgColor}`}>
-                  <Icon className={`h-4 w-4 ${metric.color}`} />
+                <div className={`p-2.5 rounded-xl ${metric.iconBg} shadow-sm`}>
+                  <Icon className="h-5 w-5 text-white" />
                 </div>
               </CardHeader>
               <CardContent>
@@ -89,14 +93,16 @@ export default function Home() {
       {/* Two Column Layout */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Upcoming Maintenance */}
-        <Card>
+        <Card className="border-t-4 border-t-blue-500 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Upcoming Maintenance</CardTitle>
+                <CardTitle className="text-lg font-bold">Upcoming Maintenance</CardTitle>
                 <CardDescription>Next 7 days</CardDescription>
               </div>
-              <Calendar className="h-5 w-5 text-muted-foreground" />
+              <div className="p-2 rounded-lg bg-blue-100">
+                <Calendar className="h-5 w-5 text-blue-600" />
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -125,14 +131,16 @@ export default function Home() {
         </Card>
 
         {/* Low Stock Alerts */}
-        <Card>
+        <Card className="border-t-4 border-t-orange-500 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Low Stock Alerts</CardTitle>
+                <CardTitle className="text-lg font-bold">Low Stock Alerts</CardTitle>
                 <CardDescription>Items below reorder point</CardDescription>
               </div>
-              <AlertTriangle className="h-5 w-5 text-orange-600" />
+              <div className="p-2 rounded-lg bg-orange-100">
+                <AlertTriangle className="h-5 w-5 text-orange-600" />
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -165,9 +173,9 @@ export default function Home() {
       </div>
 
       {/* Quick Actions */}
-      <Card>
+      <Card className="border-t-4 border-t-primary shadow-md">
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
+          <CardTitle className="text-lg font-bold">Quick Actions</CardTitle>
           <CardDescription>Common tasks and shortcuts</CardDescription>
         </CardHeader>
         <CardContent>

@@ -67,14 +67,24 @@ export default function DashboardLayout({
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-white via-blue-50 to-red-50">
+        <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full bg-white rounded-2xl shadow-2xl border border-border">
           <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
-              Sign in to continue
-            </h1>
+            <img 
+              src="/NRCSLogo.png" 
+              alt="Nigerian Red Cross Society" 
+              className="h-24 w-24"
+            />
+            <div className="text-center">
+              <h1 className="text-2xl font-bold tracking-tight mb-2">
+                NRCS Asset Management
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Nigerian Red Cross Society
+              </p>
+            </div>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
+              Sign in to access the Enterprise Asset Management System
             </p>
           </div>
           <Button
@@ -82,10 +92,13 @@ export default function DashboardLayout({
               window.location.href = getLoginUrl();
             }}
             size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
+            className="w-full shadow-lg hover:shadow-xl transition-all bg-primary hover:bg-primary/90"
           >
-            Sign in
+            Sign in with Manus
           </Button>
+          <p className="text-xs text-muted-foreground text-center">
+            Authorized personnel only
+          </p>
         </div>
       </div>
     );
@@ -168,22 +181,38 @@ function DashboardLayoutContent({
           className="border-r-0"
           disableTransition={isResizing}
         >
-          <SidebarHeader className="h-16 justify-center">
-            <div className="flex items-center gap-3 px-2 transition-all w-full">
+          <SidebarHeader className="h-20 justify-center border-b border-sidebar-border">
+            <div className="flex items-center gap-3 px-3 transition-all w-full">
+              {!isCollapsed ? (
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <img 
+                    src="/NRCSLogo.png" 
+                    alt="Nigerian Red Cross Society" 
+                    className="h-12 w-12 shrink-0"
+                  />
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-bold text-sm text-sidebar-foreground truncate">
+                      NRCS EAM
+                    </span>
+                    <span className="text-xs text-sidebar-foreground/70 truncate">
+                      Asset Management
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <img 
+                  src="/NRCSLogo.png" 
+                  alt="NRCS" 
+                  className="h-10 w-10"
+                />
+              )}
               <button
                 onClick={toggleSidebar}
-                className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
+                className="h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 ml-auto"
                 aria-label="Toggle navigation"
               >
-                <PanelLeft className="h-4 w-4 text-muted-foreground" />
+                <PanelLeft className="h-4 w-4 text-sidebar-foreground" />
               </button>
-              {!isCollapsed ? (
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold tracking-tight truncate">
-                    Navigation
-                  </span>
-                </div>
-              ) : null}
             </div>
           </SidebarHeader>
 
