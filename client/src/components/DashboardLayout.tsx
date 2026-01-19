@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan } from "lucide-react";
+import { LayoutDashboard, LogOut, Users, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -149,8 +149,7 @@ function DashboardLayoutContent({
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
-  const { state, toggleSidebar } = useSidebar();
-  const isCollapsed = state === "collapsed";
+  const { state } = useSidebar();
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find(item => item.path === location);
@@ -170,17 +169,7 @@ function DashboardLayoutContent({
     }
   };
 
-  // Keyboard shortcut for sidebar toggle (Ctrl/Cmd+B)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-        e.preventDefault();
-        toggleSidebar();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSidebar]);
+
 
   // PWA install prompt
   useEffect(() => {
@@ -203,11 +192,7 @@ function DashboardLayoutContent({
     setDeferredPrompt(null);
   };
 
-  useEffect(() => {
-    if (isCollapsed) {
-      setIsResizing(false);
-    }
-  }, [isCollapsed]);
+
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -243,36 +228,26 @@ function DashboardLayoutContent({
     <>
       <div className="relative" ref={sidebarRef}>
         <Sidebar
-          collapsible="icon"
           className="border-r-0"
-          disableTransition={isResizing}
         >
           <SidebarHeader className="h-20 justify-center border-b border-sidebar-border">
             <div className="flex items-center gap-3 px-3 transition-all w-full">
-              {!isCollapsed ? (
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <img 
-                    src="/nrcs-logo.png" 
-                    alt="Nigerian Red Cross Society" 
-                    className="h-12 w-12 shrink-0"
-                  />
-                  <div className="flex flex-col min-w-0">
-                    <span className="font-bold text-sm text-sidebar-foreground truncate">
-                      NRCS EAM
-                    </span>
-                    <span className="text-xs text-sidebar-foreground/70 truncate">
-                      Asset Management
-                    </span>
-                  </div>
-                </div>
-              ) : (
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <img 
                   src="/nrcs-logo.png" 
-                  alt="NRCS" 
-                  className="h-10 w-10"
+                  alt="Nigerian Red Cross Society" 
+                  className="h-12 w-12 shrink-0"
                 />
-              )}
-              {!isCollapsed && (
+                <div className="flex flex-col min-w-0">
+                  <span className="font-bold text-sm text-sidebar-foreground truncate">
+                    NRCS EAM
+                  </span>
+                  <span className="text-xs text-sidebar-foreground/70 truncate">
+                    Asset Management
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
                 <DropdownMenu open={showWidthPresets} onOpenChange={setShowWidthPresets}>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -295,15 +270,7 @@ function DashboardLayoutContent({
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              )}
-              <button
-                onClick={toggleSidebar}
-                className="h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 ml-auto border border-sidebar-border hover:border-primary/50"
-                aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              >
-                <PanelLeft className={`h-4 w-4 text-sidebar-foreground transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
-              </button>
+              </div>
             </div>
           </SidebarHeader>
 
@@ -380,9 +347,8 @@ function DashboardLayoutContent({
           </SidebarFooter>
         </Sidebar>
         <div
-          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors ${isCollapsed ? "hidden" : ""}`}
+          className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors"
           onMouseDown={() => {
-            if (isCollapsed) return;
             setIsResizing(true);
           }}
           style={{ zIndex: 50 }}

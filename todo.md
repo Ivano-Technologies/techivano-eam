@@ -401,3 +401,9 @@
 - [x] Build quick asset update interface
 - [x] Add scanner to navigation menu
 - [x] Test scanner functionality
+
+## Phase 43: Remove Sidebar Collapse Feature
+- [x] Remove collapse toggle button from sidebar
+- [x] Remove collapse-related state and logic
+- [x] Keep width presets and resize functionality
+- [x] Test sidebar without collapse feature
