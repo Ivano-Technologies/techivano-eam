@@ -5,7 +5,8 @@ import {
   workOrders, InsertWorkOrder, maintenanceSchedules, InsertMaintenanceSchedule,
   inventoryItems, InsertInventoryItem, inventoryTransactions, vendors, InsertVendor,
   financialTransactions, complianceRecords, auditLogs, documents,
-  notifications, notificationPreferences
+  notifications, notificationPreferences, assetPhotos, InsertAssetPhoto,
+  scheduledReports, InsertScheduledReport
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -607,4 +608,108 @@ export async function upsertNotificationPreferences(userId: number, prefs: Parti
       ...prefs,
     });
   }
+}
+
+
+// ===== Asset Photos =====
+export async function createAssetPhoto(data: InsertAssetPhoto) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(assetPhotos).values(data);
+  const insertId = Number(result[0].insertId);
+  return insertId;
+}
+
+export async function getAssetPhotos(assetId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(assetPhotos).where(eq(assetPhotos.assetId, assetId));
+}
+
+export async function getWorkOrderPhotos(workOrderId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(assetPhotos).where(eq(assetPhotos.workOrderId, workOrderId));
+}
+
+export async function deleteAssetPhoto(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(assetPhotos).where(eq(assetPhotos.id, id));
+}
+
+// ===== Scheduled Reports =====
+export async function createScheduledReport(data: InsertScheduledReport) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(scheduledReports).values(data);
+  const insertId = Number(result[0].insertId);
+  return insertId;
+}
+
+export async function getScheduledReports() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(scheduledReports);
+}
+
+export async function getScheduledReportById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(scheduledReports).where(eq(scheduledReports.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateScheduledReport(id: number, data: Partial<InsertScheduledReport>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(scheduledReports).set(data).where(eq(scheduledReports.id, id));
+}
+
+export async function deleteScheduledReport(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(scheduledReports).where(eq(scheduledReports.id, id));
+}
+
+export async function getActiveScheduledReports() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(scheduledReports).where(eq(scheduledReports.isActive, true));
+}
+
+
+// ===== Additional User Management Functions =====
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateUser(id: number, data: Partial<InsertUser>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(users).set(data).where(eq(users.id, id));
+  return { success: true };
+}
+
+export async function deleteUser(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(users).where(eq(users.id, id));
+  return { success: true };
 }

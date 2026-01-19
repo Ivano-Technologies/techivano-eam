@@ -323,3 +323,50 @@ export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
 export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
 export type InsertNotificationPreferences = typeof notificationPreferences.$inferInsert;
+
+/**
+ * Asset Photos - Store photos for assets and work orders
+ */
+export const assetPhotos = mysqlTable("assetPhotos", {
+  id: int("id").autoincrement().primaryKey(),
+  assetId: int("assetId"),
+  workOrderId: int("workOrderId"),
+  photoUrl: text("photoUrl").notNull(),
+  photoKey: varchar("photoKey", { length: 500 }).notNull(),
+  caption: text("caption"),
+  uploadedBy: int("uploadedBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/**
+ * Scheduled Reports - Email report scheduling
+ */
+export const scheduledReports = mysqlTable("scheduledReports", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  reportType: mysqlEnum("reportType", [
+    "assetInventory",
+    "maintenanceSchedule",
+    "workOrders",
+    "financial",
+    "compliance"
+  ]).notNull(),
+  format: mysqlEnum("format", ["pdf", "excel"]).notNull(),
+  schedule: mysqlEnum("schedule", ["daily", "weekly", "monthly"]).notNull(),
+  dayOfWeek: int("dayOfWeek"), // 0-6 for weekly
+  dayOfMonth: int("dayOfMonth"), // 1-31 for monthly
+  time: varchar("time", { length: 5 }).notNull(), // HH:MM format
+  recipients: text("recipients").notNull(), // Comma-separated email addresses
+  filters: text("filters"), // JSON string of filter options
+  isActive: boolean("isActive").default(true).notNull(),
+  lastRun: timestamp("lastRun"),
+  nextRun: timestamp("nextRun"),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AssetPhoto = typeof assetPhotos.$inferSelect;
+export type InsertAssetPhoto = typeof assetPhotos.$inferInsert;
+export type ScheduledReport = typeof scheduledReports.$inferSelect;
+export type InsertScheduledReport = typeof scheduledReports.$inferInsert;

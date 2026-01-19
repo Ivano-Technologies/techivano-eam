@@ -98,3 +98,141 @@ export function parseAssetQRCode(qrData: string): { assetId: number; assetTag: s
     return null;
   }
 }
+
+/**
+ * Generate bulk QR code labels PDF for printing
+ * @param assets - Array of assets with id, assetTag, and name
+ * @param labelSize - Label size template (avery_5160, avery_5163, custom)
+ * @returns Promise<Buffer> - PDF buffer with QR code labels
+ */
+export async function generateBulkQRCodeLabels(
+  assets: Array<{ id: number; assetTag: string; name: string; categoryName?: string }>,
+  labelSize: 'avery_5160' | 'avery_5163' | 'custom' = 'avery_5160'
+): Promise<Buffer> {
+  const PDFDocument = (await import('pdfkit')).default;
+  
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'LETTER', margin: 0 });
+    const chunks: Buffer[] = [];
+
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    // Label dimensions in points (1 inch = 72 points)
+    const labelConfigs = {
+      avery_5160: {
+        // 1" x 2-5/8" labels, 3 columns x 10 rows
+        width: 189, // 2.625 inches
+        height: 72, // 1 inch
+        marginLeft: 13.5, // 0.1875 inches
+        marginTop: 36, // 0.5 inches
+        columns: 3,
+        rows: 10,
+        horizontalGap: 13.5,
+        verticalGap: 0,
+      },
+      avery_5163: {
+        // 2" x 4" labels, 2 columns x 5 rows
+        width: 288, // 4 inches
+        height: 144, // 2 inches
+        marginLeft: 12,
+        marginTop: 36,
+        columns: 2,
+        rows: 5,
+        horizontalGap: 12,
+        verticalGap: 0,
+      },
+      custom: {
+        // Custom 2" x 3" labels
+        width: 216,
+        height: 144,
+        marginLeft: 36,
+        marginTop: 36,
+        columns: 2,
+        rows: 4,
+        horizontalGap: 36,
+        verticalGap: 36,
+      },
+    };
+
+    const config = labelConfigs[labelSize];
+    let assetIndex = 0;
+
+    const generatePage = async () => {
+      for (let row = 0; row < config.rows; row++) {
+        for (let col = 0; col < config.columns; col++) {
+          if (assetIndex >= assets.length) return;
+
+          const asset = assets[assetIndex];
+          const x = config.marginLeft + col * (config.width + config.horizontalGap);
+          const y = config.marginTop + row * (config.height + config.verticalGap);
+
+          // Generate QR code
+          const qrBuffer = await generateAssetQRCodeBuffer(asset.id, asset.assetTag);
+
+          // Calculate QR code size (60% of label height)
+          const qrSize = config.height * 0.6;
+          const qrX = x + (config.width - qrSize) / 2;
+          const qrY = y + 5;
+
+          // Draw QR code
+          doc.image(qrBuffer, qrX, qrY, {
+            width: qrSize,
+            height: qrSize,
+          });
+
+          // Draw asset tag below QR code
+          const textY = qrY + qrSize + 3;
+          doc
+            .fontSize(8)
+            .font('Helvetica-Bold')
+            .fillColor('#000000')
+            .text(asset.assetTag, x, textY, {
+              width: config.width,
+              align: 'center',
+            });
+
+          // Draw asset name
+          doc
+            .fontSize(6)
+            .font('Helvetica')
+            .text(asset.name, x, textY + 10, {
+              width: config.width,
+              align: 'center',
+              ellipsis: true,
+            });
+
+          // Draw category if available
+          if (asset.categoryName) {
+            doc
+              .fontSize(5)
+              .fillColor('#666666')
+              .text(asset.categoryName, x, textY + 18, {
+                width: config.width,
+                align: 'center',
+                ellipsis: true,
+              });
+          }
+
+          assetIndex++;
+        }
+      }
+    };
+
+    // Generate all pages
+    (async () => {
+      try {
+        while (assetIndex < assets.length) {
+          await generatePage();
+          if (assetIndex < assets.length) {
+            doc.addPage();
+          }
+        }
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
+    })();
+  });
+}

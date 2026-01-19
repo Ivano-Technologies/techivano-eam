@@ -158,6 +158,39 @@ export const appRouter = router({
         await db.updateAsset(asset.id, { qrCode });
         return { qrCode };
       }),
+
+    generateBulkQRCodeLabels: protectedProcedure
+      .input(z.object({
+        assetIds: z.array(z.number()),
+        labelSize: z.enum(['avery_5160', 'avery_5163', 'custom']).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { generateBulkQRCodeLabels } = await import('./qrcode');
+        
+        // Get assets
+        const assets = [];
+        for (const id of input.assetIds) {
+          const asset = await db.getAssetById(id);
+          if (asset) {
+            assets.push({
+              id: asset.id,
+              assetTag: asset.assetTag,
+              name: asset.name,
+            });
+          }
+        }
+        
+        if (assets.length === 0) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'No valid assets found' });
+        }
+        
+        const pdfBuffer = await generateBulkQRCodeLabels(assets, input.labelSize);
+        return {
+          data: pdfBuffer.toString('base64'),
+          filename: `qr-labels-${Date.now()}.pdf`,
+          mimeType: 'application/pdf',
+        };
+      }),
     
     scanQRCode: protectedProcedure
       .input(z.object({ qrData: z.string() }))
@@ -619,6 +652,44 @@ export const appRouter = router({
     list: adminProcedure.query(async () => {
       return await db.getAllUsers();
     }),
+
+    getById: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getUserById(input.id);
+      }),
+    
+    create: adminProcedure
+      .input(z.object({
+        openId: z.string(),
+        name: z.string(),
+        email: z.string().email(),
+        role: z.enum(["admin", "manager", "technician", "user"]),
+        siteId: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        await db.upsertUser({
+          openId: input.openId,
+          name: input.name,
+          email: input.email,
+          role: input.role,
+          lastSignedIn: new Date(),
+        });
+        return { success: true };
+      }),
+
+    update: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        email: z.string().email().optional(),
+        role: z.enum(["admin", "manager", "technician", "user"]).optional(),
+        siteId: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        return await db.updateUser(id, data);
+      }),
     
     updateRole: adminProcedure
       .input(z.object({
@@ -627,6 +698,12 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         return await db.updateUserRole(input.userId, input.role);
+      }),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return await db.deleteUser(input.id);
       }),
   }),
 
@@ -885,6 +962,98 @@ export const appRouter = router({
             mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           };
         }
+      }),
+  }),
+
+  // Asset Photos Management
+  photos: router({
+    create: protectedProcedure
+      .input(z.object({
+        assetId: z.number().optional(),
+        workOrderId: z.number().optional(),
+        photoUrl: z.string(),
+        photoKey: z.string(),
+        caption: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const photoId = await db.createAssetPhoto({
+          ...input,
+          uploadedBy: ctx.user.id,
+        });
+        return { id: photoId };
+      }),
+
+    listByAsset: protectedProcedure
+      .input(z.object({ assetId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getAssetPhotos(input.assetId);
+      }),
+
+    listByWorkOrder: protectedProcedure
+      .input(z.object({ workOrderId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getWorkOrderPhotos(input.workOrderId);
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteAssetPhoto(input.id);
+        return { success: true };
+      }),
+  }),
+
+  // Scheduled Reports Management
+  scheduledReports: router({
+    list: protectedProcedure.query(async () => {
+      return await db.getScheduledReports();
+    }),
+
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string(),
+        reportType: z.enum(['assetInventory', 'maintenanceSchedule', 'workOrders', 'financial', 'compliance']),
+        format: z.enum(['pdf', 'excel']),
+        schedule: z.enum(['daily', 'weekly', 'monthly']),
+        dayOfWeek: z.number().optional(),
+        dayOfMonth: z.number().optional(),
+        time: z.string(),
+        recipients: z.string(),
+        filters: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const reportId = await db.createScheduledReport({
+          ...input,
+          createdBy: ctx.user.id,
+        });
+        return { id: reportId };
+      }),
+
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        reportType: z.enum(['assetInventory', 'maintenanceSchedule', 'workOrders', 'financial', 'compliance']).optional(),
+        format: z.enum(['pdf', 'excel']).optional(),
+        schedule: z.enum(['daily', 'weekly', 'monthly']).optional(),
+        dayOfWeek: z.number().optional(),
+        dayOfMonth: z.number().optional(),
+        time: z.string().optional(),
+        recipients: z.string().optional(),
+        filters: z.string().optional(),
+        isActive: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateScheduledReport(id, data);
+        return { success: true };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteScheduledReport(input.id);
+        return { success: true };
       }),
   }),
 });

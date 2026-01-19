@@ -211,3 +211,50 @@
 - [x] Create report templates
 - [x] Test all report types
 - [x] Create reporting documentation
+
+## Phase 22: Bulk QR Code Label Printing
+- [x] Create bulk QR code generation API
+- [x] Design printable label template with asset info
+- [x] Generate PDF with multiple QR codes in grid layout
+- [x] Add label size options (Avery templates)
+- [ ] Implement batch selection for printing
+- [ ] Add print preview functionality
+- [ ] Test printing on various label sheets
+
+## Phase 23: Mobile Camera Integration
+- [x] Add camera permission handling
+- [x] Implement QR code scanner using device camera
+- [x] Add photo capture for asset documentation
+- [x] Create photo upload to S3 storage
+- [x] Link photos to assets and work orders
+- [ ] Add photo gallery view
+- [x] Implement photo deletion
+- [ ] Test on mobile devices
+
+## Phase 24: Email Report Scheduling
+- [x] Create scheduled reports table in database
+- [x] Build report scheduling API
+- [ ] Add email configuration
+- [ ] Implement cron job for scheduled reports
+- [ ] Create email templates with NRCS branding
+- [ ] Add schedule management UI
+- [x] Support daily/weekly/monthly schedules
+- [ ] Test email delivery
+
+## Phase 25: Admin User Management
+- [ ] Enhance Users page with create/edit functionality
+- [x] Add user creation form with role assignment
+- [x] Implement user editing capabilities
+- [x] Add user deletion with confirmation
+- [ ] Create password reset functionality
+- [ ] Add user activity logs
+- [ ] Implement bulk user import
+- [x] Test admin permissions
+
+## Phase 26: Database Reset
+- [x] Create database reset script
+- [x] Clear all sample data from tables
+- [x] Preserve schema and structure
+- [x] Reset auto-increment counters
+- [x] Verify database is clean
+- [x] Test application with empty database
