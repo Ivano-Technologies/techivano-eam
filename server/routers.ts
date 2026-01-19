@@ -5,6 +5,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import * as db from "./db";
+import * as notificationHelper from "./notificationHelper";
 
 // Role-based middleware
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -246,6 +247,16 @@ export const appRouter = router({
           entityType: "work_order",
           entityId: workOrder?.id,
         });
+        
+        // Notify assigned user
+        if (input.assignedTo && workOrder?.id) {
+          await notificationHelper.notifyWorkOrderAssigned(
+            input.assignedTo,
+            workOrder.id,
+            input.title
+          );
+        }
+        
         return workOrder;
       }),
     
@@ -267,6 +278,10 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const { id, ...data } = input;
+        
+        // Get existing work order to check for changes
+        const existingWorkOrder = await db.getWorkOrderById(id);
+        
         await db.createAuditLog({
           userId: ctx.user.id,
           action: "update_work_order",
@@ -274,7 +289,30 @@ export const appRouter = router({
           entityId: id,
           changes: JSON.stringify(data),
         });
-        return await db.updateWorkOrder(id, data);
+        
+        const result = await db.updateWorkOrder(id, data);
+        
+        // Notify on status change to completed
+        if (data.status === "completed" && existingWorkOrder?.status !== "completed") {
+          if (existingWorkOrder?.requestedBy) {
+            await notificationHelper.notifyWorkOrderCompleted(
+              existingWorkOrder.requestedBy,
+              id,
+              existingWorkOrder.title
+            );
+          }
+        }
+        
+        // Notify newly assigned user
+        if (data.assignedTo && data.assignedTo !== existingWorkOrder?.assignedTo) {
+          await notificationHelper.notifyWorkOrderAssigned(
+            data.assignedTo,
+            id,
+            existingWorkOrder?.title || "Work Order"
+          );
+        }
+        
+        return result;
       }),
   }),
 
@@ -588,6 +626,56 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         return await db.updateUserRole(input.userId, input.role);
+      }),
+  }),
+
+  // ============= NOTIFICATIONS =============
+  notifications: router({
+    list: protectedProcedure
+      .input(z.object({ limit: z.number().optional() }))
+      .query(async ({ ctx, input }) => {
+        return await db.getUserNotifications(ctx.user.id, input.limit);
+      }),
+    
+    unreadCount: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getUnreadNotificationCount(ctx.user.id);
+      }),
+    
+    markAsRead: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return await db.markNotificationAsRead(input.id);
+      }),
+    
+    markAllAsRead: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        return await db.markAllNotificationsAsRead(ctx.user.id);
+      }),
+    
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return await db.deleteNotification(input.id);
+      }),
+    
+    getPreferences: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getUserNotificationPreferences(ctx.user.id);
+      }),
+    
+    updatePreferences: protectedProcedure
+      .input(z.object({
+        maintenanceDue: z.boolean().optional(),
+        lowStock: z.boolean().optional(),
+        workOrderAssigned: z.boolean().optional(),
+        workOrderCompleted: z.boolean().optional(),
+        assetStatusChange: z.boolean().optional(),
+        complianceDue: z.boolean().optional(),
+        systemAlert: z.boolean().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return await db.upsertNotificationPreferences(ctx.user.id, input);
       }),
   }),
 });

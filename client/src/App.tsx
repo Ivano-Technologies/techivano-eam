@@ -18,6 +18,7 @@ import Financial from "./pages/Financial";
 import Compliance from "./pages/Compliance";
 import Sites from "./pages/Sites";
 import Users from "./pages/Users";
+import NotificationPreferences from "./pages/NotificationPreferences";
 
 function Router() {
   return (
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/compliance" component={Compliance} />
       <Route path="/sites" component={Sites} />
       <Route path="/users" component={Users} />
+      <Route path="/notification-preferences" component={NotificationPreferences} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

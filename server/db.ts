@@ -4,7 +4,8 @@ import {
   InsertUser, users, sites, InsertSite, assetCategories, assets, InsertAsset,
   workOrders, InsertWorkOrder, maintenanceSchedules, InsertMaintenanceSchedule,
   inventoryItems, InsertInventoryItem, inventoryTransactions, vendors, InsertVendor,
-  financialTransactions, complianceRecords, auditLogs, documents
+  financialTransactions, complianceRecords, auditLogs, documents,
+  notifications, notificationPreferences
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -522,4 +523,88 @@ export async function getDashboardStats() {
     inProgressWorkOrders: inProgressWorkOrders?.count || 0,
     lowStockItems: lowStockCount?.count || 0,
   };
+}
+
+// ============= NOTIFICATIONS =============
+
+export async function createNotification(notification: typeof notifications.$inferInsert) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.insert(notifications).values(notification);
+  return Number(result[0].insertId);
+}
+
+export async function getUserNotifications(userId: number, limit: number = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(notifications)
+    .where(eq(notifications.userId, userId))
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit);
+}
+
+export async function getUnreadNotificationCount(userId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ count: sql<number>`count(*)` })
+    .from(notifications)
+    .where(and(
+      eq(notifications.userId, userId),
+      eq(notifications.isRead, false)
+    ));
+  return result[0]?.count || 0;
+}
+
+export async function markNotificationAsRead(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  return await db.update(notifications)
+    .set({ isRead: true, readAt: new Date() })
+    .where(eq(notifications.id, id));
+}
+
+export async function markAllNotificationsAsRead(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  return await db.update(notifications)
+    .set({ isRead: true, readAt: new Date() })
+    .where(and(
+      eq(notifications.userId, userId),
+      eq(notifications.isRead, false)
+    ));
+}
+
+export async function deleteNotification(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  return await db.delete(notifications).where(eq(notifications.id, id));
+}
+
+// ============= NOTIFICATION PREFERENCES =============
+
+export async function getUserNotificationPreferences(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(notificationPreferences)
+    .where(eq(notificationPreferences.userId, userId))
+    .limit(1);
+  return result[0] || null;
+}
+
+export async function upsertNotificationPreferences(userId: number, prefs: Partial<typeof notificationPreferences.$inferInsert>) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const existing = await getUserNotificationPreferences(userId);
+  
+  if (existing) {
+    return await db.update(notificationPreferences)
+      .set(prefs)
+      .where(eq(notificationPreferences.userId, userId));
+  } else {
+    return await db.insert(notificationPreferences).values({
+      userId,
+      ...prefs,
+    });
+  }
 }

@@ -277,3 +277,49 @@ export type FinancialTransaction = typeof financialTransactions.$inferSelect;
 export type ComplianceRecord = typeof complianceRecords.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type Document = typeof documents.$inferSelect;
+
+/**
+ * Notifications - In-app notification system
+ */
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: mysqlEnum("type", [
+    "maintenance_due",
+    "low_stock",
+    "work_order_assigned",
+    "work_order_completed",
+    "asset_status_change",
+    "compliance_due",
+    "system_alert"
+  ]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  relatedEntityType: varchar("relatedEntityType", { length: 50 }), // asset, workOrder, inventory, etc.
+  relatedEntityId: int("relatedEntityId"),
+  isRead: boolean("isRead").default(false).notNull(),
+  readAt: timestamp("readAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/**
+ * Notification Preferences - User notification settings
+ */
+export const notificationPreferences = mysqlTable("notificationPreferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  maintenanceDue: boolean("maintenanceDue").default(true).notNull(),
+  lowStock: boolean("lowStock").default(true).notNull(),
+  workOrderAssigned: boolean("workOrderAssigned").default(true).notNull(),
+  workOrderCompleted: boolean("workOrderCompleted").default(true).notNull(),
+  assetStatusChange: boolean("assetStatusChange").default(true).notNull(),
+  complianceDue: boolean("complianceDue").default(true).notNull(),
+  systemAlert: boolean("systemAlert").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
+export type InsertNotificationPreferences = typeof notificationPreferences.$inferInsert;

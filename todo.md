@@ -154,3 +154,19 @@
 - [x] Apply consistent branding across all module pages
 - [x] Add subtle gradients to dashboard cards
 - [x] Update favicon with NRCS logo
+
+## Phase 19: Custom Notification System
+- [x] Create notifications table in database schema
+- [x] Create notification preferences table
+- [x] Add notification types (maintenance_due, low_stock, work_order_assigned, asset_status_change)
+- [x] Build tRPC procedures for notification CRUD operations
+- [x] Implement notification center UI component with bell icon
+- [x] Add unread notification count badge
+- [x] Create notification dropdown with list view
+- [x] Add mark as read/unread functionality
+- [x] Build notification preferences page
+- [x] Implement automatic notifications for maintenance due dates
+- [x] Add notifications for low stock items
+- [x] Create notifications for work order assignments
+- [x] Add notifications for asset status changes
+- [x] Test notification system end-to-end
