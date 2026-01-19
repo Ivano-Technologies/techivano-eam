@@ -114,6 +114,12 @@ export const appRouter = router({
         return await db.getAssetById(input.id);
       }),
     
+    getByTag: protectedProcedure
+      .input(z.object({ assetTag: z.string() }))
+      .query(async ({ input }) => {
+        return await db.getAssetByTag(input.assetTag);
+      }),
+    
     search: protectedProcedure
       .input(z.object({ searchTerm: z.string() }))
       .query(async ({ input }) => {
@@ -1495,5 +1501,83 @@ export const appRouter = router({
         return await db.getEmailNotificationById(input.id);
       }),
   }),
+
+  // ============= DEPRECIATION =============
+  depreciation: router({
+    calculate: protectedProcedure
+      .input(z.object({
+        assetId: z.number(),
+      }))
+      .query(async ({ input }) => {
+        const { calculateDepreciation } = require('./depreciation');
+        const asset = await db.getAssetById(input.assetId);
+        
+        if (!asset || !asset.depreciationMethod || asset.depreciationMethod === 'none') {
+          return null;
+        }
+        
+        if (!asset.acquisitionCost || !asset.depreciationStartDate) {
+          return null;
+        }
+        
+        return calculateDepreciation({
+          acquisitionCost: Number(asset.acquisitionCost),
+          residualValue: Number(asset.residualValue || 0),
+          usefulLifeYears: asset.usefulLifeYears || 5,
+          depreciationStartDate: new Date(asset.depreciationStartDate),
+          method: asset.depreciationMethod as 'straight-line' | 'declining-balance',
+          decliningBalanceRate: 2, // Double-declining balance
+        });
+      }),
+    
+    summary: protectedProcedure.query(async () => {
+      const { calculateDepreciation } = require('./depreciation');
+      const assets = await db.getAllAssets();
+      
+      let totalAcquisitionCost = 0;
+      let totalCurrentValue = 0;
+      let totalAccumulatedDepreciation = 0;
+      let assetsWithDepreciation = 0;
+      
+      for (const asset of assets) {
+        if (asset.acquisitionCost) {
+          totalAcquisitionCost += Number(asset.acquisitionCost);
+        }
+        
+        if (asset.depreciationMethod && asset.depreciationMethod !== 'none' && asset.depreciationStartDate && asset.acquisitionCost) {
+          assetsWithDepreciation++;
+          const result = calculateDepreciation({
+            acquisitionCost: Number(asset.acquisitionCost),
+            residualValue: Number(asset.residualValue || 0),
+            usefulLifeYears: asset.usefulLifeYears || 5,
+            depreciationStartDate: new Date(asset.depreciationStartDate),
+            method: asset.depreciationMethod as 'straight-line' | 'declining-balance',
+            decliningBalanceRate: 2,
+          });
+          
+          if (result) {
+            totalCurrentValue += result.currentBookValue;
+            totalAccumulatedDepreciation += result.accumulatedDepreciation;
+          }
+        } else if (asset.currentValue) {
+          totalCurrentValue += Number(asset.currentValue);
+        } else if (asset.acquisitionCost) {
+          totalCurrentValue += Number(asset.acquisitionCost);
+        }
+      }
+      
+      return {
+        totalAcquisitionCost: Math.round(totalAcquisitionCost * 100) / 100,
+        totalCurrentValue: Math.round(totalCurrentValue * 100) / 100,
+        totalAccumulatedDepreciation: Math.round(totalAccumulatedDepreciation * 100) / 100,
+        totalDepreciationPercentage: totalAcquisitionCost > 0 
+          ? Math.round((totalAccumulatedDepreciation / totalAcquisitionCost) * 10000) / 100 
+          : 0,
+        assetsWithDepreciation,
+        totalAssets: assets.length,
+      };
+    }),
+  }),
 });
+
 export type AppRouter = typeof appRouter;

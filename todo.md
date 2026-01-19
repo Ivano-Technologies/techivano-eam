@@ -386,3 +386,18 @@
 - [x] Identify canvas dependency in package.json
 - [x] Make PDF/barcode generation optional with try-catch
 - [x] Test deployment without canvas dependency
+
+## Phase 41: Asset Depreciation Calculator
+- [x] Add depreciation fields to asset schema (method, useful life, residual value)
+- [x] Create depreciation calculation service (straight-line, declining balance)
+- [x] Add depreciation API endpoints
+- [x] Build depreciation tracking UI in asset details page
+- [x] Add depreciation summary API
+- [x] Test depreciation calculations
+
+## Phase 42: Mobile Asset Scanner
+- [x] Create mobile-optimized scanner page
+- [x] Add manual entry scanner interface
+- [x] Build quick asset update interface
+- [x] Add scanner to navigation menu
+- [x] Test scanner functionality

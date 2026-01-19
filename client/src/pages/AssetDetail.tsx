@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
+import AssetDepreciation from "@/components/AssetDepreciation";
 
 export default function AssetDetail() {
   const [, params] = useRoute("/assets/:id");
@@ -322,6 +323,11 @@ export default function AssetDetail() {
           </Card>
         )}
       </div>
+
+      {/* Depreciation Analysis */}
+      {asset.depreciationMethod && asset.depreciationMethod !== 'none' && (
+        <AssetDepreciation assetId={assetId} />
+      )}
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

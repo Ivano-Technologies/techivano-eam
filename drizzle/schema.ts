@@ -74,6 +74,13 @@ export const assets = mysqlTable("assets", {
   barcodeFormat: varchar("barcodeFormat", { length: 50 }),
   latitude: decimal("latitude", { precision: 10, scale: 8 }),
   longitude: decimal("longitude", { precision: 11, scale: 8 }),
+  
+  // Depreciation fields
+  depreciationMethod: varchar("depreciationMethod", { length: 50 }), // 'straight-line', 'declining-balance', 'none'
+  usefulLifeYears: int("usefulLifeYears"), // Expected useful life in years
+  residualValue: decimal("residualValue", { precision: 12, scale: 2 }), // Salvage value at end of life
+  depreciationStartDate: timestamp("depreciationStartDate"), // When depreciation starts
+  
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

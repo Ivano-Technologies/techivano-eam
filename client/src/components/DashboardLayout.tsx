@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -32,6 +32,7 @@ import { NotificationCenter } from "./NotificationCenter";
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: Package, label: "Assets", path: "/assets" },
+  { icon: Scan, label: "Asset Scanner", path: "/scanner" },
   { icon: Map, label: "Asset Map", path: "/asset-map" },
   { icon: Wrench, label: "Work Orders", path: "/work-orders" },
   { icon: Calendar, label: "Maintenance", path: "/maintenance" },

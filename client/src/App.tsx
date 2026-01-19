@@ -8,6 +8,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import Home from "./pages/Home";
 import Assets from "./pages/Assets";
 import AssetDetail from "./pages/AssetDetail";
+import AssetScanner from "./pages/AssetScanner";
 import AssetMap from "./pages/AssetMap";
 import WorkOrders from "./pages/WorkOrders";
 import WorkOrderDetail from "./pages/WorkOrderDetail";
@@ -29,7 +30,8 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/assets" component={Assets} />
-      <Route path="/assets/:id" component={AssetDetail} />
+        <Route path="/assets/:id" component={AssetDetail} />
+        <Route path="/scanner" component={AssetScanner} />
       <Route path="/asset-map" component={AssetMap} />
       <Route path="/work-orders" component={WorkOrders} />
       <Route path="/work-orders/:id" component={WorkOrderDetail} />
