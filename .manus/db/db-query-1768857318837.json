@@ -1,0 +1,70 @@
+{
+  "query": "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user TomGb9tuntH4B4d.7e6b3ba34d8a --database YNihSyDPBSASM93ZxstDRD --execute SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME;",
+  "rows": [
+    {
+      "TABLE_NAME": "__drizzle_migrations"
+    },
+    {
+      "TABLE_NAME": "assetCategories"
+    },
+    {
+      "TABLE_NAME": "assetPhotos"
+    },
+    {
+      "TABLE_NAME": "assetTransfers"
+    },
+    {
+      "TABLE_NAME": "assets"
+    },
+    {
+      "TABLE_NAME": "auditLogs"
+    },
+    {
+      "TABLE_NAME": "complianceRecords"
+    },
+    {
+      "TABLE_NAME": "documents"
+    },
+    {
+      "TABLE_NAME": "financialTransactions"
+    },
+    {
+      "TABLE_NAME": "inventoryItems"
+    },
+    {
+      "TABLE_NAME": "inventoryTransactions"
+    },
+    {
+      "TABLE_NAME": "maintenanceSchedules"
+    },
+    {
+      "TABLE_NAME": "notificationPreferences"
+    },
+    {
+      "TABLE_NAME": "notifications"
+    },
+    {
+      "TABLE_NAME": "quickbooksConfig"
+    },
+    {
+      "TABLE_NAME": "scheduledReports"
+    },
+    {
+      "TABLE_NAME": "sites"
+    },
+    {
+      "TABLE_NAME": "users"
+    },
+    {
+      "TABLE_NAME": "vendors"
+    },
+    {
+      "TABLE_NAME": "workOrders"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\n__drizzle_migrations\nassetCategories\nassetPhotos\nassetTransfers\nassets\nauditLogs\ncomplianceRecords\ndocuments\nfinancialTransactions\ninventoryItems\ninventoryTransactions\nmaintenanceSchedules\nnotificationPreferences\nnotifications\nquickbooksConfig\nscheduledReports\nsites\nusers\nvendors\nworkOrders\n",
+  "stderr": "",
+  "execution_time_ms": 360
+}

@@ -1,0 +1,8 @@
+{
+  "query": "SET FOREIGN_KEY_CHECKS = 0;\nDELETE FROM assetTransfers WHERE 1=1;\nDELETE FROM notifications WHERE 1=1;\nDELETE FROM notificationPreferences WHERE 1=1;\nDELETE FROM complianceReports WHERE 1=1;\nDELETE FROM financialTransactions WHERE 1=1;\nDELETE FROM quickbooksConfig WHERE 1=1;\nDELETE FROM reportSchedules WHERE 1=1;\nDELETE FROM workOrderPhotos WHERE 1=1;\nDELETE FROM workOrders WHERE 1=1;\nDELETE FROM maintenanceSchedules WHERE 1=1;\nDELETE FROM inventoryItems WHERE 1=1;\nDELETE FROM vendors WHERE 1=1;\nDELETE FROM assets WHERE 1=1;\nDELETE FROM assetCategories WHERE 1=1;\nDELETE FROM sites WHERE 1=1;\nSET FOREIGN_KEY_CHECKS = 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user TomGb9tuntH4B4d.7e6b3ba34d8a --database YNihSyDPBSASM93ZxstDRD --execute SET FOREIGN_KEY_CHECKS = 0;\nDELETE FROM assetTransfers WHERE 1=1;\nDELETE FROM notifications WHERE 1=1;\nDELETE FROM notificationPreferences WHERE 1=1;\nDELETE FROM complianceReports WHERE 1=1;\nDELETE FROM financialTransactions WHERE 1=1;\nDELETE FROM quickbooksConfig WHERE 1=1;\nDELETE FROM reportSchedules WHERE 1=1;\nDELETE FROM workOrderPhotos WHERE 1=1;\nDELETE FROM workOrders WHERE 1=1;\nDELETE FROM maintenanceSchedules WHERE 1=1;\nDELETE FROM inventoryItems WHERE 1=1;\nDELETE FROM vendors WHERE 1=1;\nDELETE FROM assets WHERE 1=1;\nDELETE FROM assetCategories WHERE 1=1;\nDELETE FROM sites WHERE 1=1;\nSET FOREIGN_KEY_CHECKS = 1;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 5: Table 'ynihsydpbsasm93zxstdrd.complianceReports' doesn't exist"
+  ]
+}

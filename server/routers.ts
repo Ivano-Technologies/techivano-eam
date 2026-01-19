@@ -1187,6 +1187,36 @@ export const appRouter = router({
         const buffer = Buffer.from(input.fileData, 'base64');
         return await importAssets(buffer, ctx.user.id);
       }),
+
+    exportSites: protectedProcedure
+      .query(async () => {
+        const { exportSites } = await import('./bulkImportExport');
+        const buffer = await exportSites();
+        return {
+          data: buffer.toString('base64'),
+          filename: `sites_export_${Date.now()}.xlsx`,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        };
+      }),
+
+    importSites: managerOrAdminProcedure
+      .input(z.object({ fileData: z.string() })) // base64 encoded
+      .mutation(async ({ input }) => {
+        const { importSites } = await import('./bulkImportExport');
+        const buffer = Buffer.from(input.fileData, 'base64');
+        return await importSites(buffer);
+      }),
+
+    downloadSiteTemplate: publicProcedure
+      .query(async () => {
+        const { generateSiteTemplate } = await import('./bulkImportExport');
+        const buffer = await generateSiteTemplate();
+        return {
+          data: buffer.toString('base64'),
+          filename: 'NRCS_Sites_Import_Template.xlsx',
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        };
+      }),
   }),
 
   // ============= ASSET TRANSFERS =============

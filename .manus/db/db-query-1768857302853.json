@@ -1,0 +1,70 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user TomGb9tuntH4B4d.7e6b3ba34d8a --database YNihSyDPBSASM93ZxstDRD --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "assetCategories"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "assetPhotos"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "assetTransfers"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "assets"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "auditLogs"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "complianceRecords"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "documents"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "financialTransactions"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "inventoryItems"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "inventoryTransactions"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "maintenanceSchedules"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "notificationPreferences"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "notifications"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "quickbooksConfig"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "scheduledReports"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "sites"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "users"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "vendors"
+    },
+    {
+      "Tables_in_YNihSyDPBSASM93ZxstDRD": "workOrders"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_YNihSyDPBSASM93ZxstDRD\n__drizzle_migrations\nassetCategories\nassetPhotos\nassetTransfers\nassets\nauditLogs\ncomplianceRecords\ndocuments\nfinancialTransactions\ninventoryItems\ninventoryTransactions\nmaintenanceSchedules\nnotificationPreferences\nnotifications\nquickbooksConfig\nscheduledReports\nsites\nusers\nvendors\nworkOrders\n",
+  "stderr": "",
+  "execution_time_ms": 357
+}

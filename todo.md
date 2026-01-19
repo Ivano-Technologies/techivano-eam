@@ -344,3 +344,14 @@
 - [x] Test OAuth flow
 - [x] Test transaction sync
 - [x] Create QuickBooks integration documentation
+
+
+## Phase 36: Database Cleanup & Bulk Site Upload
+- [ ] Delete all sample data from database
+- [ ] Create bulk site upload API endpoint
+- [ ] Add Excel file parsing for sites
+- [ ] Implement data validation
+- [ ] Create bulk upload UI on Sites page
+- [ ] Generate Excel template for download
+- [ ] Create step-by-step upload guide
+- [ ] Test bulk upload with sample data

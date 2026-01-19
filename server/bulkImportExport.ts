@@ -311,3 +311,190 @@ export async function generateImportTemplate(entity: 'assets' | 'workOrders' | '
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);
 }
+
+
+/**
+ * Export sites to Excel
+ */
+export async function exportSites(): Promise<Buffer> {
+  const sites = await db.getAllSites();
+  
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Sites');
+  
+  worksheet.columns = [
+    { header: 'Site Name', key: 'name', width: 30 },
+    { header: 'Address', key: 'address', width: 40 },
+    { header: 'City', key: 'city', width: 20 },
+    { header: 'State', key: 'state', width: 20 },
+    { header: 'Country', key: 'country', width: 20 },
+    { header: 'Contact Person', key: 'contactPerson', width: 25 },
+    { header: 'Contact Phone', key: 'contactPhone', width: 20 },
+    { header: 'Contact Email', key: 'contactEmail', width: 30 },
+    { header: 'Latitude', key: 'latitude', width: 15 },
+    { header: 'Longitude', key: 'longitude', width: 15 },
+  ];
+  
+  sites.forEach(site => {
+    worksheet.addRow({
+      name: site.name,
+      address: site.address,
+      city: site.city,
+      state: site.state,
+      country: site.country,
+      contactPerson: site.contactPerson,
+      contactPhone: site.contactPhone,
+      contactEmail: site.contactEmail,
+      latitude: site.latitude,
+      longitude: site.longitude,
+    });
+  });
+  
+  worksheet.getRow(1).font = { bold: true };
+  worksheet.getRow(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF1E3A8A' },
+  };
+  worksheet.getRow(1).font = { color: { argb: 'FFFFFFFF' }, bold: true };
+  
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer);
+}
+
+/**
+ * Import sites from Excel
+ */
+export async function importSites(fileBuffer: any): Promise<ImportResult> {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(fileBuffer);
+  
+  const worksheet = workbook.getWorksheet('Sites') || workbook.worksheets[0];
+  if (!worksheet) {
+    return {
+      success: false,
+      imported: 0,
+      failed: 0,
+      errors: [{ row: 0, error: 'No worksheet found', data: null }],
+    };
+  }
+  
+  let imported = 0;
+  let failed = 0;
+  const errors: Array<{ row: number; error: string; data: any }> = [];
+  
+  const rows: any[] = [];
+  worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (rowNumber === 1) return; // Skip header
+    rows.push({ row, rowNumber });
+  });
+  
+  for (const { row, rowNumber } of rows) {
+    try {
+      const siteData = {
+        name: row.getCell(1).value?.toString() || '',
+        address: row.getCell(2).value?.toString(),
+        city: row.getCell(3).value?.toString(),
+        state: row.getCell(4).value?.toString(),
+        country: row.getCell(5).value?.toString() || 'Nigeria',
+        contactPerson: row.getCell(6).value?.toString(),
+        contactPhone: row.getCell(7).value?.toString(),
+        contactEmail: row.getCell(8).value?.toString(),
+        latitude: row.getCell(9).value ? row.getCell(9).value.toString() : undefined,
+        longitude: row.getCell(10).value ? row.getCell(10).value.toString() : undefined,
+      };
+      
+      // Validate required fields
+      if (!siteData.name) {
+        throw new Error('Site Name is required');
+      }
+      
+      await db.createSite(siteData);
+      imported++;
+      
+    } catch (error: any) {
+      failed++;
+      errors.push({
+        row: rowNumber,
+        error: error.message || 'Unknown error',
+        data: row.values,
+      });
+    }
+  }
+  
+  return {
+    success: failed === 0,
+    imported,
+    failed,
+    errors,
+  };
+}
+
+/**
+ * Generate site import template
+ */
+export async function generateSiteTemplate(): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Sites');
+  
+  worksheet.columns = [
+    { header: 'Site Name*', key: 'name', width: 30 },
+    { header: 'Address', key: 'address', width: 40 },
+    { header: 'City', key: 'city', width: 20 },
+    { header: 'State', key: 'state', width: 20 },
+    { header: 'Country', key: 'country', width: 20 },
+    { header: 'Contact Person', key: 'contactPerson', width: 25 },
+    { header: 'Contact Phone', key: 'contactPhone', width: 20 },
+    { header: 'Contact Email', key: 'contactEmail', width: 30 },
+    { header: 'Latitude', key: 'latitude', width: 15 },
+    { header: 'Longitude', key: 'longitude', width: 15 },
+  ];
+  
+  // Add sample rows
+  worksheet.addRow({
+    name: 'NRCS Abuja Headquarters',
+    address: 'National Headquarters, Red Cross Road',
+    city: 'Abuja',
+    state: 'FCT',
+    country: 'Nigeria',
+    contactPerson: 'John Doe',
+    contactPhone: '+234-xxx-xxx-xxxx',
+    contactEmail: 'abuja@redcross.org.ng',
+    latitude: '9.0579',
+    longitude: '7.4951',
+  });
+  
+  worksheet.addRow({
+    name: 'NRCS Lagos State Branch',
+    address: '123 Marina Street',
+    city: 'Lagos',
+    state: 'Lagos',
+    country: 'Nigeria',
+    contactPerson: 'Jane Smith',
+    contactPhone: '+234-xxx-xxx-xxxx',
+    contactEmail: 'lagos@redcross.org.ng',
+    latitude: '6.5244',
+    longitude: '3.3792',
+  });
+  
+  // Style header
+  worksheet.getRow(1).font = { bold: true };
+  worksheet.getRow(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF1E3A8A' },
+  };
+  worksheet.getRow(1).font = { color: { argb: 'FFFFFFFF' }, bold: true };
+  
+  // Add instructions
+  worksheet.addRow([]);
+  worksheet.addRow(['Instructions:']);
+  worksheet.addRow(['1. Fill in the site information in the rows above']);
+  worksheet.addRow(['2. Fields marked with * are required']);
+  worksheet.addRow(['3. Delete the sample rows before uploading']);
+  worksheet.addRow(['4. Latitude and Longitude are optional but recommended for map features']);
+  worksheet.addRow(['5. Save the file and upload it through the Sites page']);
+  
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer);
+}

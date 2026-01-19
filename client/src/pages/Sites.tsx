@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Plus, Phone, Mail } from "lucide-react";
+import { MapPin, Plus, Phone, Mail, Upload, Download } from "lucide-react";
+import { useRef } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -13,7 +14,23 @@ import { useAuth } from "@/_core/hooks/useAuth";
 export default function Sites() {
   const { user } = useAuth();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: sites, isLoading, refetch } = trpc.sites.list.useQuery();
+  
+  const downloadTemplateMutation = trpc.bulkOperations.downloadSiteTemplate.useQuery(undefined, { enabled: false });
+  const importSitesMutation = trpc.bulkOperations.importSites.useMutation({
+    onSuccess: (result) => {
+      if (result.success) {
+        toast.success(`Successfully imported ${result.imported} sites`);
+      } else {
+        toast.warning(`Imported ${result.imported} sites, ${result.failed} failed`);
+      }
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Import failed: ${error.message}`);
+    },
+  });
 
   const createSiteMutation = trpc.sites.create.useMutation({
     onSuccess: () => {
@@ -28,6 +45,45 @@ export default function Sites() {
   });
 
   const [newSite, setNewSite] = useState({ name: "", address: "", city: "", state: "", contactPerson: "", contactPhone: "", contactEmail: "" });
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await fetch('/api/trpc/bulkOperations.downloadSiteTemplate');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'site_import_template.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success('Template downloaded successfully');
+    } catch (error) {
+      toast.error('Failed to download template');
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const base64 = event.target?.result as string;
+        importSitesMutation.mutate({ fileData: base64.split(',')[1] });
+      } catch (error) {
+        toast.error('Failed to read file');
+      }
+    };
+    reader.readAsDataURL(file);
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleCreateSite = () => {
     if (!newSite.name) {
@@ -48,6 +104,7 @@ export default function Sites() {
       <div className="flex items-center justify-between">
         <div><h1 className="text-3xl font-bold">Sites Management</h1><p className="text-muted-foreground mt-2">Manage organization locations</p></div>
         {canManageSites && (
+          <div className="flex gap-2">
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Add Site</Button></DialogTrigger>
             <DialogContent className="max-w-2xl">
@@ -70,7 +127,21 @@ export default function Sites() {
                 <Button onClick={handleCreateSite} disabled={createSiteMutation.isPending}>{createSiteMutation.isPending ? "Creating..." : "Create Site"}</Button>
               </DialogFooter>
             </DialogContent>
+            <Button variant="outline" onClick={handleDownloadTemplate}>
+              <Download className="mr-2 h-4 w-4" />Template
+            </Button>
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="mr-2 h-4 w-4" />Import
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
           </Dialog>
+          </div>
         )}
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
