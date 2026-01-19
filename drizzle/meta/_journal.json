@@ -15,6 +15,13 @@
       "when": 1768816557957,
       "tag": "0001_blushing_puff_adder",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1768834521183,
+      "tag": "0002_lyrical_maestro",
+      "breakpoints": true
     }
   ]
 }

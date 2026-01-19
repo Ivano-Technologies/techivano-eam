@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Package, MapPin, Calendar, DollarSign } from "lucide-react";
+import { ArrowLeft, Edit, Package, MapPin, Calendar, DollarSign, QrCode, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,16 @@ export default function AssetDetail() {
 
   const assetId = params?.id ? Number(params.id) : 0;
   const { data: asset, isLoading, refetch } = trpc.assets.getById.useQuery({ id: assetId });
+
+  const generateQRCodeMutation = trpc.assets.generateQRCode.useMutation({
+    onSuccess: () => {
+      toast.success("QR Code generated successfully");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Failed to generate QR code: ${error.message}`);
+    },
+  });
 
   const updateAssetMutation = trpc.assets.update.useMutation({
     onSuccess: () => {
@@ -233,6 +243,69 @@ export default function AssetDetail() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Warranty Expiry</p>
                 <p className="text-base">{new Date(asset.warrantyExpiry).toLocaleDateString()}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>QR Code</CardTitle>
+              {!asset.qrCode && canEdit && (
+                <Button
+                  size="sm"
+                  onClick={() => generateQRCodeMutation.mutate({ id: asset.id })}
+                  disabled={generateQRCodeMutation.isPending}
+                >
+                  <QrCode className="mr-2 h-4 w-4" />
+                  Generate QR Code
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {asset.qrCode ? (
+              <div className="space-y-4">
+                <div className="flex justify-center">
+                  <img
+                    src={asset.qrCode}
+                    alt="Asset QR Code"
+                    className="w-48 h-48 border-2 border-border rounded-lg"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = asset.qrCode!;
+                      link.download = `${asset.assetTag}-qr-code.png`;
+                      link.click();
+                    }}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => window.print()}
+                  >
+                    Print Label
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground text-center">
+                  Scan this QR code to view asset details
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <QrCode className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  No QR code generated yet
+                </p>
               </div>
             )}
           </CardContent>

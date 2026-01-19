@@ -105,15 +105,38 @@
 - [x] Create user-friendly forms with validation
 
 ## Phase 14: Testing & Documentation
-- [ ] Write unit tests for critical procedures
-- [ ] Test all user workflows
-- [ ] Test offline functionality
-- [ ] Create user documentation
-- [ ] Create deployment guide
-- [ ] Test multi-site functionality
+- [x] Write unit tests for critical procedures
+- [x] Test all user workflows
+- [x] Test offline functionality
+- [x] Create user documentation
+- [x] Create deployment guide
+- [x] Test multi-site functionality
 
 ## Phase 15: Deployment Preparation
-- [ ] Final testing across all modules
-- [ ] Performance optimization
-- [ ] Create initial checkpoint
-- [ ] Prepare deployment documentation
+- [x] Final testing across all modules
+- [x] Performance optimization
+- [x] Create initial checkpoint
+- [x] Prepare deployment documentation
+
+## Phase 16: QR Code Asset Tagging
+- [x] Install QR code generation library
+- [x] Add QR code field to assets table
+- [x] Generate unique QR codes for each asset
+- [x] Add QR code display on asset detail page
+- [x] Create QR code download/print functionality
+- [x] Build QR code scanner interface
+- [x] Implement scan-to-view asset details
+- [ ] Add scan-to-create work order feature
+- [ ] Create bulk QR code generation for printing labels
+
+## Phase 17: Asset & Vehicle Mapping
+- [x] Add GPS coordinates fields to assets and sites tables
+- [x] Integrate Google Maps component
+- [x] Build interactive map view page
+- [x] Display asset markers on map by site
+- [x] Add vehicle tracking markers
+- [x] Implement map filtering by asset type/category
+- [x] Add asset clustering for multiple assets at same location
+- [ ] Create asset location update interface
+- [ ] Add directions to asset location feature
+- [ ] Implement real-time location updates for vehicles

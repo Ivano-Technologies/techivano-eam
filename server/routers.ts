@@ -138,9 +138,35 @@ export const appRouter = router({
         assignedTo: z.number().optional(),
         imageUrl: z.string().optional(),
         notes: z.string().optional(),
+        latitude: z.string().optional(),
+        longitude: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
         return await db.createAsset(input);
+      }),
+    
+    generateQRCode: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const { generateAssetQRCode } = await import('./qrcode');
+        const asset = await db.getAssetById(input.id);
+        if (!asset) throw new TRPCError({ code: 'NOT_FOUND', message: 'Asset not found' });
+        
+        const qrCode = await generateAssetQRCode(asset.id, asset.assetTag);
+        await db.updateAsset(asset.id, { qrCode });
+        return { qrCode };
+      }),
+    
+    scanQRCode: protectedProcedure
+      .input(z.object({ qrData: z.string() }))
+      .query(async ({ input }) => {
+        const { parseAssetQRCode } = await import('./qrcode');
+        const parsed = parseAssetQRCode(input.qrData);
+        if (!parsed) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid QR code' });
+        
+        const asset = await db.getAssetById(parsed.assetId);
+        if (!asset) throw new TRPCError({ code: 'NOT_FOUND', message: 'Asset not found' });
+        return asset;
       }),
     
     update: managerOrAdminProcedure
@@ -161,6 +187,8 @@ export const appRouter = router({
         assignedTo: z.number().optional(),
         imageUrl: z.string().optional(),
         notes: z.string().optional(),
+        latitude: z.string().optional(),
+        longitude: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const { id, ...data } = input;
