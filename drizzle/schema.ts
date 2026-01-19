@@ -1,28 +1,274 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, bigint } from "drizzle-orm/mysql-core";
 
 /**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
+ * Core user table backing auth flow with extended roles for EAM system
  */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", ["admin", "manager", "technician", "user"]).default("user").notNull(),
+  siteId: int("siteId"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
+/**
+ * Sites/Locations for multi-site management
+ */
+export const sites = mysqlTable("sites", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 100 }),
+  country: varchar("country", { length: 100 }).default("Nigeria"),
+  contactPerson: varchar("contactPerson", { length: 255 }),
+  contactPhone: varchar("contactPhone", { length: 50 }),
+  contactEmail: varchar("contactEmail", { length: 320 }),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Asset Categories (e.g., Machinery, Buildings, Vehicles, Equipment)
+ */
+export const assetCategories = mysqlTable("assetCategories", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/**
+ * Assets - Core asset inventory
+ */
+export const assets = mysqlTable("assets", {
+  id: int("id").autoincrement().primaryKey(),
+  assetTag: varchar("assetTag", { length: 100 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  categoryId: int("categoryId").notNull(),
+  siteId: int("siteId").notNull(),
+  status: mysqlEnum("status", ["operational", "maintenance", "repair", "retired", "disposed"]).default("operational").notNull(),
+  manufacturer: varchar("manufacturer", { length: 255 }),
+  model: varchar("model", { length: 255 }),
+  serialNumber: varchar("serialNumber", { length: 255 }),
+  acquisitionDate: timestamp("acquisitionDate"),
+  acquisitionCost: decimal("acquisitionCost", { precision: 15, scale: 2 }),
+  currentValue: decimal("currentValue", { precision: 15, scale: 2 }),
+  depreciationRate: decimal("depreciationRate", { precision: 5, scale: 2 }),
+  warrantyExpiry: timestamp("warrantyExpiry"),
+  location: varchar("location", { length: 255 }),
+  assignedTo: int("assignedTo"),
+  imageUrl: text("imageUrl"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Work Orders
+ */
+export const workOrders = mysqlTable("workOrders", {
+  id: int("id").autoincrement().primaryKey(),
+  workOrderNumber: varchar("workOrderNumber", { length: 100 }).notNull().unique(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  assetId: int("assetId").notNull(),
+  siteId: int("siteId").notNull(),
+  type: mysqlEnum("type", ["corrective", "preventive", "inspection", "emergency"]).notNull(),
+  priority: mysqlEnum("priority", ["low", "medium", "high", "critical"]).default("medium").notNull(),
+  status: mysqlEnum("status", ["pending", "assigned", "in_progress", "on_hold", "completed", "cancelled"]).default("pending").notNull(),
+  assignedTo: int("assignedTo"),
+  requestedBy: int("requestedBy").notNull(),
+  scheduledStart: timestamp("scheduledStart"),
+  scheduledEnd: timestamp("scheduledEnd"),
+  actualStart: timestamp("actualStart"),
+  actualEnd: timestamp("actualEnd"),
+  estimatedCost: decimal("estimatedCost", { precision: 15, scale: 2 }),
+  actualCost: decimal("actualCost", { precision: 15, scale: 2 }),
+  completionNotes: text("completionNotes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Preventive Maintenance Schedules
+ */
+export const maintenanceSchedules = mysqlTable("maintenanceSchedules", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  assetId: int("assetId").notNull(),
+  frequency: mysqlEnum("frequency", ["daily", "weekly", "monthly", "quarterly", "semi_annual", "annual"]).notNull(),
+  frequencyValue: int("frequencyValue").default(1).notNull(),
+  lastPerformed: timestamp("lastPerformed"),
+  nextDue: timestamp("nextDue").notNull(),
+  assignedTo: int("assignedTo"),
+  isActive: boolean("isActive").default(true).notNull(),
+  taskTemplate: text("taskTemplate"),
+  estimatedDuration: int("estimatedDuration"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Inventory Items (spare parts and supplies)
+ */
+export const inventoryItems = mysqlTable("inventoryItems", {
+  id: int("id").autoincrement().primaryKey(),
+  itemCode: varchar("itemCode", { length: 100 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 100 }),
+  siteId: int("siteId").notNull(),
+  currentStock: int("currentStock").default(0).notNull(),
+  minStockLevel: int("minStockLevel").default(0).notNull(),
+  reorderPoint: int("reorderPoint").default(0).notNull(),
+  maxStockLevel: int("maxStockLevel"),
+  unitOfMeasure: varchar("unitOfMeasure", { length: 50 }),
+  unitCost: decimal("unitCost", { precision: 15, scale: 2 }),
+  vendorId: int("vendorId"),
+  location: varchar("location", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Inventory Transactions
+ */
+export const inventoryTransactions = mysqlTable("inventoryTransactions", {
+  id: int("id").autoincrement().primaryKey(),
+  itemId: int("itemId").notNull(),
+  type: mysqlEnum("type", ["in", "out", "adjustment", "transfer"]).notNull(),
+  quantity: int("quantity").notNull(),
+  workOrderId: int("workOrderId"),
+  fromSiteId: int("fromSiteId"),
+  toSiteId: int("toSiteId"),
+  unitCost: decimal("unitCost", { precision: 15, scale: 2 }),
+  totalCost: decimal("totalCost", { precision: 15, scale: 2 }),
+  performedBy: int("performedBy").notNull(),
+  notes: text("notes"),
+  transactionDate: timestamp("transactionDate").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/**
+ * Vendors
+ */
+export const vendors = mysqlTable("vendors", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  vendorCode: varchar("vendorCode", { length: 100 }).unique(),
+  contactPerson: varchar("contactPerson", { length: 255 }),
+  email: varchar("email", { length: 320 }),
+  phone: varchar("phone", { length: 50 }),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 100 }),
+  country: varchar("country", { length: 100 }),
+  website: varchar("website", { length: 255 }),
+  notes: text("notes"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Financial Transactions
+ */
+export const financialTransactions = mysqlTable("financialTransactions", {
+  id: int("id").autoincrement().primaryKey(),
+  transactionType: mysqlEnum("transactionType", ["acquisition", "maintenance", "repair", "disposal", "depreciation", "other"]).notNull(),
+  assetId: int("assetId"),
+  workOrderId: int("workOrderId"),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 10 }).default("NGN").notNull(),
+  description: text("description"),
+  transactionDate: timestamp("transactionDate").notNull(),
+  vendorId: int("vendorId"),
+  receiptNumber: varchar("receiptNumber", { length: 100 }),
+  approvedBy: int("approvedBy"),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/**
+ * Compliance Records
+ */
+export const complianceRecords = mysqlTable("complianceRecords", {
+  id: int("id").autoincrement().primaryKey(),
+  assetId: int("assetId"),
+  title: varchar("title", { length: 255 }).notNull(),
+  regulatoryBody: varchar("regulatoryBody", { length: 255 }),
+  requirementType: varchar("requirementType", { length: 100 }),
+  description: text("description"),
+  status: mysqlEnum("status", ["compliant", "non_compliant", "pending", "expired"]).default("pending").notNull(),
+  dueDate: timestamp("dueDate"),
+  completionDate: timestamp("completionDate"),
+  nextReviewDate: timestamp("nextReviewDate"),
+  assignedTo: int("assignedTo"),
+  documentUrl: text("documentUrl"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Audit Trail for compliance and tracking
+ */
+export const auditLogs = mysqlTable("auditLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  action: varchar("action", { length: 100 }).notNull(),
+  entityType: varchar("entityType", { length: 100 }),
+  entityId: int("entityId"),
+  changes: text("changes"),
+  ipAddress: varchar("ipAddress", { length: 50 }),
+  userAgent: text("userAgent"),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+/**
+ * Documents and Attachments
+ */
+export const documents = mysqlTable("documents", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  fileUrl: text("fileUrl").notNull(),
+  fileKey: varchar("fileKey", { length: 500 }).notNull(),
+  fileType: varchar("fileType", { length: 100 }),
+  fileSize: bigint("fileSize", { mode: "number" }),
+  entityType: varchar("entityType", { length: 100 }),
+  entityId: int("entityId"),
+  uploadedBy: int("uploadedBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// Type exports
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
-
-// TODO: Add your tables here
+export type Site = typeof sites.$inferSelect;
+export type InsertSite = typeof sites.$inferInsert;
+export type AssetCategory = typeof assetCategories.$inferSelect;
+export type Asset = typeof assets.$inferSelect;
+export type InsertAsset = typeof assets.$inferInsert;
+export type WorkOrder = typeof workOrders.$inferSelect;
+export type InsertWorkOrder = typeof workOrders.$inferInsert;
+export type MaintenanceSchedule = typeof maintenanceSchedules.$inferSelect;
+export type InsertMaintenanceSchedule = typeof maintenanceSchedules.$inferInsert;
+export type InventoryItem = typeof inventoryItems.$inferSelect;
+export type InsertInventoryItem = typeof inventoryItems.$inferInsert;
+export type InventoryTransaction = typeof inventoryTransactions.$inferSelect;
+export type Vendor = typeof vendors.$inferSelect;
+export type InsertVendor = typeof vendors.$inferInsert;
+export type FinancialTransaction = typeof financialTransactions.$inferSelect;
+export type ComplianceRecord = typeof complianceRecords.$inferSelect;
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type Document = typeof documents.$inferSelect;
