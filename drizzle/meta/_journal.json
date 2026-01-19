@@ -71,6 +71,13 @@
       "when": 1768858832295,
       "tag": "0009_romantic_switch",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1768859590009,
+      "tag": "0010_easy_mach_iv",
+      "breakpoints": true
     }
   ]
 }

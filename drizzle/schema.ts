@@ -435,3 +435,22 @@ export const userPreferences = mysqlTable("userPreferences", {
 });
 
 export type InsertUserPreferences = typeof userPreferences.$inferInsert;
+
+/**
+ * Email Notification History
+ */
+export const emailNotifications = mysqlTable("emailNotifications", {
+  id: int("id").autoincrement().primaryKey(),
+  subject: varchar("subject", { length: 255 }).notNull(),
+  body: text("body").notNull(),
+  recipientType: varchar("recipientType", { length: 50 }).notNull(), // 'all', 'individual', 'role'
+  recipientIds: text("recipientIds"), // JSON array of user IDs if individual
+  recipientRole: varchar("recipientRole", { length: 50 }), // 'admin', 'manager', 'user' if by role
+  sentBy: int("sentBy").notNull(),
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+  status: varchar("status", { length: 50 }).default("sent").notNull(), // 'sent', 'failed'
+  recipientCount: int("recipientCount").default(0),
+});
+
+export type EmailNotification = typeof emailNotifications.$inferSelect;
+export type InsertEmailNotification = typeof emailNotifications.$inferInsert;

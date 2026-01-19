@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2 } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -43,6 +43,7 @@ const menuItems = [
   { icon: MapPin, label: "Sites", path: "/sites" },
   { icon: Users, label: "Users", path: "/users" },
   { icon: DollarSign, label: "QuickBooks", path: "/quickbooks" },
+  { icon: Mail, label: "Email Notifications", path: "/email-notifications" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

@@ -7,7 +7,7 @@ import {
   financialTransactions, complianceRecords, auditLogs, documents,
   notifications, notificationPreferences, assetPhotos, InsertAssetPhoto,
   scheduledReports, InsertScheduledReport, assetTransfers, quickbooksConfig, InsertQuickBooksConfig,
-  userPreferences, InsertUserPreferences
+  userPreferences, InsertUserPreferences, emailNotifications, InsertEmailNotification
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -882,4 +882,30 @@ export async function upsertUserPreferences(prefs: InsertUserPreferences) {
     const insertId = result[0].insertId;
     return await db.select().from(userPreferences).where(eq(userPreferences.id, Number(insertId))).limit(1).then(r => r[0]);
   }
+}
+
+
+// ============= Email Notifications =============
+export async function createEmailNotification(notification: InsertEmailNotification) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.insert(emailNotifications).values(notification);
+  const insertId = result[0].insertId;
+  return await db.select().from(emailNotifications).where(eq(emailNotifications.id, Number(insertId))).limit(1).then(r => r[0]);
+}
+
+export async function getEmailNotificationHistory(limit: number = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(emailNotifications).orderBy(desc(emailNotifications.sentAt)).limit(limit);
+}
+
+export async function getEmailNotificationById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(emailNotifications).where(eq(emailNotifications.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
 }
