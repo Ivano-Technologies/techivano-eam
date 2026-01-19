@@ -19,6 +19,7 @@ import Compliance from "./pages/Compliance";
 import Sites from "./pages/Sites";
 import Users from "./pages/Users";
 import NotificationPreferences from "./pages/NotificationPreferences";
+import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
 function Router() {
   return (
@@ -49,6 +50,7 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
+          <PWAInstallPrompt />
           <DashboardLayout>
             <Router />
           </DashboardLayout>

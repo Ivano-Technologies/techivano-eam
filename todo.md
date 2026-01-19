@@ -170,3 +170,18 @@
 - [x] Create notifications for work order assignments
 - [x] Add notifications for asset status changes
 - [x] Test notification system end-to-end
+
+## Phase 20: Progressive Web App (PWA) Installation
+- [x] Create web app manifest.json with NRCS metadata
+- [x] Generate app icons in multiple sizes (192x192, 512x512, etc.)
+- [x] Add manifest link to index.html
+- [x] Configure theme colors and display mode
+- [x] Enhance service worker for app shell caching
+- [x] Add offline fallback page
+- [x] Implement install prompt UI component
+- [x] Add "Add to Home Screen" banner for mobile
+- [x] Detect standalone mode and adjust UI
+- [x] Test installation on Windows desktop
+- [x] Test installation on Android mobile
+- [x] Test installation on iOS devices
+- [x] Create installation guide documentation
