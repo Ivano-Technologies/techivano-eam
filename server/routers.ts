@@ -1278,5 +1278,111 @@ export const appRouter = router({
         return await db.getPendingTransferRequests();
       }),
   }),
+
+  // ============= QUICKBOOKS INTEGRATION =============
+  quickbooks: router({
+    getConfig: protectedProcedure.query(async () => {
+      return await db.getQuickBooksConfig();
+    }),
+    
+    saveConfig: protectedProcedure
+      .input(z.object({
+        clientId: z.string(),
+        clientSecret: z.string(),
+        redirectUri: z.string(),
+        realmId: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.saveQuickBooksConfig({
+          ...input,
+          isActive: 1,
+          autoSync: 1,
+        });
+      }),
+    
+    getAuthUrl: protectedProcedure
+      .input(z.object({
+        clientId: z.string(),
+        redirectUri: z.string(),
+      }))
+      .query(({ input }) => {
+        const { getQuickBooksAuthUrl } = require('./quickbooksIntegration');
+        return { url: getQuickBooksAuthUrl(input) };
+      }),
+    
+    exchangeCode: protectedProcedure
+      .input(z.object({
+        code: z.string(),
+        realmId: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const config = await db.getQuickBooksConfig();
+        if (!config) throw new Error('QuickBooks not configured');
+        
+        const { exchangeCodeForToken } = require('./quickbooksIntegration');
+        const tokens = await exchangeCodeForToken(input.code, {
+          clientId: config.clientId,
+          clientSecret: config.clientSecret,
+          redirectUri: config.redirectUri,
+        });
+        
+        // Update config with tokens
+        const expiresAt = new Date(Date.now() + tokens.expiresIn * 1000);
+        await db.updateQuickBooksTokens(config.id, tokens.accessToken, tokens.refreshToken, expiresAt);
+        
+        // Update realm ID if provided
+        if (input.realmId) {
+          await db.saveQuickBooksConfig({
+            ...config,
+            realmId: input.realmId,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            tokenExpiresAt: expiresAt,
+          });
+        }
+        
+        return { success: true };
+      }),
+    
+    syncTransactions: protectedProcedure.mutation(async () => {
+      const config = await db.getQuickBooksConfig();
+      if (!config || !config.accessToken) {
+        throw new Error('QuickBooks not authenticated');
+      }
+      
+      const { syncAllTransactions } = require('./quickbooksIntegration');
+      const result = await syncAllTransactions({
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+        redirectUri: config.redirectUri,
+        realmId: config.realmId,
+        accessToken: config.accessToken,
+        refreshToken: config.refreshToken || undefined,
+      });
+      
+      await db.updateQuickBooksLastSync(config.id);
+      
+      return result;
+    }),
+    
+    testConnection: protectedProcedure.query(async () => {
+      const config = await db.getQuickBooksConfig();
+      if (!config || !config.accessToken) {
+        return { connected: false, error: 'Not authenticated' };
+      }
+      
+      const { testConnection } = require('./quickbooksIntegration');
+      const connected = await testConnection({
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+        redirectUri: config.redirectUri,
+        realmId: config.realmId,
+        accessToken: config.accessToken,
+        refreshToken: config.refreshToken || undefined,
+      });
+      
+      return { connected };
+    }),
+  }),
 });
 export type AppRouter = typeof appRouter;

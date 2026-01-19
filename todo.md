@@ -327,3 +327,20 @@
 - [ ] Add depreciation sync
 - [ ] Create reconciliation reports
 - [ ] Test accounting data flow
+
+
+## Phase 35: QuickBooks Integration
+- [x] Install QuickBooks SDK/API library
+- [x] Create QuickBooks OAuth configuration
+- [x] Implement OAuth authentication flow
+- [x] Store QuickBooks tokens securely
+- [x] Build automatic transaction sync
+- [x] Map EAM expenses to QuickBooks categories
+- [x] Implement real-time sync on transaction creation
+- [x] Add manual sync trigger
+- [x] Create QuickBooks settings page
+- [x] Build sync status dashboard
+- [x] Add error handling and retry logic
+- [x] Test OAuth flow
+- [x] Test transaction sync
+- [x] Create QuickBooks integration documentation

@@ -6,7 +6,7 @@ import {
   inventoryItems, InsertInventoryItem, inventoryTransactions, vendors, InsertVendor,
   financialTransactions, complianceRecords, auditLogs, documents,
   notifications, notificationPreferences, assetPhotos, InsertAssetPhoto,
-  scheduledReports, InsertScheduledReport, assetTransfers
+  scheduledReports, InsertScheduledReport, assetTransfers, quickbooksConfig, InsertQuickBooksConfig
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -794,4 +794,63 @@ export async function getAssetByTag(assetTag: string) {
   
   const result = await db.select().from(assets).where(eq(assets.assetTag, assetTag)).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+
+export async function getFinancialTransactionById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(financialTransactions).where(eq(financialTransactions.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+
+// ============= QuickBooks Configuration =============
+export async function getQuickBooksConfig() {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(quickbooksConfig).where(eq(quickbooksConfig.isActive, 1)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function saveQuickBooksConfig(config: InsertQuickBooksConfig) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  // Deactivate all existing configs
+  await db.update(quickbooksConfig).set({ isActive: 0 });
+  
+  // Insert new config
+  const result = await db.insert(quickbooksConfig).values(config);
+  const insertId = result[0].insertId;
+  
+  return await db.select().from(quickbooksConfig).where(eq(quickbooksConfig.id, Number(insertId))).limit(1).then(r => r[0]);
+}
+
+export async function updateQuickBooksTokens(id: number, accessToken: string, refreshToken: string, expiresAt: Date) {
+  const db = await getDb();
+  if (!db) return false;
+  
+  await db.update(quickbooksConfig)
+    .set({ 
+      accessToken, 
+      refreshToken, 
+      tokenExpiresAt: expiresAt 
+    })
+    .where(eq(quickbooksConfig.id, id));
+  
+  return true;
+}
+
+export async function updateQuickBooksLastSync(id: number) {
+  const db = await getDb();
+  if (!db) return false;
+  
+  await db.update(quickbooksConfig)
+    .set({ lastSyncAt: new Date() })
+    .where(eq(quickbooksConfig.id, id));
+  
+  return true;
 }

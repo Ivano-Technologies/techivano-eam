@@ -41,6 +41,7 @@ const menuItems = [
   { icon: FileText, label: "Reports", path: "/reports" },
   { icon: MapPin, label: "Sites", path: "/sites" },
   { icon: Users, label: "Users", path: "/users" },
+  { icon: DollarSign, label: "QuickBooks", path: "/quickbooks" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

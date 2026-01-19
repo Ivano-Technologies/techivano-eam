@@ -398,3 +398,26 @@ export const assetTransfers = mysqlTable("assetTransfers", {
 
 export type AssetTransfer = typeof assetTransfers.$inferSelect;
 export type InsertAssetTransfer = typeof assetTransfers.$inferInsert;
+
+
+/**
+ * QuickBooks Integration Configuration
+ */
+export const quickbooksConfig = mysqlTable("quickbooksConfig", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: varchar("clientId", { length: 255 }).notNull(),
+  clientSecret: varchar("clientSecret", { length: 255 }).notNull(),
+  redirectUri: varchar("redirectUri", { length: 500 }).notNull(),
+  realmId: varchar("realmId", { length: 255 }).notNull(), // Company ID
+  accessToken: text("accessToken"),
+  refreshToken: text("refreshToken"),
+  tokenExpiresAt: timestamp("tokenExpiresAt"),
+  isActive: int("isActive").default(1).notNull(), // 1 = active, 0 = inactive
+  lastSyncAt: timestamp("lastSyncAt"),
+  autoSync: int("autoSync").default(1).notNull(), // 1 = enabled, 0 = disabled
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type QuickBooksConfig = typeof quickbooksConfig.$inferSelect;
+export type InsertQuickBooksConfig = typeof quickbooksConfig.$inferInsert;
