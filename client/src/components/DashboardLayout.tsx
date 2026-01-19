@@ -211,10 +211,11 @@ function DashboardLayoutContent({
               )}
               <button
                 onClick={toggleSidebar}
-                className="h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 ml-auto"
-                aria-label="Toggle navigation"
+                className="h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 ml-auto border border-sidebar-border hover:border-primary/50"
+                aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
-                <PanelLeft className="h-4 w-4 text-sidebar-foreground" />
+                <PanelLeft className={`h-4 w-4 text-sidebar-foreground transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
               </button>
             </div>
           </SidebarHeader>

@@ -358,3 +358,4 @@
 
 ## Phase 37: Bug Fixes
 - [x] Fix QuickBooks getConfig query returning undefined error
+- [x] Fix dashboard sidebar collapse/expand toggle functionality
