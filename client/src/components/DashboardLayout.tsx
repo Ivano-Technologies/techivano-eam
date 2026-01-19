@@ -38,6 +38,7 @@ const menuItems = [
   { icon: Building2, label: "Vendors", path: "/vendors" },
   { icon: DollarSign, label: "Financial", path: "/financial" },
   { icon: FileText, label: "Compliance", path: "/compliance" },
+  { icon: FileText, label: "Reports", path: "/reports" },
   { icon: MapPin, label: "Sites", path: "/sites" },
   { icon: Users, label: "Users", path: "/users" },
 ];

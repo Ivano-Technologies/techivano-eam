@@ -6,6 +6,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import * as db from "./db";
 import * as notificationHelper from "./notificationHelper";
+import { generatePDFReport, generateExcelReport } from "./reportGenerator";
 
 // Role-based middleware
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -676,6 +677,214 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         return await db.upsertNotificationPreferences(ctx.user.id, input);
+      }),
+  }),
+
+  // Reports
+  reports: router({
+    // Asset Reports
+    assetInventory: protectedProcedure
+      .input(z.object({
+        format: z.enum(['pdf', 'excel']),
+        siteId: z.number().optional(),
+        categoryId: z.number().optional(),
+        status: z.enum(['operational', 'maintenance', 'retired', 'disposed']).optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const assets = await db.getAllAssets();
+
+        const columns = [
+          { header: 'Asset Tag', key: 'assetTag', width: 15 },
+          { header: 'Name', key: 'name', width: 25 },
+          { header: 'Category', key: 'categoryName', width: 15 },
+          { header: 'Site', key: 'siteName', width: 20 },
+          { header: 'Status', key: 'status', width: 12 },
+          { header: 'Condition', key: 'condition', width: 12 },
+          { header: 'Purchase Date', key: 'purchaseDate', width: 15 },
+        ];
+
+        const title = 'Asset Inventory Report';
+        const subtitle = `Generated for ${input.siteId ? 'Site ' + input.siteId : 'All Sites'}`;
+
+        if (input.format === 'pdf') {
+          const buffer = await generatePDFReport(title, assets, columns, { subtitle });
+          return {
+            data: buffer.toString('base64'),
+            filename: `asset-inventory-${Date.now()}.pdf`,
+            mimeType: 'application/pdf',
+          };
+        } else {
+          const buffer = await generateExcelReport(title, assets, columns, { sheetName: 'Assets' });
+          return {
+            data: buffer.toString('base64'),
+            filename: `asset-inventory-${Date.now()}.xlsx`,
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          };
+        }
+      }),
+
+    // Maintenance Reports
+    maintenanceSchedule: protectedProcedure
+      .input(z.object({
+        format: z.enum(['pdf', 'excel']),
+        siteId: z.number().optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const schedules = await db.getAllMaintenanceSchedules();
+
+        const columns = [
+          { header: 'Schedule Name', key: 'scheduleName', width: 25 },
+          { header: 'Asset', key: 'assetName', width: 20 },
+          { header: 'Type', key: 'maintenanceType', width: 15 },
+          { header: 'Frequency', key: 'frequency', width: 12 },
+          { header: 'Last Performed', key: 'lastPerformed', width: 15 },
+          { header: 'Next Due', key: 'nextDue', width: 15 },
+          { header: 'Status', key: 'status', width: 12 },
+        ];
+
+        const title = 'Maintenance Schedule Report';
+        const subtitle = `Period: ${input.startDate || 'All'} to ${input.endDate || 'All'}`;
+
+        if (input.format === 'pdf') {
+          const buffer = await generatePDFReport(title, schedules, columns, { subtitle });
+          return {
+            data: buffer.toString('base64'),
+            filename: `maintenance-schedule-${Date.now()}.pdf`,
+            mimeType: 'application/pdf',
+          };
+        } else {
+          const buffer = await generateExcelReport(title, schedules, columns, { sheetName: 'Maintenance' });
+          return {
+            data: buffer.toString('base64'),
+            filename: `maintenance-schedule-${Date.now()}.xlsx`,
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          };
+        }
+      }),
+
+    // Work Order Reports
+    workOrders: protectedProcedure
+      .input(z.object({
+        format: z.enum(['pdf', 'excel']),
+        siteId: z.number().optional(),
+        status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']).optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const workOrders = await db.getAllWorkOrders();
+
+        const columns = [
+          { header: 'WO Number', key: 'workOrderNumber', width: 15 },
+          { header: 'Title', key: 'title', width: 25 },
+          { header: 'Asset', key: 'assetName', width: 20 },
+          { header: 'Type', key: 'type', width: 12 },
+          { header: 'Priority', key: 'priority', width: 10 },
+          { header: 'Status', key: 'status', width: 12 },
+          { header: 'Created', key: 'createdAt', width: 15 },
+          { header: 'Completed', key: 'completedAt', width: 15 },
+        ];
+
+        const title = 'Work Orders Report';
+        const subtitle = `Status: ${input.status || 'All'}`;
+
+        if (input.format === 'pdf') {
+          const buffer = await generatePDFReport(title, workOrders, columns, { subtitle });
+          return {
+            data: buffer.toString('base64'),
+            filename: `work-orders-${Date.now()}.pdf`,
+            mimeType: 'application/pdf',
+          };
+        } else {
+          const buffer = await generateExcelReport(title, workOrders, columns, { sheetName: 'Work Orders' });
+          return {
+            data: buffer.toString('base64'),
+            filename: `work-orders-${Date.now()}.xlsx`,
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          };
+        }
+      }),
+
+    // Financial Reports
+    financial: protectedProcedure
+      .input(z.object({
+        format: z.enum(['pdf', 'excel']),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const transactions = await db.getFinancialTransactions();
+
+        const columns = [
+          { header: 'Date', key: 'transactionDate', width: 15 },
+          { header: 'Asset', key: 'assetName', width: 20 },
+          { header: 'Type', key: 'transactionType', width: 15 },
+          { header: 'Category', key: 'category', width: 15 },
+          { header: 'Amount', key: 'amount', width: 12 },
+          { header: 'Description', key: 'description', width: 30 },
+        ];
+
+        const title = 'Financial Summary Report';
+        const subtitle = `Period: ${input.startDate || 'All'} to ${input.endDate || 'All'}`;
+
+        if (input.format === 'pdf') {
+          const buffer = await generatePDFReport(title, transactions, columns, { subtitle });
+          return {
+            data: buffer.toString('base64'),
+            filename: `financial-report-${Date.now()}.pdf`,
+            mimeType: 'application/pdf',
+          };
+        } else {
+          const buffer = await generateExcelReport(title, transactions, columns, { sheetName: 'Financial' });
+          return {
+            data: buffer.toString('base64'),
+            filename: `financial-report-${Date.now()}.xlsx`,
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          };
+        }
+      }),
+
+    // Compliance Reports
+    compliance: protectedProcedure
+      .input(z.object({
+        format: z.enum(['pdf', 'excel']),
+        siteId: z.number().optional(),
+        status: z.enum(['compliant', 'non_compliant', 'pending']).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const records = await db.getAllComplianceRecords();
+
+        const columns = [
+          { header: 'Asset', key: 'assetName', width: 20 },
+          { header: 'Requirement', key: 'requirementName', width: 25 },
+          { header: 'Status', key: 'status', width: 12 },
+          { header: 'Last Inspection', key: 'lastInspectionDate', width: 15 },
+          { header: 'Next Due', key: 'nextDueDate', width: 15 },
+          { header: 'Inspector', key: 'inspectorName', width: 15 },
+        ];
+
+        const title = 'Compliance Audit Report';
+        const subtitle = `Status: ${input.status || 'All'}`;
+
+        if (input.format === 'pdf') {
+          const buffer = await generatePDFReport(title, records, columns, { subtitle });
+          return {
+            data: buffer.toString('base64'),
+            filename: `compliance-report-${Date.now()}.pdf`,
+            mimeType: 'application/pdf',
+          };
+        } else {
+          const buffer = await generateExcelReport(title, records, columns, { sheetName: 'Compliance' });
+          return {
+            data: buffer.toString('base64'),
+            filename: `compliance-report-${Date.now()}.xlsx`,
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          };
+        }
       }),
   }),
 });

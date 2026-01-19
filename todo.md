@@ -185,3 +185,29 @@
 - [x] Test installation on Android mobile
 - [x] Test installation on iOS devices
 - [x] Create installation guide documentation
+
+## Phase 21: Advanced Reporting System
+- [x] Install PDF generation library (jsPDF or pdfkit)
+- [x] Install Excel generation library (exceljs)
+- [ ] Create reports database table for saved reports
+- [x] Build report generation backend APIs
+- [x] Create asset inventory report (PDF/Excel)
+- [ ] Create asset history report with timeline
+- [ ] Create depreciation analysis report
+- [x] Create maintenance schedule report
+- [x] Create completed work orders report
+- [ ] Create maintenance cost analysis report
+- [x] Create financial summary report
+- [x] Create compliance audit trail report
+- [x] Build Reports page UI with filters
+- [x] Add date range filter
+- [x] Add site filter
+- [x] Add category filter
+- [x] Add status filter
+- [x] Implement PDF export with NRCS branding
+- [ ] Add charts and graphs to PDF reports
+- [x] Implement Excel export with detailed tables
+- [ ] Add report preview before export
+- [x] Create report templates
+- [x] Test all report types
+- [x] Create reporting documentation
