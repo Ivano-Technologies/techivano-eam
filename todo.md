@@ -347,11 +347,14 @@
 
 
 ## Phase 36: Database Cleanup & Bulk Site Upload
-- [ ] Delete all sample data from database
-- [ ] Create bulk site upload API endpoint
-- [ ] Add Excel file parsing for sites
-- [ ] Implement data validation
-- [ ] Create bulk upload UI on Sites page
-- [ ] Generate Excel template for download
-- [ ] Create step-by-step upload guide
-- [ ] Test bulk upload with sample data
+- [x] Delete all sample data from database
+- [x] Create bulk site upload API endpoint
+- [x] Add Excel file parsing for sites
+- [x] Implement data validation
+- [x] Create bulk upload UI on Sites page
+- [x] Generate Excel template for download
+- [x] Create step-by-step upload guide
+- [x] Test bulk upload with sample data
+
+## Phase 37: Bug Fixes
+- [x] Fix QuickBooks getConfig query returning undefined error

@@ -809,10 +809,10 @@ export async function getFinancialTransactionById(id: number) {
 // ============= QuickBooks Configuration =============
 export async function getQuickBooksConfig() {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) return null;
   
   const result = await db.select().from(quickbooksConfig).where(eq(quickbooksConfig.isActive, 1)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  return result.length > 0 ? result[0] : null;
 }
 
 export async function saveQuickBooksConfig(config: InsertQuickBooksConfig) {
