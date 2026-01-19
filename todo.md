@@ -414,3 +414,25 @@
 - [x] Arrange menu items alphabetically
 - [x] Keep Dashboard at the top
 - [x] Test with admin and non-admin users
+
+## Phase 45: User Role Management UI
+- [x] Add role change dropdown to Users page
+- [x] Create backend API for updating user roles
+- [x] Add role change confirmation dialog
+- [x] Test role changes with admin user
+
+## Phase 46: Dashboard Widget Customization
+- [x] Add widget visibility preferences to user schema
+- [x] Create widget visibility toggle UI (simplified)
+- [x] Save widget preferences per user
+- [x] Backend API for dashboard widget preferences
+
+## Phase 47: Asset Maintenance History Timeline
+- [x] Create timeline component for asset details
+- [x] Fetch maintenance history and work orders
+- [x] Display timeline with dates and status
+- [x] Add visual timeline with icons and colors
+
+## Phase 48: Update Sidebar Text
+- [x] Change "NRCS EAM" to "Nigerian Red Cross Society"
+- [x] Change "Asset Management" to "Enterprise Asset Management"

@@ -437,6 +437,7 @@ export const userPreferences = mysqlTable("userPreferences", {
   userId: int("userId").notNull().unique(),
   sidebarWidth: int("sidebarWidth").default(280),
   sidebarCollapsed: int("sidebarCollapsed").default(0), // 0 = expanded, 1 = collapsed
+  dashboardWidgets: text("dashboardWidgets"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

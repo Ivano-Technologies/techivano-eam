@@ -1439,6 +1439,17 @@ export const appRouter = router({
           ...input,
         });
       }),
+
+    updateDashboardWidgets: protectedProcedure
+      .input(z.object({
+        widgets: z.record(z.string(), z.boolean()),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.upsertUserPreferences({
+          userId: ctx.user.id,
+          dashboardWidgets: JSON.stringify(input.widgets),
+        });
+      }),
   }),
 
   // ============= EMAIL NOTIFICATIONS =============

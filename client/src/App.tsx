@@ -23,6 +23,7 @@ import NotificationPreferences from "./pages/NotificationPreferences";
 import Reports from "./pages/Reports";
 import QuickBooksSettings from "./pages/QuickBooksSettings";
 import EmailNotifications from "./pages/EmailNotifications";
+import DashboardSettings from "./pages/DashboardSettings";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
 function Router() {
@@ -45,7 +46,8 @@ function Router() {
       <Route path="/notification-preferences" component={NotificationPreferences} />
       <Route path="/reports" component={Reports} />
       <Route path="/quickbooks" component={QuickBooksSettings} />
-      <Route path="/email-notifications" component={EmailNotifications} />
+        <Route path="/email-notifications" component={EmailNotifications} />
+        <Route path="/dashboard-settings" component={DashboardSettings} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

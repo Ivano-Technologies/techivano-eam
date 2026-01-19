@@ -31,6 +31,7 @@ import { NotificationCenter } from "./NotificationCenter";
 
 const allMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: false, sortOrder: 0 },
+  { icon: Settings, label: "Dashboard Settings", path: "/dashboard-settings", adminOnly: false },
   { icon: Package, label: "Assets", path: "/assets", adminOnly: false },
   { icon: Map, label: "Asset Map", path: "/asset-map", adminOnly: false },
   { icon: Scan, label: "Asset Scanner", path: "/scanner", adminOnly: false },
@@ -254,10 +255,10 @@ function DashboardLayoutContent({
                 />
                 <div className="flex flex-col min-w-0">
                   <span className="font-bold text-sm text-sidebar-foreground truncate">
-                    NRCS EAM
+                    Nigerian Red Cross Society
                   </span>
                   <span className="text-xs text-sidebar-foreground/70 truncate">
-                    Asset Management
+                    Enterprise Asset Management
                   </span>
                 </div>
               </div>

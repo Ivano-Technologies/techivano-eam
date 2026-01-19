@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import AssetDepreciation from "@/components/AssetDepreciation";
+import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
 
 export default function AssetDetail() {
   const [, params] = useRoute("/assets/:id");
@@ -328,6 +329,9 @@ export default function AssetDetail() {
       {asset.depreciationMethod && asset.depreciationMethod !== 'none' && (
         <AssetDepreciation assetId={assetId} />
       )}
+
+      {/* Maintenance Timeline */}
+      <AssetMaintenanceTimeline assetId={assetId} />
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
