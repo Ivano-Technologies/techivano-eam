@@ -70,6 +70,8 @@ export const assets = mysqlTable("assets", {
   imageUrl: text("imageUrl"),
   notes: text("notes"),
   qrCode: text("qrCode"),
+  barcode: varchar("barcode", { length: 255 }),
+  barcodeFormat: varchar("barcodeFormat", { length: 50 }),
   latitude: decimal("latitude", { precision: 10, scale: 8 }),
   longitude: decimal("longitude", { precision: 11, scale: 8 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -370,3 +372,29 @@ export type AssetPhoto = typeof assetPhotos.$inferSelect;
 export type InsertAssetPhoto = typeof assetPhotos.$inferInsert;
 export type ScheduledReport = typeof scheduledReports.$inferSelect;
 export type InsertScheduledReport = typeof scheduledReports.$inferInsert;
+
+
+/**
+ * Asset Transfer Requests
+ */
+export const assetTransfers = mysqlTable("assetTransfers", {
+  id: int("id").autoincrement().primaryKey(),
+  assetId: int("assetId").notNull(),
+  fromSiteId: int("fromSiteId").notNull(),
+  toSiteId: int("toSiteId").notNull(),
+  requestedBy: int("requestedBy").notNull(),
+  approvedBy: int("approvedBy"),
+  status: mysqlEnum("status", ["pending", "approved", "rejected", "in_transit", "completed", "cancelled"]).default("pending").notNull(),
+  requestDate: timestamp("requestDate").defaultNow().notNull(),
+  approvalDate: timestamp("approvalDate"),
+  transferDate: timestamp("transferDate"),
+  completionDate: timestamp("completionDate"),
+  reason: text("reason"),
+  notes: text("notes"),
+  handoverChecklist: text("handoverChecklist"), // JSON string
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AssetTransfer = typeof assetTransfers.$inferSelect;
+export type InsertAssetTransfer = typeof assetTransfers.$inferInsert;

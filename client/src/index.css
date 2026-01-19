@@ -178,3 +178,100 @@
     }
   }
 }
+
+/* ===== Mobile-First Responsive Design Enhancements ===== */
+
+/* Larger touch targets for mobile */
+@media (max-width: 768px) {
+  button, 
+  a[role="button"],
+  [type="button"],
+  [type="submit"] {
+    @apply min-h-[44px] min-w-[44px] text-base;
+  }
+  
+  /* Larger form inputs for mobile */
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="password"],
+  textarea,
+  select {
+    @apply text-base min-h-[44px] px-4;
+  }
+  
+  /* Mobile-optimized table display */
+  .mobile-table-card {
+    @apply block border rounded-lg p-4 mb-4;
+  }
+  
+  .mobile-table-card > div {
+    @apply flex justify-between py-2 border-b last:border-b-0;
+  }
+  
+  /* Simplified navigation for mobile */
+  .mobile-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-background border-t z-50;
+  }
+  
+  /* Full-width mobile forms */
+  .mobile-form {
+    @apply w-full px-4;
+  }
+  
+  /* Optimized spacing for mobile */
+  .mobile-spacing {
+    @apply space-y-4 p-4;
+  }
+  
+  /* Hide desktop-only elements */
+  .desktop-only {
+    @apply hidden;
+  }
+  
+  /* Show mobile-only elements */
+  .mobile-only {
+    @apply block;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-only {
+    @apply hidden;
+  }
+  
+  .desktop-only {
+    @apply block;
+  }
+}
+
+/* Swipe gesture indicators */
+.swipeable {
+  @apply touch-pan-x;
+}
+
+/* Offline indicator */
+.offline-indicator {
+  @apply fixed top-0 left-0 right-0 bg-yellow-500 text-white text-center py-2 z-50;
+}
+
+/* Loading skeleton for offline mode */
+.skeleton {
+  @apply animate-pulse bg-muted rounded;
+}
+
+/* Mobile-optimized cards */
+@media (max-width: 768px) {
+  .card-mobile {
+    @apply rounded-lg shadow-sm border p-4 mb-3;
+  }
+  
+  .card-mobile-header {
+    @apply flex items-center justify-between mb-3 pb-3 border-b;
+  }
+  
+  .card-mobile-content {
+    @apply space-y-2 text-sm;
+  }
+}

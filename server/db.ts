@@ -6,7 +6,7 @@ import {
   inventoryItems, InsertInventoryItem, inventoryTransactions, vendors, InsertVendor,
   financialTransactions, complianceRecords, auditLogs, documents,
   notifications, notificationPreferences, assetPhotos, InsertAssetPhoto,
-  scheduledReports, InsertScheduledReport
+  scheduledReports, InsertScheduledReport, assetTransfers
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -712,4 +712,86 @@ export async function deleteUser(id: number) {
   
   await db.delete(users).where(eq(users.id, id));
   return { success: true };
+}
+
+
+export async function getAssetByBarcode(barcode: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(assets).where(eq(assets.barcode, barcode)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+
+export async function getAssetWorkOrders(assetId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(workOrders).where(eq(workOrders.assetId, assetId));
+}
+
+
+// ============= ASSET TRANSFERS =============
+
+export async function createAssetTransfer(transfer: typeof assetTransfers.$inferInsert) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.insert(assetTransfers).values(transfer);
+  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
+  if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
+  return await db.select().from(assetTransfers).where(eq(assetTransfers.id, insertId)).limit(1).then(r => r[0]);
+}
+
+export async function getAllAssetTransfers(filters?: { status?: string; assetId?: number; siteId?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const conditions = [];
+  if (filters?.status) conditions.push(eq(assetTransfers.status, filters.status as any));
+  if (filters?.assetId) conditions.push(eq(assetTransfers.assetId, filters.assetId));
+  if (filters?.siteId) conditions.push(
+    or(eq(assetTransfers.fromSiteId, filters.siteId), eq(assetTransfers.toSiteId, filters.siteId))
+  );
+  
+  if (conditions.length > 0) {
+    return await db.select().from(assetTransfers)
+      .where(and(...conditions))
+      .orderBy(desc(assetTransfers.requestDate));
+  }
+  
+  return await db.select().from(assetTransfers).orderBy(desc(assetTransfers.requestDate));
+}
+
+export async function getAssetTransferById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(assetTransfers).where(eq(assetTransfers.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateAssetTransfer(id: number, data: Partial<typeof assetTransfers.$inferInsert>) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.update(assetTransfers).set(data).where(eq(assetTransfers.id, id));
+  return await db.select().from(assetTransfers).where(eq(assetTransfers.id, id)).limit(1).then(r => r[0] || null);
+}
+
+export async function getPendingTransferRequests() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(assetTransfers)
+    .where(eq(assetTransfers.status, 'pending'))
+    .orderBy(asc(assetTransfers.requestDate));
+}
+
+
+export async function getAssetByTag(assetTag: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(assets).where(eq(assets.assetTag, assetTag)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
 }

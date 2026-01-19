@@ -36,6 +36,20 @@
       "when": 1768853771850,
       "tag": "0004_brave_stardust",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1768854302742,
+      "tag": "0005_colossal_lady_vermin",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1768854604737,
+      "tag": "0006_minor_slayback",
+      "breakpoints": true
     }
   ]
 }

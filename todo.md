@@ -258,3 +258,72 @@
 - [x] Reset auto-increment counters
 - [x] Verify database is clean
 - [x] Test application with empty database
+
+## Phase 27: Mobile-First Responsive Design
+- [ ] Optimize navigation for mobile screens
+- [ ] Increase touch target sizes for buttons
+- [ ] Implement mobile-optimized forms
+- [ ] Add offline-first data entry with sync
+- [ ] Test on various mobile devices
+- [ ] Optimize table displays for mobile
+- [ ] Add swipe gestures for common actions
+
+## Phase 28: Barcode Scanner Integration
+- [ ] Add barcode scanning library
+- [ ] Support Code 128, Code 39, EAN-13 formats
+- [ ] Create unified scanner for QR + barcodes
+- [ ] Add barcode to asset schema
+- [ ] Implement barcode generation
+- [ ] Test barcode scanning on mobile
+
+## Phase 29: Asset Lifecycle Cost Analysis
+- [ ] Add TCO calculation functions
+- [ ] Track purchase + maintenance + downtime costs
+- [ ] Create lifecycle cost reports
+- [ ] Add cost comparison by category
+- [ ] Build TCO dashboard widgets
+- [ ] Generate cost optimization recommendations
+
+## Phase 30: Predictive Maintenance AI
+- [ ] Collect historical maintenance data
+- [ ] Build ML model for failure prediction
+- [ ] Implement pattern recognition
+- [ ] Auto-create preventive work orders
+- [ ] Add confidence scores to predictions
+- [ ] Create prediction dashboard
+
+## Phase 31: Asset Transfer Workflow
+- [ ] Create transfer requests table
+- [ ] Build transfer approval workflow
+- [ ] Add physical handover checklist
+- [ ] Implement automatic location updates
+- [ ] Create transfer audit trail
+- [ ] Add transfer notifications
+- [ ] Test multi-site transfers
+
+## Phase 32: Bulk Import/Export Tools
+- [ ] Add Excel/CSV import for assets
+- [ ] Implement data validation
+- [ ] Add duplicate detection
+- [ ] Create error reporting
+- [ ] Build bulk export for all modules
+- [ ] Add import templates
+- [ ] Test large dataset imports
+
+## Phase 33: Dashboard Customization
+- [ ] Create user preferences table
+- [ ] Allow widget selection
+- [ ] Implement drag-and-drop layout
+- [ ] Add personalized filters
+- [ ] Save preferences per user
+- [ ] Create preset layouts by role
+- [ ] Test customization persistence
+
+## Phase 34: Accounting System Integration
+- [ ] Research QuickBooks/Sage/Xero APIs
+- [ ] Build integration framework
+- [ ] Sync financial transactions
+- [ ] Map asset costs to accounting
+- [ ] Add depreciation sync
+- [ ] Create reconciliation reports
+- [ ] Test accounting data flow

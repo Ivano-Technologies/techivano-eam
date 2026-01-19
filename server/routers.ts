@@ -203,6 +203,35 @@ export const appRouter = router({
         if (!asset) throw new TRPCError({ code: 'NOT_FOUND', message: 'Asset not found' });
         return asset;
       }),
+
+    generateBarcode: protectedProcedure
+      .input(z.object({ 
+        id: z.number(),
+        format: z.enum(['CODE128', 'CODE39', 'EAN13']).default('CODE128'),
+      }))
+      .mutation(async ({ input }) => {
+        const { generateBarcode, generateBarcodeValue } = await import('./barcode');
+        const asset = await db.getAssetById(input.id);
+        if (!asset) throw new TRPCError({ code: 'NOT_FOUND', message: 'Asset not found' });
+        
+        const barcodeValue = generateBarcodeValue(asset.assetTag, input.format);
+        const barcodeImage = generateBarcode(barcodeValue, input.format);
+        
+        await db.updateAsset(input.id, {
+          barcode: barcodeValue,
+          barcodeFormat: input.format,
+        });
+        
+        return { barcode: barcodeValue, image: barcodeImage, format: input.format };
+      }),
+
+    scanBarcode: protectedProcedure
+      .input(z.object({ barcode: z.string() }))
+      .query(async ({ input }) => {
+        const asset = await db.getAssetByBarcode(input.barcode);
+        if (!asset) throw new TRPCError({ code: 'NOT_FOUND', message: 'Asset not found' });
+        return asset;
+      }),
     
     update: managerOrAdminProcedure
       .input(z.object({
@@ -415,6 +444,33 @@ export const appRouter = router({
         });
         return await db.updateMaintenanceSchedule(id, data);
       }),
+
+    // Predictive Maintenance AI
+    getPredictions: protectedProcedure
+      .query(async () => {
+        const { getAllMaintenancePredictions } = await import('./predictiveMaintenance');
+        return await getAllMaintenancePredictions();
+      }),
+
+    getHighPriorityPredictions: protectedProcedure
+      .query(async () => {
+        const { getHighPriorityPredictions } = await import('./predictiveMaintenance');
+        return await getHighPriorityPredictions();
+      }),
+
+    getAssetPrediction: protectedProcedure
+      .input(z.object({ assetId: z.number() }))
+      .query(async ({ input }) => {
+        const { analyzeAssetMaintenancePattern } = await import('./predictiveMaintenance');
+        return await analyzeAssetMaintenancePattern(input.assetId);
+      }),
+
+    autoCreateWorkOrders: managerOrAdminProcedure
+      .mutation(async ({ ctx }) => {
+        const { autoCreatePreventiveWorkOrders } = await import('./predictiveMaintenance');
+        const workOrderIds = await autoCreatePreventiveWorkOrders(ctx.user.id);
+        return { created: workOrderIds.length, workOrderIds };
+      }),
   }),
 
   // ============= INVENTORY =============
@@ -586,6 +642,26 @@ export const appRouter = router({
           ...input,
           createdBy: ctx.user.id,
         });
+      }),
+
+    // Lifecycle Cost Analysis
+    getAssetLifecycleCost: protectedProcedure
+      .input(z.object({ assetId: z.number() }))
+      .query(async ({ input }) => {
+        const { calculateAssetLifecycleCost } = await import('./lifecycleCost');
+        return await calculateAssetLifecycleCost(input.assetId);
+      }),
+
+    getCategoryCostSummary: protectedProcedure
+      .query(async () => {
+        const { getCategoryCostSummary } = await import('./lifecycleCost');
+        return await getCategoryCostSummary();
+      }),
+
+    getCostOptimizationRecommendations: protectedProcedure
+      .query(async () => {
+        const { getCostOptimizationRecommendations } = await import('./lifecycleCost');
+        return await getCostOptimizationRecommendations();
       }),
   }),
 
@@ -1054,8 +1130,153 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await db.deleteScheduledReport(input.id);
         return { success: true };
+       }),
+  }),
+
+  // ============= BULK IMPORT/EXPORT =============
+  bulkOperations: router({
+    exportAssets: protectedProcedure
+      .query(async () => {
+        const { exportAssets } = await import('./bulkImportExport');
+        const buffer = await exportAssets();
+        return {
+          data: buffer.toString('base64'),
+          filename: `assets_export_${Date.now()}.xlsx`,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        };
+      }),
+
+    exportWorkOrders: protectedProcedure
+      .query(async () => {
+        const { exportWorkOrders } = await import('./bulkImportExport');
+        const buffer = await exportWorkOrders();
+        return {
+          data: buffer.toString('base64'),
+          filename: `work_orders_export_${Date.now()}.xlsx`,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        };
+      }),
+
+    exportInventory: protectedProcedure
+      .query(async () => {
+        const { exportInventory } = await import('./bulkImportExport');
+        const buffer = await exportInventory();
+        return {
+          data: buffer.toString('base64'),
+          filename: `inventory_export_${Date.now()}.xlsx`,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        };
+      }),
+
+    getImportTemplate: protectedProcedure
+      .input(z.object({ entity: z.enum(['assets', 'workOrders', 'inventory']) }))
+      .query(async ({ input }) => {
+        const { generateImportTemplate } = await import('./bulkImportExport');
+        const buffer = await generateImportTemplate(input.entity);
+        return {
+          data: buffer.toString('base64'),
+          filename: `${input.entity}_import_template.xlsx`,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        };
+      }),
+
+    importAssets: managerOrAdminProcedure
+      .input(z.object({ fileData: z.string() })) // base64 encoded
+      .mutation(async ({ input, ctx }) => {
+        const { importAssets } = await import('./bulkImportExport');
+        const buffer = Buffer.from(input.fileData, 'base64');
+        return await importAssets(buffer, ctx.user.id);
+      }),
+  }),
+
+  // ============= ASSET TRANSFERS =============
+  transfers: router({
+    list: protectedProcedure
+      .input(z.object({
+        status: z.string().optional(),
+        assetId: z.number().optional(),
+        siteId: z.number().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        return await db.getAllAssetTransfers(input);
+      }),
+
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getAssetTransferById(input.id);
+      }),
+
+    create: protectedProcedure
+      .input(z.object({
+        assetId: z.number(),
+        fromSiteId: z.number(),
+        toSiteId: z.number(),
+        reason: z.string(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.createAssetTransfer({
+          ...input,
+          requestedBy: ctx.user.id,
+        });
+      }),
+
+    approve: managerOrAdminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.updateAssetTransfer(input.id, {
+          status: 'approved',
+          approvedBy: ctx.user.id,
+          approvalDate: new Date(),
+        });
+      }),
+
+    reject: managerOrAdminProcedure
+      .input(z.object({ id: z.number(), notes: z.string().optional() }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.updateAssetTransfer(input.id, {
+          status: 'rejected',
+          approvedBy: ctx.user.id,
+          approvalDate: new Date(),
+          notes: input.notes,
+        });
+      }),
+
+    startTransfer: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return await db.updateAssetTransfer(input.id, {
+          status: 'in_transit',
+          transferDate: new Date(),
+        });
+      }),
+
+    complete: protectedProcedure
+      .input(z.object({ 
+        id: z.number(),
+        handoverChecklist: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const transfer = await db.getAssetTransferById(input.id);
+        if (!transfer) throw new TRPCError({ code: 'NOT_FOUND', message: 'Transfer not found' });
+        
+        // Update asset location
+        await db.updateAsset(transfer.assetId, {
+          siteId: transfer.toSiteId,
+        });
+        
+        return await db.updateAssetTransfer(input.id, {
+          status: 'completed',
+          completionDate: new Date(),
+          handoverChecklist: input.handoverChecklist,
+        });
+      }),
+
+    getPending: managerOrAdminProcedure
+      .query(async () => {
+        return await db.getPendingTransferRequests();
       }),
   }),
 });
-
 export type AppRouter = typeof appRouter;
