@@ -59,9 +59,9 @@ export default function Reports() {
         case "assetInventory":
           result = await assetInventoryMutation.mutateAsync({
             format,
-            siteId: siteId ? parseInt(siteId) : undefined,
-            categoryId: categoryId ? parseInt(categoryId) : undefined,
-            status: status as any,
+            siteId: siteId && siteId !== 'all' ? parseInt(siteId) : undefined,
+            categoryId: categoryId && categoryId !== 'all' ? parseInt(categoryId) : undefined,
+            status: status && status !== 'all' ? (status as any) : undefined,
             startDate,
             endDate,
           });
@@ -70,7 +70,7 @@ export default function Reports() {
         case "maintenanceSchedule":
           result = await maintenanceScheduleMutation.mutateAsync({
             format,
-            siteId: siteId ? parseInt(siteId) : undefined,
+            siteId: siteId && siteId !== 'all' ? parseInt(siteId) : undefined,
             startDate,
             endDate,
           });
@@ -79,8 +79,8 @@ export default function Reports() {
         case "workOrders":
           result = await workOrdersMutation.mutateAsync({
             format,
-            siteId: siteId ? parseInt(siteId) : undefined,
-            status: status as any,
+            siteId: siteId && siteId !== 'all' ? parseInt(siteId) : undefined,
+            status: status && status !== 'all' ? (status as any) : undefined,
             startDate,
             endDate,
           });
@@ -97,8 +97,8 @@ export default function Reports() {
         case "compliance":
           result = await complianceMutation.mutateAsync({
             format,
-            siteId: siteId ? parseInt(siteId) : undefined,
-            status: status as any,
+            siteId: siteId && siteId !== 'all' ? parseInt(siteId) : undefined,
+            status: status && status !== 'all' ? (status as any) : undefined,
           });
           break;
 
@@ -189,7 +189,7 @@ export default function Reports() {
                     <SelectValue placeholder="All sites" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Sites</SelectItem>
+                    <SelectItem value="all">All Sites</SelectItem>
                     {sites?.map((site) => (
                       <SelectItem key={site.id} value={site.id.toString()}>
                         {site.name}
@@ -208,7 +208,7 @@ export default function Reports() {
                     <SelectValue placeholder="All categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
                     {categories?.map((cat: any) => (
                       <SelectItem key={cat.id} value={cat.id.toString()}>
                         {cat.name}
@@ -227,7 +227,7 @@ export default function Reports() {
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Statuses</SelectItem>
+                    <SelectItem value="all">All Statuses</SelectItem>
                     {reportType === "assetInventory" && (
                       <>
                         <SelectItem value="operational">Operational</SelectItem>
