@@ -127,7 +127,7 @@ export default function DashboardLayout({
             size="lg"
             className="w-full shadow-lg hover:shadow-xl transition-all bg-primary hover:bg-primary/90"
           >
-            Sign in with Manus
+            Sign In
           </Button>
           <p className="text-xs text-muted-foreground text-center">
             Authorized personnel only

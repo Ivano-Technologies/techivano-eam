@@ -436,3 +436,6 @@
 ## Phase 48: Update Sidebar Text
 - [x] Change "NRCS EAM" to "Nigerian Red Cross Society"
 - [x] Change "Asset Management" to "Enterprise Asset Management"
+
+## Phase 49: Update Login Button Text
+- [x] Change "Sign in with Manus" to "Sign In"
