@@ -447,7 +447,37 @@ export type InsertUserPreferences = typeof userPreferences.$inferInsert;
 /**
  * Email Notification History
  */
-export const emailNotifications = mysqlTable("emailNotifications", {
+// Magic Link Authentication
+export const authTokens = mysqlTable("auth_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").references(() => users.id, { onDelete: "cascade" }),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  type: mysqlEnum("type", ["magic_link", "signup_verification"]).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type AuthToken = typeof authTokens.$inferSelect;
+export type InsertAuthToken = typeof authTokens.$inferInsert;
+
+export const pendingUsers = mysqlTable("pending_users", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  requestedRole: mysqlEnum("requested_role", ["user", "manager"]).notNull().default("user"),
+  status: mysqlEnum("status", ["pending", "approved", "rejected"]).notNull().default("pending"),
+  approvedBy: int("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PendingUser = typeof pendingUsers.$inferSelect;
+export type InsertPendingUser = typeof pendingUsers.$inferInsert;
+
+export const emailNotifications = mysqlTable("email_notifications", {
   id: int("id").autoincrement().primaryKey(),
   subject: varchar("subject", { length: 255 }).notNull(),
   body: text("body").notNull(),
