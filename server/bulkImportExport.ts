@@ -102,10 +102,15 @@ export async function importAssets(fileBuffer: any, userId: number): Promise<Imp
   let failed = 0;
   const errors: Array<{ row: number; error: string; data: any }> = [];
   
-  // Skip header row
-  worksheet.eachRow({ includeEmpty: false }, async (row, rowNumber) => {
-    if (rowNumber === 1) return; // Skip header
-    
+  // Process rows sequentially
+  const rows: any[] = [];
+  worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (rowNumber > 1) { // Skip header
+      rows.push({ row, rowNumber });
+    }
+  });
+  
+  for (const { row, rowNumber } of rows) {
     try {
       const assetData = {
         assetTag: row.getCell(1).value?.toString() || '',
@@ -148,7 +153,7 @@ export async function importAssets(fileBuffer: any, userId: number): Promise<Imp
         data: row.values,
       });
     }
-  });
+  }
   
   return {
     success: failed === 0,

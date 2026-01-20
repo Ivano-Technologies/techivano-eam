@@ -31,26 +31,27 @@ export default function Assets() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
-  const { refetch: downloadTemplate, isFetching: isDownloading } = trpc.bulkOperations.getImportTemplate.useQuery(
-    { entity: "assets" },
-    { enabled: false }
-  );
+  const utils = trpc.useUtils();
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownloadTemplate = async () => {
     try {
-      const result = await downloadTemplate();
-      if (result.data) {
-        const blob = new Blob([Buffer.from(result.data.data, 'base64')], { type: result.data.mimeType });
+      setIsDownloading(true);
+      const result = await utils.client.bulkOperations.getImportTemplate.query({ entity: "assets" });
+      if (result) {
+        const blob = new Blob([Uint8Array.from(atob(result.data), c => c.charCodeAt(0))], { type: result.mimeType });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = result.data.filename;
+        link.download = result.filename;
         link.click();
         URL.revokeObjectURL(url);
         toast.success("Template downloaded");
       }
     } catch (error: any) {
       toast.error(`Failed to download template: ${error.message}`);
+    } finally {
+      setIsDownloading(false);
     }
   };
 

@@ -708,3 +708,9 @@
 - [ ] Implement expiration tracking
 - [ ] Add automated expiration alerts
 - [ ] Create compliance dashboard
+
+## Phase 81: Bug Fixes - Bulk Import & Asset Map
+- [x] Fixed asset map default location to Nigeria (9.0820, 8.6753) with zoom 6
+- [x] Fixed bulk import template download (proper base64 decoding)
+- [x] Fixed bulk import upload functionality (sequential row processing)
+- [x] All fixes tested and working
