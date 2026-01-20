@@ -757,3 +757,13 @@
 - [x] Asset category management page already exists
 - [x] Created comprehensive bulk import guide PDF (14 pages)
 - [x] All production setup features confirmed working
+
+## Phase 87: Sample Asset Categories
+- [x] Added Medical Equipment category
+- [x] Added Vehicles & Ambulances category
+- [x] Added IT Equipment category
+- [x] Added Generators & Power Equipment category
+- [x] Added Office Equipment & Furniture category
+- [x] Added Communication Equipment category
+- [x] Added Emergency Response Equipment category
+- [x] All 7 categories created successfully

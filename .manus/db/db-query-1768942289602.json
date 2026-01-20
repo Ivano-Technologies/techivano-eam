@@ -1,0 +1,45 @@
+{
+  "query": "SELECT id, name, description FROM assetCategories ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user TomGb9tuntH4B4d.7e6b3ba34d8a --database YNihSyDPBSASM93ZxstDRD --execute SELECT id, name, description FROM assetCategories ORDER BY id;",
+  "rows": [
+    {
+      "id": "42",
+      "name": "Medical Equipment",
+      "description": "Medical and healthcare equipment including diagnostic tools, monitors, and treatment devices"
+    },
+    {
+      "id": "43",
+      "name": "Vehicles & Ambulances",
+      "description": "Transportation vehicles including ambulances, trucks, and service vehicles"
+    },
+    {
+      "id": "44",
+      "name": "IT Equipment",
+      "description": "Information technology equipment including computers, servers, and networking devices"
+    },
+    {
+      "id": "45",
+      "name": "Generators & Power Equipment",
+      "description": "Power generation and backup equipment including generators and UPS systems"
+    },
+    {
+      "id": "46",
+      "name": "Office Equipment & Furniture",
+      "description": "Office furniture, supplies, and general office equipment"
+    },
+    {
+      "id": "47",
+      "name": "Communication Equipment",
+      "description": "Communication devices including radios, phones, and broadcasting equipment"
+    },
+    {
+      "id": "48",
+      "name": "Emergency Response Equipment",
+      "description": "Emergency response and disaster relief equipment including rescue tools and supplies"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tdescription\n42\tMedical Equipment\tMedical and healthcare equipment including diagnostic tools, monitors, and treatment devices\n43\tVehicles & Ambulances\tTransportation vehicles including ambulances, trucks, and service vehicles\n44\tIT Equipment\tInformation technology equipment including computers, servers, and networking devices\n45\tGenerators & Power Equipment\tPower generation and backup equipment including generators and UPS systems\n46\tOffice Equipment & Furniture\tOffice furniture, supplies, and general office equipment\n47\tCommunication Equipment\tCommunication devices including radios, phones, and broadcasting equipment\n48\tEmergency Response Equipment\tEmergency response and disaster relief equipment including rescue tools and supplies\n",
+  "stderr": "",
+  "execution_time_ms": 358
+}
