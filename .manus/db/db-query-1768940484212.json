@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE users SET role = 'admin' WHERE openId = (SELECT OWNER_OPEN_ID FROM (SELECT 'test' as OWNER_OPEN_ID) as temp) OR email LIKE '%kezie%' OR name LIKE '%Kezie%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user TomGb9tuntH4B4d.7e6b3ba34d8a --database YNihSyDPBSASM93ZxstDRD --execute UPDATE users SET role = 'admin' WHERE openId = (SELECT OWNER_OPEN_ID FROM (SELECT 'test' as OWNER_OPEN_ID) as temp) OR email LIKE '%kezie%' OR name LIKE '%Kezie%';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 365
+}

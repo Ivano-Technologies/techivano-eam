@@ -55,7 +55,7 @@ export default function Users() {
     try {
       await updateRoleMutation.mutateAsync({
         userId: roleChangeDialog.userId,
-        role: roleChangeDialog.newRole as 'admin' | 'user',
+        role: roleChangeDialog.newRole as 'admin' | 'manager' | 'technician' | 'user',
       });
       
       utils.users.list.invalidate();
@@ -142,6 +142,8 @@ export default function Users() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="technician">Technician</SelectItem>
                       <SelectItem value="user">User</SelectItem>
                     </SelectContent>
                   </Select>
