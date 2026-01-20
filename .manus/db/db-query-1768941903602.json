@@ -1,0 +1,18 @@
+{
+  "query": "\nSELECT \n  (SELECT COUNT(*) FROM assets) as assets,\n  (SELECT COUNT(*) FROM sites) as sites,\n  (SELECT COUNT(*) FROM vendors) as vendors,\n  (SELECT COUNT(*) FROM workOrders) as work_orders,\n  (SELECT COUNT(*) FROM assetCategories) as categories,\n  (SELECT COUNT(*) FROM financialTransactions) as transactions;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user TomGb9tuntH4B4d.7e6b3ba34d8a --database YNihSyDPBSASM93ZxstDRD --execute \nSELECT \n  (SELECT COUNT(*) FROM assets) as assets,\n  (SELECT COUNT(*) FROM sites) as sites,\n  (SELECT COUNT(*) FROM vendors) as vendors,\n  (SELECT COUNT(*) FROM workOrders) as work_orders,\n  (SELECT COUNT(*) FROM assetCategories) as categories,\n  (SELECT COUNT(*) FROM financialTransactions) as transactions;\n",
+  "rows": [
+    {
+      "assets": "0",
+      "sites": "0",
+      "vendors": "0",
+      "work_orders": "0",
+      "categories": "0",
+      "transactions": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "assets\tsites\tvendors\twork_orders\tcategories\ttransactions\n0\t0\t0\t0\t0\t0\n",
+  "stderr": "",
+  "execution_time_ms": 362
+}
