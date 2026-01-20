@@ -1,0 +1,31 @@
+{
+  "query": "\nSELECT COUNT(*) as asset_count FROM assets;\nSELECT COUNT(*) as site_count FROM sites;\nSELECT COUNT(*) as vendor_count FROM vendors;\nSELECT COUNT(*) as category_count FROM assetCategories;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user TomGb9tuntH4B4d.7e6b3ba34d8a --database YNihSyDPBSASM93ZxstDRD --execute \nSELECT COUNT(*) as asset_count FROM assets;\nSELECT COUNT(*) as site_count FROM sites;\nSELECT COUNT(*) as vendor_count FROM vendors;\nSELECT COUNT(*) as category_count FROM assetCategories;\n",
+  "rows": [
+    {
+      "asset_count": "69"
+    },
+    {
+      "asset_count": "site_count"
+    },
+    {
+      "asset_count": "23"
+    },
+    {
+      "asset_count": "vendor_count"
+    },
+    {
+      "asset_count": "17"
+    },
+    {
+      "asset_count": "category_count"
+    },
+    {
+      "asset_count": "17"
+    }
+  ],
+  "messages": [],
+  "stdout": "asset_count\n69\nsite_count\n23\nvendor_count\n17\ncategory_count\n17\n",
+  "stderr": "",
+  "execution_time_ms": 510
+}

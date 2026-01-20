@@ -738,3 +738,15 @@
 - [x] Created enhanced Activity Log viewer UI at /activity-log
 - [x] Manager and admin access with filtering and search
 - [x] Feature complete and tested
+
+## Phase 85: Sample Data Population
+- [ ] Create data generation script
+- [ ] Insert sample sites (10 locations across Nigeria)
+- [ ] Insert sample vendors (5-10 vendors)
+- [ ] Insert sample assets (50+ assets with various categories)
+- [ ] Insert sample work orders (20+ with different statuses)
+- [ ] Insert sample inventory items
+- [ ] Insert sample maintenance schedules
+- [ ] Insert sample financial transactions
+- [ ] Verify all data is properly linked
+- [ ] Test data integrity
