@@ -172,9 +172,101 @@ export default function Home() {
         </Card>
       </div>
 
+      {/* Analytics Widgets */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Assets by Status */}
+        <Card className="border-t-4 border-t-blue-500">
+          <CardHeader>
+            <CardTitle className="text-base">Assets by Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Operational</span>
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-24 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-green-500" 
+                      style={{ width: `${stats?.totalAssets ? (stats.operationalAssets / stats.totalAssets * 100) : 0}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-semibold">{stats?.operationalAssets || 0}</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Maintenance</span>
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-24 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-orange-500" 
+                      style={{ width: `${stats?.totalAssets ? (stats.maintenanceAssets / stats.totalAssets * 100) : 0}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-semibold">{stats?.maintenanceAssets || 0}</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Retired</span>
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-24 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gray-500" 
+                      style={{ width: `${stats?.totalAssets ? (((stats as any).retiredAssets || 0) / stats.totalAssets * 100) : 0}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-semibold">{(stats as any)?.retiredAssets || 0}</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Overdue Maintenance */}
+        <Card className="border-t-4 border-t-red-500">
+          <CardHeader>
+            <CardTitle className="text-base">Overdue Maintenance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-4">
+              <div className="text-4xl font-bold text-red-600">{(stats as any)?.overdueMaintenance || 0}</div>
+              <p className="text-sm text-muted-foreground mt-2">Tasks past due date</p>
+              {((stats as any)?.overdueMaintenance || 0) > 0 && (
+                <Link href="/maintenance">
+                  <Button size="sm" variant="outline" className="mt-4">
+                    View Tasks
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Work Order Completion Rate */}
+        <Card className="border-t-4 border-t-purple-500">
+          <CardHeader>
+            <CardTitle className="text-base">Work Order Completion</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-4">
+              <div className="text-4xl font-bold text-purple-600">
+                {(stats as any)?.totalWorkOrders ? Math.round(((stats as any).completedWorkOrders / (stats as any).totalWorkOrders) * 100) : 0}%
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                {(stats as any)?.completedWorkOrders || 0} of {(stats as any)?.totalWorkOrders || 0} completed
+              </p>
+              <div className="mt-4 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-purple-500" 
+                  style={{ width: `${(stats as any)?.totalWorkOrders ? ((stats as any).completedWorkOrders / (stats as any).totalWorkOrders * 100) : 0}%` }}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Quick Actions */}
-      <Card className="border-t-4 border-t-primary shadow-md">
-        <CardHeader>
+      <Card className="border-t-4 border-t-green-500 shadow-md">       <CardHeader>
           <CardTitle className="text-lg font-bold">Quick Actions</CardTitle>
           <CardDescription>Common tasks and shortcuts</CardDescription>
         </CardHeader>

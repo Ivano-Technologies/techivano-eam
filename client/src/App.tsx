@@ -31,6 +31,8 @@ import EmailNotifications from "./pages/EmailNotifications";
 import DashboardSettings from "./pages/DashboardSettings";
 import WorkOrderTemplates from "./pages/WorkOrderTemplates";
 import ReportScheduling from "./pages/ReportScheduling";
+import MobileWorkOrders from "./pages/MobileWorkOrders";
+import MobileWorkOrderDetail from "./pages/MobileWorkOrderDetail";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
 function Router() {
@@ -47,6 +49,8 @@ function Router() {
       <Route path="/asset-map" component={AssetMap} />
       <Route path="/work-orders" component={WorkOrders} />
       <Route path="/work-orders/:id" component={WorkOrderDetail} />
+      <Route path="/mobile-work-orders" component={MobileWorkOrders} />
+      <Route path="/mobile-work-order/:id" component={MobileWorkOrderDetail} />
       <Route path="/work-order-templates" component={WorkOrderTemplates} />
       <Route path="/maintenance" component={Maintenance} />
       <Route path="/inventory" component={Inventory} />
