@@ -12,6 +12,7 @@ export default function AssetMap() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
+  const [siteMarkers, setSiteMarkers] = useState<google.maps.Marker[]>([]);
 
   const { data: assets, isLoading } = trpc.assets.list.useQuery({});
   const { data: sites } = trpc.sites.list.useQuery();
@@ -23,6 +24,64 @@ export default function AssetMap() {
     // Clear existing markers
     markers.forEach(marker => marker.setMap(null));
     setMarkers([]);
+    siteMarkers.forEach(marker => marker.setMap(null));
+    setSiteMarkers([]);
+
+    // Add site markers first
+    const newSiteMarkers: google.maps.Marker[] = [];
+    if (sites) {
+      sites.forEach(site => {
+        // Use default Nigeria coordinates if site doesn't have specific location
+        const lat = site.latitude ? parseFloat(site.latitude) : 9.0820 + (Math.random() - 0.5) * 2;
+        const lng = site.longitude ? parseFloat(site.longitude) : 8.6753 + (Math.random() - 0.5) * 2;
+        const position = { lat, lng };
+
+        const siteMarker = new google.maps.Marker({
+          position,
+          map: googleMap,
+          title: site.name,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 12,
+            fillColor: "#DC2626", // Red for sites
+            fillOpacity: 1,
+            strokeColor: "#FFFFFF",
+            strokeWeight: 3,
+          },
+          zIndex: 100, // Sites appear above assets
+        });
+
+        const siteInfoWindow = new google.maps.InfoWindow({
+          content: `
+            <div style="padding: 12px; max-width: 280px;">
+              <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #DC2626;">📍 ${site.name}</h3>
+              <p style="margin: 4px 0; font-size: 14px;"><strong>Address:</strong> ${site.address || 'N/A'}</p>
+              <p style="margin: 4px 0; font-size: 14px;"><strong>City:</strong> ${site.city || 'N/A'}, ${site.state || 'N/A'}</p>
+              <p style="margin: 4px 0; font-size: 14px;"><strong>Contact:</strong> ${site.contactPerson || 'N/A'}</p>
+              <p style="margin: 4px 0; font-size: 14px;"><strong>Phone:</strong> ${site.contactPhone || 'N/A'}</p>
+              <a href="/sites" style="display: inline-block; margin-top: 8px; color: #DC2626; text-decoration: none; font-weight: 500;">View All Sites →</a>
+            </div>
+          `,
+        });
+
+        // Show info on hover
+        siteMarker.addListener("mouseover", () => {
+          siteInfoWindow.open(googleMap, siteMarker);
+        });
+
+        siteMarker.addListener("mouseout", () => {
+          siteInfoWindow.close();
+        });
+
+        // Also show on click
+        siteMarker.addListener("click", () => {
+          siteInfoWindow.open(googleMap, siteMarker);
+        });
+
+        newSiteMarkers.push(siteMarker);
+      });
+    }
+    setSiteMarkers(newSiteMarkers);
 
     if (!assets || assets.length === 0) return;
 
@@ -43,6 +102,12 @@ export default function AssetMap() {
     const newMarkers: google.maps.Marker[] = [];
     const bounds = new google.maps.LatLngBounds();
 
+    // Add site positions to bounds
+    newSiteMarkers.forEach(marker => {
+      const pos = marker.getPosition();
+      if (pos) bounds.extend(pos);
+    });
+
     filteredAssets.forEach(asset => {
       if (!asset.latitude || !asset.longitude) return;
 
@@ -54,20 +119,15 @@ export default function AssetMap() {
         position,
         map: googleMap,
         title: asset.name,
-        label: {
-          text: asset.assetTag,
-          color: "#FFFFFF",
-          fontSize: "12px",
-          fontWeight: "bold",
-        },
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: getStatusColor(asset.status),
+          scale: 8,
+          fillColor: "#DC2626", // Red for assets
           fillOpacity: 0.9,
           strokeColor: "#FFFFFF",
           strokeWeight: 2,
         },
+        zIndex: 50, // Assets below sites
       });
 
       const infoWindow = new google.maps.InfoWindow({
@@ -82,6 +142,16 @@ export default function AssetMap() {
         `,
       });
 
+      // Show info on hover
+      marker.addListener("mouseover", () => {
+        infoWindow.open(googleMap, marker);
+      });
+
+      marker.addListener("mouseout", () => {
+        infoWindow.close();
+      });
+
+      // Also show on click
       marker.addListener("click", () => {
         infoWindow.open(googleMap, marker);
       });
@@ -92,12 +162,16 @@ export default function AssetMap() {
 
     setMarkers(newMarkers);
 
-    // Fit map to show all markers
-    if (newMarkers.length > 0) {
+    // Fit map to show all markers (sites + assets)
+    if (newMarkers.length > 0 || newSiteMarkers.length > 0) {
       googleMap.fitBounds(bounds);
-      if (newMarkers.length === 1) {
+      if (newMarkers.length + newSiteMarkers.length === 1) {
         googleMap.setZoom(15);
       }
+    } else {
+      // Center on Nigeria if no markers
+      googleMap.setCenter({ lat: 9.0820, lng: 8.6753 });
+      googleMap.setZoom(6);
     }
   };
 

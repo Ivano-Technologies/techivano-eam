@@ -140,3 +140,52 @@ export async function checkAndNotifyLowStock() {
     }
   }
 }
+
+
+/**
+ * Send warranty expiration alert email to owner
+ */
+export async function sendWarrantyExpirationAlert(data: {
+  assetId: number;
+  assetName: string;
+  assetTag: string;
+  warrantyExpiry: Date;
+  daysUntilExpiry: number;
+  manufacturer: string;
+  model: string;
+}) {
+  const { notifyOwner } = await import('./_core/notification');
+  
+  const urgency = data.daysUntilExpiry <= 30 ? '🔴 URGENT' : data.daysUntilExpiry <= 60 ? '🟡 WARNING' : '🟢 NOTICE';
+  
+  await notifyOwner({
+    title: `${urgency}: Warranty Expiring for ${data.assetName}`,
+    content: `
+Asset Warranty Expiration Alert
+
+${urgency}
+
+Asset Details:
+- Name: ${data.assetName}
+- Tag: ${data.assetTag}
+- Manufacturer: ${data.manufacturer}
+- Model: ${data.model}
+
+Warranty Status:
+- Expiry Date: ${new Date(data.warrantyExpiry).toLocaleDateString()}
+- Days Until Expiry: ${data.daysUntilExpiry} days
+- Status: ${data.daysUntilExpiry < 0 ? 'EXPIRED' : data.daysUntilExpiry <= 30 ? 'CRITICAL' : data.daysUntilExpiry <= 60 ? 'WARNING' : 'UPCOMING'}
+
+Action Required:
+${data.daysUntilExpiry < 0 
+  ? '⚠️ Warranty has expired. Contact manufacturer for renewal options.'
+  : data.daysUntilExpiry <= 30
+  ? '⚠️ Warranty expires soon! Contact manufacturer immediately to renew.'
+  : '📋 Review warranty terms and prepare for renewal if needed.'
+}
+
+---
+This is an automated alert from NRCS Enterprise Asset Management System.
+    `.trim(),
+  });
+}

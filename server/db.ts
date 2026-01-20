@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, gte, lte, sql, or, like } from "drizzle-orm";
+import { eq, and, desc, asc, gte, lte, sql, or, like, isNotNull, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, users, sites, InsertSite, assetCategories, assets, InsertAsset,
@@ -982,4 +982,54 @@ export async function deleteWorkOrderTemplate(id: number) {
   if (!db) throw new Error("Database not available");
   
   await db.update(workOrderTemplates).set({ isActive: false }).where(eq(workOrderTemplates.id, id));
+}
+
+
+// ============= WARRANTY ALERTS =============
+
+export async function getExpiringWarranties() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const now = new Date();
+  const ninetyDaysFromNow = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+  
+  return await db
+    .select()
+    .from(assets)
+    .where(
+      and(
+        isNotNull(assets.warrantyExpiry),
+        lte(assets.warrantyExpiry, ninetyDaysFromNow),
+        gte(assets.warrantyExpiry, now)
+      )
+    )
+    .orderBy(asc(assets.warrantyExpiry));
+}
+
+// ============= AUDIT TRAIL =============
+
+export async function logAuditEntry(entry: {
+  userId: number;
+  action: string;
+  entityType?: string;
+  entityId?: number;
+  changes?: string;
+}) {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.insert(auditLogs).values({
+    userId: entry.userId,
+    action: entry.action,
+    entityType: entry.entityType || null,
+    entityId: entry.entityId || null,
+    changes: entry.changes || null,
+    ipAddress: null,
+    userAgent: null,
+  });
+}
+
+export async function getAssetAuditHistory(assetId: number) {
+  return await getAuditLogs({ entityType: 'asset', entityId: assetId });
 }

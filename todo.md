@@ -617,3 +617,90 @@
 - [x] Install button already in sidebar footer
 - [x] Shows "Install App" button when available
 - [x] Feature complete
+
+## Phase 69: Verify Bulk Import Template
+- [x] Checked uploaded template columns (15 columns found)
+- [x] Template has: Asset Name, Tag, Category, Type, Status, Site Code, Purchase Date/Cost, Manufacturer, Model, Serial, Warranty, Description, Lat/Lng
+- [x] Template compatible with bulk import system
+
+## Phase 70: Enhanced Asset Map
+- [x] Added site markers with red icons (larger, zIndex 100)
+- [x] Added asset markers with red icons (smaller, zIndex 50)
+- [x] Implemented hover info popup for sites (shows address, contact, phone)
+- [x] Implemented hover info popup for assets (shows tag, status, location)
+- [x] Markers clickable and show detailed info
+- [x] Map centers on Nigeria by default (9.0820, 8.6753)
+- [x] Feature complete and tested
+
+## Phase 71: Asset Warranty Expiration Alerts
+- [x] Created warranty tracking system (getExpiringWarranties)
+- [x] Added automated email alerts with urgency levels
+- [x] Included manufacturer/model details in alerts
+- [x] Created warranty alerts page at /warranty-alerts
+- [x] Added menu item and route
+- [x] Feature complete and ready for use
+
+## Phase 72: Maintenance Cost Analytics Dashboard
+- [ ] Create cost analytics page
+- [ ] Add charts for cost trends by category
+- [ ] Add charts for cost trends by site
+- [ ] Add charts for cost trends by vendor
+- [ ] Add budget vs actual comparisons
+- [ ] Implement date range filtering
+
+## Phase 73: Asset Audit Trail & History Log
+- [ ] Create audit_logs table in database
+- [ ] Track all asset changes (transfers, status, ownership)
+- [ ] Add timestamps and user attribution
+- [ ] Create audit trail viewer UI
+- [ ] Add filtering and search capabilities
+
+## Phase 74: Preventive Maintenance Scheduler
+- [ ] Create maintenance schedule templates
+- [ ] Add recurring task generation logic
+- [ ] Implement technician assignment
+- [ ] Add calendar view for scheduled maintenance
+- [ ] Create automated notifications
+
+## Phase 75: Asset Depreciation Calculator
+- [ ] Add depreciation method selection (straight-line, declining balance)
+- [ ] Implement automatic depreciation calculation
+- [ ] Add book value tracking
+- [ ] Create depreciation reports
+- [ ] Add tax reporting features
+
+## Phase 76: Advanced Filtering & Saved Views
+- [ ] Create custom filter builder UI
+- [ ] Add save filter functionality
+- [ ] Implement filter sharing between users
+- [ ] Add quick access filter presets
+- [ ] Test complex filter combinations
+
+## Phase 77: Batch Operations Panel
+- [ ] Add multi-select functionality to asset list
+- [ ] Add multi-select to work orders list
+- [ ] Implement bulk status updates
+- [ ] Implement bulk assignments
+- [ ] Add bulk delete with confirmation
+- [ ] Add bulk export functionality
+
+## Phase 78: Mobile Barcode Scanner Enhancement
+- [ ] Add native camera integration
+- [ ] Implement offline mode for scanner
+- [ ] Add auto-sync when connection restored
+- [ ] Test scanner on mobile devices
+- [ ] Add barcode format validation
+
+## Phase 79: Custom Report Builder
+- [ ] Create drag-and-drop report builder UI
+- [ ] Add field selection interface
+- [ ] Implement grouping and filtering
+- [ ] Add scheduled report generation
+- [ ] Create report template library
+
+## Phase 80: Compliance Document Management
+- [ ] Create compliance_documents table
+- [ ] Add document upload functionality
+- [ ] Implement expiration tracking
+- [ ] Add automated expiration alerts
+- [ ] Create compliance dashboard

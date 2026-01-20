@@ -275,8 +275,11 @@ export const appRouter = router({
     update: managerOrAdminProcedure
       .input(z.object({
         id: z.number(),
+        assetTag: z.string().optional(),
         name: z.string().optional(),
         description: z.string().optional(),
+        categoryId: z.number().optional(),
+        siteId: z.number().optional(),
         status: z.enum(["operational", "maintenance", "repair", "retired", "disposed"]).optional(),
         manufacturer: z.string().optional(),
         model: z.string().optional(),
@@ -295,14 +298,42 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const { id, ...data } = input;
-        await db.createAuditLog({
+        await db.logAuditEntry({
           userId: ctx.user.id,
-          action: "update_asset",
-          entityType: "asset",
+          action: 'update',
+          entityType: 'asset',
           entityId: id,
           changes: JSON.stringify(data),
         });
         return await db.updateAsset(id, data);
+      }),
+
+    getExpiringWarranties: protectedProcedure
+      .query(async () => {
+        return await db.getExpiringWarranties();
+      }),
+
+    sendWarrantyAlert: managerOrAdminProcedure
+      .input(z.object({ assetId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const asset = await db.getAssetById(input.assetId);
+        if (!asset || !asset.warrantyExpiry) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Asset not found or no warranty expiry date' });
+        }
+
+        const daysUntilExpiry = Math.ceil((new Date(asset.warrantyExpiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        
+        await notificationHelper.sendWarrantyExpirationAlert({
+          assetId: asset.id,
+          assetName: asset.name,
+          assetTag: asset.assetTag,
+          warrantyExpiry: asset.warrantyExpiry,
+          daysUntilExpiry,
+          manufacturer: asset.manufacturer || 'N/A',
+          model: asset.model || 'N/A',
+        });
+
+        return { success: true };
       }),
   }),
 
