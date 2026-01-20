@@ -455,3 +455,17 @@
 - [ ] Remove Manus OAuth dependencies
 - [ ] Test complete signup → approval → login flow
 - [ ] Test magic link expiration and security
+
+## Phase 50: Magic Link Authentication System
+- [x] Design authentication schema (magic links, login tokens, user approval status)
+- [x] Create database tables for auth tokens and pending users
+- [x] Build magic link token generation service
+- [x] Implement email sending for magic links
+- [x] Build backend functions for signup, approval, rejection
+- [x] Create signup form UI
+- [x] Create login form UI (email entry)
+- [x] Build magic link verification endpoint
+- [x] Create admin approval dashboard
+- [x] Add approve/reject user actions for admins
+- [x] Update authentication middleware to use new system
+- [x] Test complete signup → approval → login flow

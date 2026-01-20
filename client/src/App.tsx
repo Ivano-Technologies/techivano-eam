@@ -2,6 +2,10 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
+import Signup from "./pages/Signup";
+import Login from "./pages/Login";
+import VerifyMagicLink from "./pages/VerifyMagicLink";
+import PendingUsers from "./pages/PendingUsers";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import DashboardLayout from "./components/DashboardLayout";
@@ -28,7 +32,10 @@ import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
 function Router() {
   return (
-    <Switch>
+      <Switch>
+        <Route path="/signup" component={Signup} />
+        <Route path="/login" component={Login} />
+        <Route path="/auth/verify" component={VerifyMagicLink} />
       <Route path="/" component={Home} />
       <Route path="/assets" component={Assets} />
         <Route path="/assets/:id" component={AssetDetail} />
@@ -43,6 +50,7 @@ function Router() {
       <Route path="/compliance" component={Compliance} />
       <Route path="/sites" component={Sites} />
       <Route path="/users" component={Users} />
+      <Route path="/pending-users" component={PendingUsers} />
       <Route path="/notification-preferences" component={NotificationPreferences} />
       <Route path="/reports" component={Reports} />
       <Route path="/quickbooks" component={QuickBooksSettings} />

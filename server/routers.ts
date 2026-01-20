@@ -33,6 +33,30 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+    signup: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        name: z.string().min(1),
+      }))
+      .mutation(async ({ input }) => {
+        const { createSignupRequest } = await import("./magicLinkAuth");
+        return await createSignupRequest(input.email, input.name);
+      }),
+    requestMagicLink: publicProcedure
+      .input(z.object({ email: z.string().email() }))
+      .mutation(async ({ input }) => {
+        const user = await db.getUserByEmail(input.email);
+        if (!user) {
+          return { success: false, message: "No account found with this email" };
+        }
+        const { createMagicLinkToken, sendMagicLink } = await import("./magicLinkAuth");
+        const token = await createMagicLinkToken(user.id);
+        const sent = await sendMagicLink(input.email, token);
+        if (sent) {
+          return { success: true, message: "Magic link sent to your email" };
+        }
+        return { success: false, message: "Failed to send magic link" };
+      }),
   }),
 
   // ============= SITES MANAGEMENT =============
@@ -1588,6 +1612,33 @@ export const appRouter = router({
         totalAssets: assets.length,
       };
     }),
+  }),
+
+  // ============= PENDING USERS (Admin Approval) =============
+  pendingUsers: router({
+    list: adminProcedure.query(async () => {
+      const database = await db.getDb();
+      if (!database) return [];
+      const { pendingUsers } = await import("../drizzle/schema");
+      return await database.select().from(pendingUsers);
+    }),
+    
+    approve: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const { approvePendingUser } = await import("./magicLinkAuth");
+        return await approvePendingUser(input.id, ctx.user.id);
+      }),
+    
+    reject: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        reason: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { rejectPendingUser } = await import("./magicLinkAuth");
+        return await rejectPendingUser(input.id, ctx.user.id, input.reason);
+      }),
   }),
 });
 

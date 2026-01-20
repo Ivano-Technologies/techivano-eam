@@ -35,6 +35,12 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  
+  // Magic link verification endpoint
+  app.post("/api/auth/verify-magic-link", async (req, res) => {
+    const { handleMagicLinkVerification } = await import("./magicLinkVerification");
+    return handleMagicLinkVerification(req, res);
+  });
   // tRPC API
   app.use(
     "/api/trpc",

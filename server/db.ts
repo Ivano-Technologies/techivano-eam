@@ -909,3 +909,16 @@ export async function getEmailNotificationById(id: number) {
   const result = await db.select().from(emailNotifications).where(eq(emailNotifications.id, id)).limit(1);
   return result.length > 0 ? result[0] : null;
 }
+
+export async function getUserByEmail(email: string) {
+  const database = await getDb();
+  if (!database) return null;
+  
+  const result = await database
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : null;
+}
