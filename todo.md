@@ -590,7 +590,8 @@
 - [x] User can update via Settings → General in Management UI
 
 ## Phase 65: Regenerate Logo with NRCS Emblem
-- [x] Located NRCS logo at /client/public/nrcs-logo.png
-- [x] Regenerated iOS-style app logo with actual NRCS emblem (red cross + red crescent)
+- [x] Received official Nigerian Red Cross circular badge logo
+- [x] Regenerated iOS-style app logo with official NRCS circular badge
 - [x] Replaced app-logo.png with new version
-- [x] Logo features navy blue gradient background with NRCS emblem
+- [x] Logo features navy blue gradient background with official NRCS badge
+- [x] Maintains all original text and branding from official logo
