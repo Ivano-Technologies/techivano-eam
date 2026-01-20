@@ -734,6 +734,12 @@ export const appRouter = router({
         const { getCostOptimizationRecommendations } = await import('./lifecycleCost');
         return await getCostOptimizationRecommendations();
       }),
+
+    getCostAnalytics: protectedProcedure
+      .input(z.object({ days: z.number().default(30) }))
+      .query(async ({ input }) => {
+        return await db.getCostAnalytics(input.days);
+      }),
   }),
 
   // ============= COMPLIANCE =============
@@ -1748,6 +1754,20 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await db.deleteWorkOrderTemplate(input.id);
         return { success: true };
+      }),
+  }),
+
+  // ============= AUDIT LOGS =============
+  auditLogs: router({
+    list: protectedProcedure
+      .input(z.object({
+        entityType: z.string().optional(),
+        entityId: z.number().optional(),
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        return await db.getAuditLogs(input || {});
       }),
   }),
 });

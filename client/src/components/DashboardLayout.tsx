@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan, Search, AlertTriangle } from "lucide-react";
+import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan, Search, AlertTriangle, BarChart3, History } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -50,6 +50,8 @@ const allMenuItems = [
   { icon: Wrench, label: "Work Orders", path: "/work-orders", adminOnly: false },
   { icon: FileText, label: "Work Order Templates", path: "/work-order-templates", adminOnly: false },
   { icon: AlertTriangle, label: "Warranty Alerts", path: "/warranty-alerts", adminOnly: false },
+  { icon: BarChart3, label: "Cost Analytics", path: "/cost-analytics", adminOnly: false },
+  { icon: History, label: "Audit Trail", path: "/audit-trail", adminOnly: true },
 ];
 
 const getMenuItems = (userRole?: string) => {

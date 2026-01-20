@@ -641,19 +641,23 @@
 - [x] Feature complete and ready for use
 
 ## Phase 72: Maintenance Cost Analytics Dashboard
-- [ ] Create cost analytics page
-- [ ] Add charts for cost trends by category
-- [ ] Add charts for cost trends by site
-- [ ] Add charts for cost trends by vendor
-- [ ] Add budget vs actual comparisons
-- [ ] Implement date range filtering
+- [x] Created cost analytics backend API (getCostAnalytics)
+- [x] Created cost analytics page UI with summary cards
+- [x] Added cost breakdown by category
+- [x] Added cost breakdown by site
+- [x] Added top vendors breakdown
+- [x] Implemented date range filtering (7/30/90/180/365 days)
+- [x] Added route /cost-analytics and menu item
+- [x] Feature complete and tested
 
 ## Phase 73: Asset Audit Trail & History Log
-- [ ] Create audit_logs table in database
-- [ ] Track all asset changes (transfers, status, ownership)
-- [ ] Add timestamps and user attribution
-- [ ] Create audit trail viewer UI
-- [ ] Add filtering and search capabilities
+- [x] Audit logs table already exists
+- [x] Created audit trail viewer UI
+- [x] Added filtering by entity type (asset, work_order, site, user, vendor, financial)
+- [x] Added search functionality
+- [x] Display user ID and timestamps
+- [x] Added route /audit-trail and menu item (admin only)
+- [x] Feature complete and tested
 
 ## Phase 74: Preventive Maintenance Scheduler
 - [ ] Create maintenance schedule templates

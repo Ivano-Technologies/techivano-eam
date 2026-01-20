@@ -1033,3 +1033,115 @@ export async function logAuditEntry(entry: {
 export async function getAssetAuditHistory(assetId: number) {
   return await getAuditLogs({ entityType: 'asset', entityId: assetId });
 }
+
+
+// ============= COST ANALYTICS =============
+
+export async function getCostAnalytics(days: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  
+  // Get all transactions in date range
+  const transactions = await db
+    .select()
+    .from(financialTransactions)
+    .where(gte(financialTransactions.transactionDate, startDate));
+  
+  // Calculate totals
+  const totalCost = transactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
+  const maintenanceCost = transactions
+    .filter(t => t.transactionType === 'maintenance')
+    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+  const repairCost = transactions
+    .filter(t => t.transactionType === 'repair')
+    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+  
+  // Group by category
+  const assetIds = Array.from(new Set(transactions.map(t => t.assetId).filter(Boolean)));
+  const assetsList = await Promise.all(
+    assetIds.map(id => getAssetById(id!))
+  );
+  
+  const byCategory: Record<number, { categoryId: number; categoryName: string; total: number }> = {};
+  for (const transaction of transactions) {
+    if (transaction.assetId) {
+      const asset = assetsList.find(a => a?.id === transaction.assetId);
+      if (asset && asset.categoryId) {
+        if (!byCategory[asset.categoryId]) {
+          const category = await getAssetCategoryById(asset.categoryId);
+          byCategory[asset.categoryId] = {
+            categoryId: asset.categoryId,
+            categoryName: category?.name || 'Unknown',
+            total: 0,
+          };
+        }
+        byCategory[asset.categoryId].total += parseFloat(transaction.amount);
+      }
+    }
+  }
+  
+  // Group by site
+  const bySite: Record<number, { siteId: number; siteName: string; total: number }> = {};
+  for (const transaction of transactions) {
+    if (transaction.assetId) {
+      const asset = assetsList.find(a => a?.id === transaction.assetId);
+      if (asset && asset.siteId) {
+        if (!bySite[asset.siteId]) {
+          const site = await getSiteById(asset.siteId);
+          bySite[asset.siteId] = {
+            siteId: asset.siteId,
+            siteName: site?.name || 'Unknown',
+            total: 0,
+          };
+        }
+        bySite[asset.siteId].total += parseFloat(transaction.amount);
+      }
+    }
+  }
+  
+  // Group by vendor
+  const byVendor: Record<number, { vendorId: number; vendorName: string; total: number; transactionCount: number }> = {};
+  for (const transaction of transactions) {
+    if (transaction.vendorId) {
+      if (!byVendor[transaction.vendorId]) {
+        const vendor = await getVendorById(transaction.vendorId);
+        byVendor[transaction.vendorId] = {
+          vendorId: transaction.vendorId,
+          vendorName: vendor?.name || 'Unknown',
+          total: 0,
+          transactionCount: 0,
+        };
+      }
+      byVendor[transaction.vendorId].total += parseFloat(transaction.amount);
+      byVendor[transaction.vendorId].transactionCount += 1;
+    }
+  }
+  
+  return {
+    totalCost,
+    maintenanceCost,
+    repairCost,
+    byCategory: Object.values(byCategory),
+    bySite: Object.values(bySite),
+    byVendor: Object.values(byVendor).sort((a, b) => b.total - a.total).slice(0, 10),
+  };
+}
+
+export async function getAssetCategoryById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(assetCategories).where(eq(assetCategories.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getVendorById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(vendors).where(eq(vendors.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}

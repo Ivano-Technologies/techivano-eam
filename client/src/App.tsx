@@ -34,6 +34,8 @@ import ReportScheduling from "./pages/ReportScheduling";
 import MobileWorkOrders from "./pages/MobileWorkOrders";
 import MobileWorkOrderDetail from "./pages/MobileWorkOrderDetail";
 import WarrantyAlerts from "./pages/WarrantyAlerts";
+import CostAnalytics from "./pages/CostAnalytics";
+import AuditTrail from "./pages/AuditTrail";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
 function Router() {
@@ -49,6 +51,8 @@ function Router() {
         <Route path="/scanner" component={AssetScanner} />
       <Route path="/asset-map" component={AssetMap} />
       <Route path="/warranty-alerts" component={WarrantyAlerts} />
+      <Route path="/cost-analytics" component={CostAnalytics} />
+      <Route path="/audit-trail" component={AuditTrail} />
       <Route path="/work-orders" component={WorkOrders} />
       <Route path="/work-orders/:id" component={WorkOrderDetail} />
       <Route path="/mobile-work-orders" component={MobileWorkOrders} />
