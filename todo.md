@@ -595,3 +595,12 @@
 - [x] Replaced app-logo.png with new version
 - [x] Logo features navy blue gradient background with official NRCS badge
 - [x] Maintains all original text and branding from official logo
+
+## Phase 66: Bulk Site Import/Export
+- [x] Backend API for site template already exists (downloadSiteTemplate)
+- [x] Backend API for site bulk import already exists (importSites)
+- [x] Download Template button already on Sites page
+- [x] Import button with file upload already implemented
+- [x] Template download and import functionality working
+- [x] Error handling already implemented
+- [x] Feature complete - already existed
