@@ -604,3 +604,16 @@
 - [x] Template download and import functionality working
 - [x] Error handling already implemented
 - [x] Feature complete - already existed
+
+## Phase 67: Sidebar Search Bar
+- [x] Add search input to DashboardLayout sidebar
+- [x] Implement search functionality for menu items
+- [x] Search filters menu items in real-time
+- [x] Test search filtering
+
+## Phase 68: PWA Install Prompt
+- [x] PWA install prompt already existed
+- [x] beforeinstallprompt event handler already implemented
+- [x] Install button already in sidebar footer
+- [x] Shows "Install App" button when available
+- [x] Feature complete
