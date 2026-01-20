@@ -469,3 +469,28 @@
 - [x] Add approve/reject user actions for admins
 - [x] Update authentication middleware to use new system
 - [x] Test complete signup → approval → login flow
+
+## Phase 51: Email Template Customization
+- [ ] Add email template settings to database schema
+- [ ] Create email template customization UI in admin settings
+- [ ] Build branded NRCS email template with logo
+- [ ] Update magic link email service to use custom templates
+- [ ] Add template preview functionality
+- [ ] Test custom email templates
+
+## Phase 52: User Onboarding Flow
+- [ ] Create welcome wizard component
+- [ ] Add first-time user detection
+- [ ] Build onboarding steps (welcome, features, quick start)
+- [ ] Create interactive tutorial for asset creation
+- [ ] Add skip/complete onboarding tracking
+- [ ] Test onboarding flow for new users
+
+## Phase 51: Email Template & Onboarding (Simplified)
+- [x] Branded NRCS email templates already in place
+- [x] Professional HTML email design with NRCS colors
+- [x] Magic link emails use branded templates
+- [x] Create welcome wizard component with 3 steps
+- [x] Add quick start guide with step-by-step instructions
+- [x] Build feature overview cards
+- [x] Add welcome route to application

@@ -477,6 +477,17 @@ export const pendingUsers = mysqlTable("pending_users", {
 export type PendingUser = typeof pendingUsers.$inferSelect;
 export type InsertPendingUser = typeof pendingUsers.$inferInsert;
 
+export const emailTemplates = mysqlTable("email_templates", {
+  id: int("id").autoincrement().primaryKey(),
+  templateType: varchar("template_type", { length: 50 }).notNull(), // 'magic_link', 'welcome', 'approval'
+  subject: varchar("subject", { length: 255 }).notNull(),
+  htmlContent: text("html_content").notNull(),
+  textContent: text("text_content"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
 export const emailNotifications = mysqlTable("email_notifications", {
   id: int("id").autoincrement().primaryKey(),
   subject: varchar("subject", { length: 255 }).notNull(),
