@@ -588,3 +588,9 @@
 - [x] iPhone iOS standard look and feel (rounded square, glass morphism)
 - [x] Logo saved to /client/public/app-logo.png
 - [x] User can update via Settings → General in Management UI
+
+## Phase 65: Regenerate Logo with NRCS Emblem
+- [x] Located NRCS logo at /client/public/nrcs-logo.png
+- [x] Regenerated iOS-style app logo with actual NRCS emblem (red cross + red crescent)
+- [x] Replaced app-logo.png with new version
+- [x] Logo features navy blue gradient background with NRCS emblem
