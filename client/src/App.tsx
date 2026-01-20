@@ -29,6 +29,8 @@ import Reports from "./pages/Reports";
 import QuickBooksSettings from "./pages/QuickBooksSettings";
 import EmailNotifications from "./pages/EmailNotifications";
 import DashboardSettings from "./pages/DashboardSettings";
+import WorkOrderTemplates from "./pages/WorkOrderTemplates";
+import ReportScheduling from "./pages/ReportScheduling";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
 function Router() {
@@ -45,6 +47,7 @@ function Router() {
       <Route path="/asset-map" component={AssetMap} />
       <Route path="/work-orders" component={WorkOrders} />
       <Route path="/work-orders/:id" component={WorkOrderDetail} />
+      <Route path="/work-order-templates" component={WorkOrderTemplates} />
       <Route path="/maintenance" component={Maintenance} />
       <Route path="/inventory" component={Inventory} />
       <Route path="/vendors" component={Vendors} />
@@ -55,6 +58,7 @@ function Router() {
       <Route path="/pending-users" component={PendingUsers} />
       <Route path="/notification-preferences" component={NotificationPreferences} />
       <Route path="/reports" component={Reports} />
+      <Route path="/report-scheduling" component={ReportScheduling} />
       <Route path="/quickbooks" component={QuickBooksSettings} />
         <Route path="/email-notifications" component={EmailNotifications} />
         <Route path="/dashboard-settings" component={DashboardSettings} />

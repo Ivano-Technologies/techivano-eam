@@ -42,11 +42,13 @@ const allMenuItems = [
   { icon: Calendar, label: "Maintenance", path: "/maintenance", adminOnly: false },
   { icon: DollarSign, label: "QuickBooks", path: "/quickbooks", adminOnly: true },
   { icon: FileText, label: "Reports", path: "/reports", adminOnly: false },
+  { icon: Calendar, label: "Report Scheduling", path: "/report-scheduling", adminOnly: false },
   { icon: MapPin, label: "Sites", path: "/sites", adminOnly: false },
   { icon: Users, label: "Users", path: "/users", adminOnly: true },
   { icon: UserPlus, label: "Pending Users", path: "/pending-users", adminOnly: true },
   { icon: Building2, label: "Vendors", path: "/vendors", adminOnly: false },
   { icon: Wrench, label: "Work Orders", path: "/work-orders", adminOnly: false },
+  { icon: FileText, label: "Work Order Templates", path: "/work-order-templates", adminOnly: false },
 ];
 
 const getMenuItems = (userRole?: string) => {

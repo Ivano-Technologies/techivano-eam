@@ -409,6 +409,29 @@ export type InsertAssetTransfer = typeof assetTransfers.$inferInsert;
 
 
 /**
+ * Work Order Templates - Reusable templates for common maintenance tasks
+ */
+export const workOrderTemplates = mysqlTable("workOrderTemplates", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  type: mysqlEnum("type", ["corrective", "preventive", "inspection", "emergency"]).notNull(),
+  priority: mysqlEnum("priority", ["low", "medium", "high", "critical"]).default("medium").notNull(),
+  estimatedDuration: int("estimatedDuration"), // in minutes
+  checklistItems: text("checklistItems"), // JSON string of checklist items
+  instructions: text("instructions"),
+  categoryId: int("categoryId"), // Optional: link to asset category
+  createdBy: int("createdBy").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WorkOrderTemplate = typeof workOrderTemplates.$inferSelect;
+export type InsertWorkOrderTemplate = typeof workOrderTemplates.$inferInsert;
+
+
+/**
  * QuickBooks Integration Configuration
  */
 export const quickbooksConfig = mysqlTable("quickbooksConfig", {
@@ -489,7 +512,7 @@ export const emailTemplates = mysqlTable("email_templates", {
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });
 
-export const emailNotifications = mysqlTable("email_notifications", {
+export const emailNotifications = mysqlTable("emailNotifications", {
   id: int("id").autoincrement().primaryKey(),
   subject: varchar("subject", { length: 255 }).notNull(),
   body: text("body").notNull(),

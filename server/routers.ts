@@ -1655,6 +1655,70 @@ export const appRouter = router({
         return await rejectPendingUser(input.id, ctx.user.id, input.reason);
       }),
   }),
+
+  // ============= WORK ORDER TEMPLATES =============
+  workOrderTemplates: router({
+    list: protectedProcedure
+      .input(z.object({
+        isActive: z.boolean().optional(),
+        type: z.enum(['corrective', 'preventive', 'inspection', 'emergency']).optional(),
+        categoryId: z.number().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        return await db.getWorkOrderTemplates(input || {});
+      }),
+
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getWorkOrderTemplateById(input.id);
+      }),
+
+    create: managerOrAdminProcedure
+      .input(z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        type: z.enum(['corrective', 'preventive', 'inspection', 'emergency']),
+        priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
+        estimatedDuration: z.number().optional(),
+        checklistItems: z.string().optional(), // JSON string
+        instructions: z.string().optional(),
+        categoryId: z.number().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.createWorkOrderTemplate({
+          ...input,
+          createdBy: ctx.user.id,
+          isActive: true,
+        });
+      }),
+
+    update: managerOrAdminProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        description: z.string().optional(),
+        type: z.enum(['corrective', 'preventive', 'inspection', 'emergency']).optional(),
+        priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+        estimatedDuration: z.number().optional(),
+        checklistItems: z.string().optional(),
+        instructions: z.string().optional(),
+        categoryId: z.number().optional(),
+        isActive: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateWorkOrderTemplate(id, data);
+        return { success: true };
+      }),
+
+    delete: managerOrAdminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteWorkOrderTemplate(input.id);
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

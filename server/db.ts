@@ -7,7 +7,8 @@ import {
   financialTransactions, complianceRecords, auditLogs, documents,
   notifications, notificationPreferences, assetPhotos, InsertAssetPhoto,
   scheduledReports, InsertScheduledReport, assetTransfers, quickbooksConfig, InsertQuickBooksConfig,
-  userPreferences, InsertUserPreferences, emailNotifications, InsertEmailNotification
+  userPreferences, InsertUserPreferences, emailNotifications, InsertEmailNotification,
+  workOrderTemplates, InsertWorkOrderTemplate
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -921,4 +922,64 @@ export async function getUserByEmail(email: string) {
     .limit(1);
   
   return result.length > 0 ? result[0] : null;
+}
+
+
+
+// ============= WORK ORDER TEMPLATES =============
+
+export async function createWorkOrderTemplate(data: InsertWorkOrderTemplate) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(workOrderTemplates).values(data);
+  return Number(result[0].insertId);
+}
+
+export async function getWorkOrderTemplates(filters?: {
+  isActive?: boolean;
+  type?: string;
+  categoryId?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const conditions = [];
+  if (filters?.isActive !== undefined) {
+    conditions.push(eq(workOrderTemplates.isActive, filters.isActive));
+  }
+  if (filters?.type) {
+    conditions.push(eq(workOrderTemplates.type, filters.type as any));
+  }
+  if (filters?.categoryId) {
+    conditions.push(eq(workOrderTemplates.categoryId, filters.categoryId));
+  }
+  
+  if (conditions.length > 0) {
+    return await db.select().from(workOrderTemplates).where(and(...conditions));
+  }
+  
+  return await db.select().from(workOrderTemplates);
+}
+
+export async function getWorkOrderTemplateById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(workOrderTemplates).where(eq(workOrderTemplates.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateWorkOrderTemplate(id: number, data: Partial<InsertWorkOrderTemplate>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(workOrderTemplates).set(data).where(eq(workOrderTemplates.id, id));
+}
+
+export async function deleteWorkOrderTemplate(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(workOrderTemplates).set({ isActive: false }).where(eq(workOrderTemplates.id, id));
 }
