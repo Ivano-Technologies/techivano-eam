@@ -67,9 +67,9 @@ const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
 const PRESET_WIDTHS = {
-  narrow: 200,
-  medium: 280,
-  wide: 380,
+  narrow: 160,
+  medium: 260,
+  wide: 360,
 };
 
 export default function DashboardLayout({
@@ -164,6 +164,13 @@ function DashboardLayoutContent({
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
+  
+  // Auto-redirect first-time users to welcome page
+  useEffect(() => {
+    if (user && !user.hasCompletedOnboarding && location !== '/welcome') {
+      setLocation('/welcome');
+    }
+  }, [user, location, setLocation]);
   const { state } = useSidebar();
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -276,13 +283,13 @@ function DashboardLayoutContent({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-36">
                     <DropdownMenuItem onClick={() => applyWidthPreset('narrow')} className="cursor-pointer">
-                      <span className="text-xs">Narrow (200px)</span>
+                      <span className="text-xs">Narrow</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => applyWidthPreset('medium')} className="cursor-pointer">
-                      <span className="text-xs">Medium (280px)</span>
+                      <span className="text-xs">Medium</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => applyWidthPreset('wide')} className="cursor-pointer">
-                      <span className="text-xs">Wide (380px)</span>
+                      <span className="text-xs">Wide</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

@@ -14,6 +14,7 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  hasCompletedOnboarding: boolean("has_completed_onboarding").default(false).notNull(),
 });
 
 /**

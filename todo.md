@@ -494,3 +494,29 @@
 - [x] Add quick start guide with step-by-step instructions
 - [x] Build feature overview cards
 - [x] Add welcome route to application
+
+## Phase 53: First-Time User Auto-Redirect
+- [x] Add hasCompletedOnboarding field to users table
+- [x] Create auto-redirect logic in DashboardLayout
+- [x] Mark onboarding complete when user finishes welcome wizard
+- [x] Test first-time user experience
+
+## Phase 54: Email Domain Whitelist
+- [x] Add email domain whitelist to system settings
+- [x] Hardcoded whitelist: redcross.org, nrcs.gov.ng, nrcs.org.ng
+- [x] Implement domain validation in signup
+- [x] Test domain restrictions
+
+## Phase 55: Bulk Asset Upload
+- [x] Backend API already exists (bulkOperations.ts)
+- [x] Excel file parsing already implemented
+- [x] Asset data validation already implemented
+- [x] Create bulk upload UI on Assets page
+- [x] Generate Excel template for download
+- [x] UI buttons added to Assets page
+
+## Phase 56: Update Sidebar Width Presets
+- [x] Change narrow preset to 160px
+- [x] Change medium preset to 260px
+- [x] Change wide preset to 360px
+- [x] Test sidebar width presets

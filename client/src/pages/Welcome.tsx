@@ -1,12 +1,20 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, Package, Wrench, FileText, DollarSign, Users, ArrowRight } from "lucide-react";
 
 export default function Welcome() {
   const [, setLocation] = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
+  const utils = trpc.useUtils();
+  const completeOnboarding = trpc.users.completeOnboarding.useMutation({
+    onSuccess: () => {
+      utils.auth.me.invalidate();
+      setLocation("/");
+    },
+  });
 
   const steps = [
     {
@@ -184,7 +192,7 @@ export default function Welcome() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
-                <Button onClick={() => setLocation("/")}>
+                <Button onClick={() => completeOnboarding.mutate()}>
                   Go to Dashboard
                 </Button>
               )}

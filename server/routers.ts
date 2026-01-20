@@ -39,6 +39,15 @@ export const appRouter = router({
         name: z.string().min(1),
       }))
       .mutation(async ({ input }) => {
+        // Email domain whitelist
+        const allowedDomains = ['redcross.org', 'nrcs.gov.ng', 'gmail.com', 'outlook.com', 'yahoo.com'];
+        const emailDomain = input.email.split('@')[1];
+        if (!allowedDomains.includes(emailDomain)) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Email domain @${emailDomain} is not allowed. Please contact your administrator.`,
+          });
+        }
         const { createSignupRequest } = await import("./magicLinkAuth");
         return await createSignupRequest(input.email, input.name);
       }),
@@ -805,6 +814,12 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         return await db.updateUserRole(input.userId, input.role);
+      }),
+
+    completeOnboarding: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        await db.updateUser(ctx.user.id, { hasCompletedOnboarding: true });
+        return { success: true };
       }),
 
     delete: adminProcedure
