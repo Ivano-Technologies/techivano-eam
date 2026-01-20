@@ -52,6 +52,7 @@ const allMenuItems = [
   { icon: AlertTriangle, label: "Warranty Alerts", path: "/warranty-alerts", adminOnly: false },
   { icon: BarChart3, label: "Cost Analytics", path: "/cost-analytics", adminOnly: false },
   { icon: History, label: "Audit Trail", path: "/audit-trail", adminOnly: true },
+  { icon: History, label: "Activity Log", path: "/activity-log", adminOnly: false },
 ];
 
 const getMenuItems = (userRole?: string) => {

@@ -3,8 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Package, Wrench, AlertTriangle, DollarSign, Calendar, TrendingUp } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function Home() {
+  const { user } = useAuth();
   const { data: stats, isLoading } = trpc.dashboard.stats.useQuery();
   const { data: upcomingMaintenance } = trpc.maintenance.upcoming.useQuery({ days: 7 });
   const { data: lowStockItems } = trpc.inventory.lowStock.useQuery();
@@ -17,7 +19,8 @@ export default function Home() {
     );
   }
 
-  const metrics = [
+  // Role-based metrics
+  const allMetrics = [
     {
       title: "Total Assets",
       value: stats?.totalAssets || 0,
@@ -26,6 +29,7 @@ export default function Home() {
       color: "text-blue-700",
       bgColor: "bg-blue-100",
       iconBg: "bg-gradient-to-br from-blue-500 to-blue-600",
+      roles: ["admin", "manager"],
     },
     {
       title: "Assets in Maintenance",
@@ -35,6 +39,7 @@ export default function Home() {
       color: "text-orange-700",
       bgColor: "bg-orange-50",
       iconBg: "bg-gradient-to-br from-orange-500 to-orange-600",
+      roles: ["admin", "manager", "technician"],
     },
     {
       title: "Pending Work Orders",
@@ -44,6 +49,7 @@ export default function Home() {
       color: "text-red-700",
       bgColor: "bg-red-50",
       iconBg: "bg-gradient-to-br from-red-600 to-red-700",
+      roles: ["admin", "manager", "technician"],
     },
     {
       title: "Low Stock Items",
@@ -53,8 +59,14 @@ export default function Home() {
       color: "text-purple-700",
       bgColor: "bg-purple-50",
       iconBg: "bg-gradient-to-br from-purple-500 to-purple-600",
+      roles: ["admin", "manager"],
     },
   ];
+
+  // Filter metrics based on user role
+  const metrics = allMetrics.filter(metric => 
+    !user?.role || metric.roles.includes(user.role)
+  );
 
   return (
     <div className="space-y-6">

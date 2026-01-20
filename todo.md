@@ -722,3 +722,19 @@
 - [x] Role selector includes admin, manager, technician, user
 - [x] Set owner as admin in database
 - [x] Feature complete and tested
+
+## Phase 83: Role-Based Dashboard Views
+- [x] Customized dashboard widgets based on user role
+- [x] Technicians see maintenance and work order metrics
+- [x] Managers see analytics including total assets and low stock
+- [x] Admins see all widgets and system overview
+- [x] Role filtering implemented on Home page
+- [x] Feature complete and tested
+
+## Phase 84: Activity Logging System
+- [x] Activity logging already exists via audit logs
+- [x] Tracks all user actions with timestamps
+- [x] Logs all entity changes (assets, work orders, users, etc.)
+- [x] Created enhanced Activity Log viewer UI at /activity-log
+- [x] Manager and admin access with filtering and search
+- [x] Feature complete and tested
