@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Package, MapPin, Calendar, DollarSign, QrCode, Download } from "lucide-react";
+import { ArrowLeft, Edit, Package, MapPin, Calendar, DollarSign, QrCode, Download, Upload, Image as ImageIcon, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -20,9 +20,12 @@ export default function AssetDetail() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const assetId = params?.id ? Number(params.id) : 0;
   const { data: asset, isLoading, refetch } = trpc.assets.getById.useQuery({ id: assetId });
+  const { data: photos, refetch: refetchPhotos } = trpc.photos.listByAsset.useQuery({ assetId }, { enabled: !!assetId });
 
   const generateQRCodeMutation = trpc.assets.generateQRCode.useMutation({
     onSuccess: () => {
@@ -44,6 +47,73 @@ export default function AssetDetail() {
       toast.error(`Failed to update asset: ${error.message}`);
     },
   });
+
+  const createPhotoMutation = trpc.photos.create.useMutation({
+    onSuccess: () => {
+      toast.success("Photo uploaded successfully");
+      refetchPhotos();
+    },
+    onError: (error) => {
+      toast.error(`Failed to upload photo: ${error.message}`);
+    },
+  });
+
+  const deletePhotoMutation = trpc.photos.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Photo deleted successfully");
+      refetchPhotos();
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete photo: ${error.message}`);
+    },
+  });
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+
+      const { url, key } = await response.json();
+
+      await createPhotoMutation.mutateAsync({
+        assetId,
+        photoUrl: url,
+        photoKey: key,
+      });
+    } catch (error: any) {
+      toast.error(`Upload failed: ${error.message}`);
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDeletePhoto = (photoId: number) => {
+    if (confirm('Are you sure you want to delete this photo?')) {
+      deletePhotoMutation.mutate({ id: photoId });
+    }
+  };
 
   const [editForm, setEditForm] = useState({
     name: "",
@@ -324,6 +394,95 @@ export default function AssetDetail() {
           </Card>
         )}
       </div>
+
+      {/* Photo Gallery */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <ImageIcon className="h-5 w-5" />
+              Asset Photos
+            </CardTitle>
+            {canEdit && (
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                  id="photo-upload"
+                  disabled={uploadingPhoto}
+                />
+                <Button
+                  size="sm"
+                  onClick={() => document.getElementById('photo-upload')?.click()}
+                  disabled={uploadingPhoto}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {uploadingPhoto ? 'Uploading...' : 'Upload Photo'}
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {photos && photos.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {photos.map((photo: any) => (
+                <div key={photo.id} className="relative group">
+                  <img
+                    src={photo.photoUrl}
+                    alt={photo.caption || 'Asset photo'}
+                    className="w-full h-32 object-cover rounded-lg border-2 border-border cursor-pointer hover:border-primary transition-colors"
+                    onClick={() => setSelectedImage(photo.photoUrl)}
+                  />
+                  {canEdit && (
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleDeletePhoto(photo.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {photo.caption && (
+                    <p className="text-xs text-muted-foreground mt-1 truncate">{photo.caption}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">
+                No photos uploaded yet
+              </p>
+              {canEdit && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Click "Upload Photo" to add images
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Image Preview Dialog */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Photo Preview</DialogTitle>
+          </DialogHeader>
+          {selectedImage && (
+            <img
+              src={selectedImage}
+              alt="Asset photo preview"
+              className="w-full h-auto rounded-lg"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Depreciation Analysis */}
       {asset.depreciationMethod && asset.depreciationMethod !== 'none' && (
