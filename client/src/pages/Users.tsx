@@ -2,6 +2,8 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -17,9 +19,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { User, Mail } from "lucide-react";
+import { User, Mail, Edit2, Trash2, Save, X } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useState } from "react";
+import { toast } from "sonner";
 
 
 export default function Users() {
@@ -29,6 +32,8 @@ export default function Users() {
     enabled: user?.role === "admin",
   });
   const updateRoleMutation = trpc.users.updateRole.useMutation();
+  const updateUserMutation = trpc.users.update.useMutation();
+  const deleteUserMutation = trpc.users.delete.useMutation();
   const utils = trpc.useUtils();
 
   const [roleChangeDialog, setRoleChangeDialog] = useState<{
@@ -38,6 +43,15 @@ export default function Users() {
     currentRole?: string;
     newRole?: string;
   }>({ open: false });
+
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    userId?: number;
+    userName?: string;
+  }>({ open: false });
+
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [editData, setEditData] = useState<{ name: string; email: string }>({ name: "", email: "" });
 
   const handleRoleChange = (userId: number, userName: string, currentRole: string, newRole: string) => {
     setRoleChangeDialog({
@@ -59,10 +73,61 @@ export default function Users() {
       });
       
       utils.users.list.invalidate();
-      alert(`Role updated: ${roleChangeDialog.userName}'s role has been changed to ${roleChangeDialog.newRole}`);
+      toast.success(`Role updated: ${roleChangeDialog.userName}'s role has been changed to ${roleChangeDialog.newRole}`);
       setRoleChangeDialog({ open: false });
     } catch (error: any) {
-      alert(`Error: ${error.message || 'Failed to update user role'}`);
+      toast.error(`Error: ${error.message || 'Failed to update user role'}`);
+    }
+  };
+
+  const handleStartEdit = (userId: number, name: string, email: string) => {
+    setEditingUserId(userId);
+    setEditData({ name, email });
+  };
+
+  const handleSaveEdit = async (userId: number) => {
+    if (!editData.name || !editData.email) {
+      toast.error("Name and email are required");
+      return;
+    }
+
+    try {
+      await updateUserMutation.mutateAsync({
+        id: userId,
+        name: editData.name,
+        email: editData.email,
+      });
+      utils.users.list.invalidate();
+      toast.success("User updated successfully");
+      setEditingUserId(null);
+    } catch (error: any) {
+      toast.error(`Failed to update user: ${error.message}`);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingUserId(null);
+    setEditData({ name: "", email: "" });
+  };
+
+  const handleDeleteClick = (userId: number, userName: string) => {
+    setDeleteDialog({
+      open: true,
+      userId,
+      userName,
+    });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteDialog.userId) return;
+
+    try {
+      await deleteUserMutation.mutateAsync({ id: deleteDialog.userId });
+      utils.users.list.invalidate();
+      toast.success(`User ${deleteDialog.userName} deleted successfully`);
+      setDeleteDialog({ open: false });
+    } catch (error: any) {
+      toast.error(`Failed to delete user: ${error.message}`);
     }
   };
 
@@ -100,22 +165,65 @@ export default function Users() {
           <Card key={u.id}>
             <CardHeader>
               <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-1">
                   <User className="h-5 w-5 text-primary" />
-                  <div>
-                    <CardTitle className="text-lg">{u.name || "No Name"}</CardTitle>
+                  <div className="flex-1">
+                    {editingUserId === u.id ? (
+                      <Input 
+                        value={editData.name} 
+                        onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                        className="h-8 text-lg font-semibold"
+                      />
+                    ) : (
+                      <CardTitle className="text-lg">{u.name || "No Name"}</CardTitle>
+                    )}
                   </div>
                 </div>
-                <Badge className={getRoleBadgeColor(u.role)}>{u.role}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge className={getRoleBadgeColor(u.role)}>{u.role}</Badge>
+                  {u.id !== user?.id && (
+                    editingUserId === u.id ? (
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => handleSaveEdit(u.id)}>
+                          <Save className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => handleStartEdit(u.id, u.name || "", u.email || "")}>
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleDeleteClick(u.id, u.name || "User")}>
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
+                    )
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3 text-sm">
-                {u.email && (
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Mail className="h-3 w-3" />
-                    <span>{u.email}</span>
+                {editingUserId === u.id ? (
+                  <div className="space-y-2">
+                    <Label className="text-xs">Email</Label>
+                    <Input 
+                      type="email"
+                      value={editData.email} 
+                      onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                      className="text-sm"
+                    />
                   </div>
+                ) : (
+                  u.email && (
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Mail className="h-3 w-3" />
+                      <span>{u.email}</span>
+                    </div>
+                  )
                 )}
                 {u.loginMethod && (
                   <p className="text-muted-foreground">
@@ -128,31 +236,33 @@ export default function Users() {
                 </p>
                 
                 {/* Role Management */}
-                <div className="pt-2 border-t">
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">
-                    Change Role
-                  </label>
-                  <Select
-                    value={u.role}
-                    onValueChange={(newRole) => handleRoleChange(u.id, u.name || 'User', u.role, newRole)}
-                    disabled={u.id === user?.id} // Prevent changing own role
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="technician">Technician</SelectItem>
-                      <SelectItem value="user">User</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {u.id === user?.id && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Cannot change your own role
-                    </p>
-                  )}
-                </div>
+                {editingUserId !== u.id && (
+                  <div className="pt-2 border-t">
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">
+                      Change Role
+                    </label>
+                    <Select
+                      value={u.role}
+                      onValueChange={(newRole) => handleRoleChange(u.id, u.name || 'User', u.role, newRole)}
+                      disabled={u.id === user?.id} // Prevent changing own role
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="manager">Manager</SelectItem>
+                        <SelectItem value="technician">Technician</SelectItem>
+                        <SelectItem value="user">User</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {u.id === user?.id && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Cannot change your own role or delete yourself
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -179,6 +289,34 @@ export default function Users() {
             </Button>
             <Button onClick={confirmRoleChange} disabled={updateRoleMutation.isPending}>
               {updateRoleMutation.isPending ? "Updating..." : "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm User Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete user <span className="font-semibold">{deleteDialog.userName}</span>? 
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialog({ open: false })}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDelete} 
+              disabled={deleteUserMutation.isPending}
+            >
+              {deleteUserMutation.isPending ? "Deleting..." : "Delete User"}
             </Button>
           </DialogFooter>
         </DialogContent>

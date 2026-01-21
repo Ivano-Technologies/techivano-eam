@@ -715,6 +715,24 @@ export const appRouter = router({
         });
       }),
 
+    update: managerOrAdminProcedure
+      .input(z.object({
+        id: z.number(),
+        transactionType: z.enum(["acquisition", "maintenance", "repair", "disposal", "depreciation", "revenue", "other"]).optional(),
+        amount: z.string().optional(),
+        description: z.string().optional(),
+        transactionDate: z.string().optional(),
+        receiptNumber: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        const updateData: any = { ...data };
+        if (data.transactionDate) {
+          updateData.transactionDate = new Date(data.transactionDate);
+        }
+        return await db.updateFinancialTransaction(id, updateData);
+      }),
+
     // Lifecycle Cost Analysis
     getAssetLifecycleCost: protectedProcedure
       .input(z.object({ assetId: z.number() }))

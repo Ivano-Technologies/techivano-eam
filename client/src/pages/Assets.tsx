@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Package, MapPin, Download, Upload } from "lucide-react";
+import { Plus, Search, Package, MapPin, Download, Upload, Edit2 } from "lucide-react";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,8 @@ export default function Assets() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [siteFilter, setSiteFilter] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<any>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const { data: assets, isLoading, refetch } = trpc.assets.list.useQuery({
     siteId: siteFilter !== "all" ? Number(siteFilter) : undefined,
@@ -70,8 +72,6 @@ export default function Assets() {
     },
   });
 
-
-
   const handleImport = async () => {
     if (!importFile) {
       toast.error("Please select a file");
@@ -109,6 +109,18 @@ export default function Assets() {
     },
   });
 
+  const updateAssetMutation = trpc.assets.update.useMutation({
+    onSuccess: () => {
+      toast.success("Asset updated successfully");
+      setIsEditDialogOpen(false);
+      setEditingAsset(null);
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update asset: ${error.message}`);
+    },
+  });
+
   const [newAsset, setNewAsset] = useState({
     assetTag: "",
     name: "",
@@ -137,6 +149,46 @@ export default function Assets() {
       model: newAsset.model || undefined,
       serialNumber: newAsset.serialNumber || undefined,
       location: newAsset.location || undefined,
+    });
+  };
+
+  const handleStartEdit = (asset: any, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingAsset({
+      id: asset.id,
+      assetTag: asset.assetTag,
+      name: asset.name,
+      description: asset.description || "",
+      categoryId: asset.categoryId?.toString() || "",
+      siteId: asset.siteId?.toString() || "",
+      manufacturer: asset.manufacturer || "",
+      model: asset.model || "",
+      serialNumber: asset.serialNumber || "",
+      location: asset.location || "",
+      status: asset.status,
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingAsset.assetTag || !editingAsset.name || !editingAsset.categoryId || !editingAsset.siteId) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    updateAssetMutation.mutate({
+      id: editingAsset.id,
+      assetTag: editingAsset.assetTag,
+      name: editingAsset.name,
+      description: editingAsset.description || undefined,
+      categoryId: Number(editingAsset.categoryId),
+      siteId: Number(editingAsset.siteId),
+      manufacturer: editingAsset.manufacturer || undefined,
+      model: editingAsset.model || undefined,
+      serialNumber: editingAsset.serialNumber || undefined,
+      location: editingAsset.location || undefined,
+      status: editingAsset.status,
     });
   };
 
@@ -366,46 +418,60 @@ export default function Assets() {
       ) : filteredAssets && filteredAssets.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredAssets.map((asset) => (
-            <Link key={asset.id} href={`/assets/${asset.id}`}>
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-5 w-5 text-primary" />
-                      <div>
-                        <CardTitle className="text-lg">{asset.name}</CardTitle>
-                        <CardDescription className="text-xs mt-1">
-                          {asset.assetTag}
-                        </CardDescription>
+            <div key={asset.id} className="relative">
+              <Link href={`/assets/${asset.id}`}>
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-5 w-5 text-primary" />
+                        <div>
+                          <CardTitle className="text-lg">{asset.name}</CardTitle>
+                          <CardDescription className="text-xs mt-1">
+                            {asset.assetTag}
+                          </CardDescription>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusColor(asset.status)}>
+                          {asset.status}
+                        </Badge>
+                        {canCreateAsset && (
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={(e) => handleStartEdit(asset, e)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
-                    <Badge className={getStatusColor(asset.status)}>
-                      {asset.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    {asset.manufacturer && (
-                      <p className="text-muted-foreground">
-                        <span className="font-medium">Manufacturer:</span> {asset.manufacturer}
-                      </p>
-                    )}
-                    {asset.model && (
-                      <p className="text-muted-foreground">
-                        <span className="font-medium">Model:</span> {asset.model}
-                      </p>
-                    )}
-                    {asset.location && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
-                        <span>{asset.location}</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm">
+                      {asset.manufacturer && (
+                        <p className="text-muted-foreground">
+                          <span className="font-medium">Manufacturer:</span> {asset.manufacturer}
+                        </p>
+                      )}
+                      {asset.model && (
+                        <p className="text-muted-foreground">
+                          <span className="font-medium">Model:</span> {asset.model}
+                        </p>
+                      )}
+                      {asset.location && (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <MapPin className="h-3 w-3" />
+                          <span>{asset.location}</span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
           ))}
         </div>
       ) : (
@@ -416,6 +482,139 @@ export default function Assets() {
           </CardContent>
         </Card>
       )}
+
+      {/* Edit Asset Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Asset</DialogTitle>
+            <DialogDescription>
+              Update asset information
+            </DialogDescription>
+          </DialogHeader>
+          {editingAsset && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-assetTag">Asset Tag *</Label>
+                  <Input
+                    id="edit-assetTag"
+                    value={editingAsset.assetTag}
+                    onChange={(e) => setEditingAsset({ ...editingAsset, assetTag: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Asset Name *</Label>
+                  <Input
+                    id="edit-name"
+                    value={editingAsset.name}
+                    onChange={(e) => setEditingAsset({ ...editingAsset, name: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  value={editingAsset.description}
+                  onChange={(e) => setEditingAsset({ ...editingAsset, description: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-category">Category *</Label>
+                  <Select value={editingAsset.categoryId} onValueChange={(value) => setEditingAsset({ ...editingAsset, categoryId: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories?.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id.toString()}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-site">Site *</Label>
+                  <Select value={editingAsset.siteId} onValueChange={(value) => setEditingAsset({ ...editingAsset, siteId: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select site" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sites?.map((site) => (
+                        <SelectItem key={site.id} value={site.id.toString()}>
+                          {site.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">Status</Label>
+                  <Select value={editingAsset.status} onValueChange={(value) => setEditingAsset({ ...editingAsset, status: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="operational">Operational</SelectItem>
+                      <SelectItem value="maintenance">Maintenance</SelectItem>
+                      <SelectItem value="repair">Repair</SelectItem>
+                      <SelectItem value="retired">Retired</SelectItem>
+                      <SelectItem value="disposed">Disposed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-manufacturer">Manufacturer</Label>
+                  <Input
+                    id="edit-manufacturer"
+                    value={editingAsset.manufacturer}
+                    onChange={(e) => setEditingAsset({ ...editingAsset, manufacturer: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-model">Model</Label>
+                  <Input
+                    id="edit-model"
+                    value={editingAsset.model}
+                    onChange={(e) => setEditingAsset({ ...editingAsset, model: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-serialNumber">Serial Number</Label>
+                  <Input
+                    id="edit-serialNumber"
+                    value={editingAsset.serialNumber}
+                    onChange={(e) => setEditingAsset({ ...editingAsset, serialNumber: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-location">Location</Label>
+                <Input
+                  id="edit-location"
+                  value={editingAsset.location}
+                  onChange={(e) => setEditingAsset({ ...editingAsset, location: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={updateAssetMutation.isPending}>
+              {updateAssetMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Import Dialog */}
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>

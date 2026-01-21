@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Plus, Phone, Mail, Upload, Download } from "lucide-react";
+import { MapPin, Plus, Phone, Mail, Upload, Download, Edit2, Save, X } from "lucide-react";
 import { useRef } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 export default function Sites() {
   const { user } = useAuth();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingSiteId, setEditingSiteId] = useState<number | null>(null);
+  const [editData, setEditData] = useState<any>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: sites, isLoading, refetch } = trpc.sites.list.useQuery();
   
@@ -41,6 +43,18 @@ export default function Sites() {
     },
     onError: (error) => {
       toast.error(`Failed to create site: ${error.message}`);
+    },
+  });
+
+  const updateSiteMutation = trpc.sites.update.useMutation({
+    onSuccess: () => {
+      toast.success("Site updated successfully");
+      setEditingSiteId(null);
+      setEditData({});
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Failed to update site: ${error.message}`);
     },
   });
 
@@ -91,6 +105,32 @@ export default function Sites() {
       return;
     }
     createSiteMutation.mutate(newSite);
+  };
+
+  const handleStartEdit = (site: any) => {
+    setEditingSiteId(site.id);
+    setEditData({
+      name: site.name,
+      address: site.address || "",
+      city: site.city || "",
+      state: site.state || "",
+      contactPerson: site.contactPerson || "",
+      contactPhone: site.contactPhone || "",
+      contactEmail: site.contactEmail || "",
+    });
+  };
+
+  const handleSaveEdit = (siteId: number) => {
+    if (!editData.name) {
+      toast.error("Site name is required");
+      return;
+    }
+    updateSiteMutation.mutate({ id: siteId, ...editData });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSiteId(null);
+    setEditData({});
   };
 
   const canManageSites = user?.role === "admin" || user?.role === "manager";
@@ -151,19 +191,91 @@ export default function Sites() {
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-primary" />
-                  <div><CardTitle className="text-lg">{site.name}</CardTitle></div>
+                  <div>
+                    {editingSiteId === site.id ? (
+                      <Input 
+                        value={editData.name} 
+                        onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                        className="h-8 text-lg font-semibold"
+                      />
+                    ) : (
+                      <CardTitle className="text-lg">{site.name}</CardTitle>
+                    )}
+                  </div>
                 </div>
-                <Badge variant={site.isActive ? "default" : "secondary"}>{site.isActive ? "Active" : "Inactive"}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={site.isActive ? "default" : "secondary"}>{site.isActive ? "Active" : "Inactive"}</Badge>
+                  {canManageSites && (
+                    editingSiteId === site.id ? (
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => handleSaveEdit(site.id)}>
+                          <Save className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="ghost" onClick={() => handleStartEdit(site)}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    )
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2 text-sm">
-                {site.address && <p className="text-muted-foreground">{site.address}</p>}
-                {(site.city || site.state) && <p className="text-muted-foreground">{[site.city, site.state].filter(Boolean).join(", ")}</p>}
-                {site.contactPerson && <p className="text-muted-foreground"><span className="font-medium">Contact:</span> {site.contactPerson}</p>}
-                {site.contactPhone && <div className="flex items-center gap-1 text-muted-foreground"><Phone className="h-3 w-3" /><span>{site.contactPhone}</span></div>}
-                {site.contactEmail && <div className="flex items-center gap-1 text-muted-foreground"><Mail className="h-3 w-3" /><span>{site.contactEmail}</span></div>}
-              </div>
+              {editingSiteId === site.id ? (
+                <div className="space-y-2">
+                  <Input 
+                    placeholder="Address" 
+                    value={editData.address} 
+                    onChange={(e) => setEditData({ ...editData, address: e.target.value })}
+                    className="text-sm"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input 
+                      placeholder="City" 
+                      value={editData.city} 
+                      onChange={(e) => setEditData({ ...editData, city: e.target.value })}
+                      className="text-sm"
+                    />
+                    <Input 
+                      placeholder="State" 
+                      value={editData.state} 
+                      onChange={(e) => setEditData({ ...editData, state: e.target.value })}
+                      className="text-sm"
+                    />
+                  </div>
+                  <Input 
+                    placeholder="Contact Person" 
+                    value={editData.contactPerson} 
+                    onChange={(e) => setEditData({ ...editData, contactPerson: e.target.value })}
+                    className="text-sm"
+                  />
+                  <Input 
+                    placeholder="Phone" 
+                    value={editData.contactPhone} 
+                    onChange={(e) => setEditData({ ...editData, contactPhone: e.target.value })}
+                    className="text-sm"
+                  />
+                  <Input 
+                    placeholder="Email" 
+                    type="email"
+                    value={editData.contactEmail} 
+                    onChange={(e) => setEditData({ ...editData, contactEmail: e.target.value })}
+                    className="text-sm"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2 text-sm">
+                  {site.address && <p className="text-muted-foreground">{site.address}</p>}
+                  {(site.city || site.state) && <p className="text-muted-foreground">{[site.city, site.state].filter(Boolean).join(", ")}</p>}
+                  {site.contactPerson && <p className="text-muted-foreground"><span className="font-medium">Contact:</span> {site.contactPerson}</p>}
+                  {site.contactPhone && <div className="flex items-center gap-1 text-muted-foreground"><Phone className="h-3 w-3" /><span>{site.contactPhone}</span></div>}
+                  {site.contactEmail && <div className="flex items-center gap-1 text-muted-foreground"><Mail className="h-3 w-3" /><span>{site.contactEmail}</span></div>}
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}

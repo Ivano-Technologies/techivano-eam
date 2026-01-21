@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DollarSign, Plus, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+import { DollarSign, Plus, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, Edit2, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -14,6 +14,9 @@ export default function Financial() {
   const { user } = useAuth();
   const { data: transactions, isLoading, refetch } = trpc.financial.list.useQuery();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingTransactionId, setEditingTransactionId] = useState<number | null>(null);
+  const [editData, setEditData] = useState<any>({});
+  
   const [newTransaction, setNewTransaction] = useState({
     transactionType: "maintenance",
     amount: "",
@@ -37,8 +40,20 @@ export default function Financial() {
         receiptNumber: "",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Failed to create transaction: ${error.message}`);
+    },
+  });
+
+  const updateTransactionMutation = trpc.financial.update.useMutation({
+    onSuccess: () => {
+      toast.success("Transaction updated successfully");
+      setEditingTransactionId(null);
+      setEditData({});
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update transaction: ${error.message}`);
     },
   });
 
@@ -55,6 +70,37 @@ export default function Financial() {
       assetId: newTransaction.assetId ? parseInt(newTransaction.assetId) : undefined,
       receiptNumber: newTransaction.receiptNumber || undefined,
     });
+  };
+
+  const handleStartEdit = (transaction: any) => {
+    setEditingTransactionId(transaction.id);
+    setEditData({
+      transactionType: transaction.transactionType,
+      amount: transaction.amount,
+      description: transaction.description || "",
+      transactionDate: transaction.transactionDate.split('T')[0],
+      receiptNumber: transaction.receiptNumber || "",
+    });
+  };
+
+  const handleSaveEdit = () => {
+    if (!editData.amount || parseFloat(editData.amount) <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+    updateTransactionMutation.mutate({
+      id: editingTransactionId!,
+      transactionType: editData.transactionType,
+      amount: editData.amount,
+      description: editData.description || undefined,
+      transactionDate: editData.transactionDate,
+      receiptNumber: editData.receiptNumber || undefined,
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTransactionId(null);
+    setEditData({});
   };
 
   if (isLoading) {
@@ -216,18 +262,55 @@ export default function Financial() {
           {revenueTransactions.length > 0 ? (
             <div className="space-y-3">
               {revenueTransactions.slice(0, 10).map((t) => (
-                <div key={t.id} className="flex items-center justify-between border-b pb-3 last:border-0">
-                  <div>
-                    <p className="font-medium">{t.description || "Revenue"}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(t.transactionDate).toLocaleDateString()}
-                      {t.receiptNumber && ` • ${t.receiptNumber}`}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-green-600">+₦{parseFloat(t.amount).toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">{t.currency}</p>
-                  </div>
+                <div key={t.id} className="border-b pb-3 last:border-0">
+                  {editingTransactionId === t.id ? (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          value={editData.amount}
+                          onChange={(e) => setEditData({ ...editData, amount: e.target.value })}
+                          placeholder="Amount"
+                        />
+                        <Input 
+                          type="date"
+                          value={editData.transactionDate}
+                          onChange={(e) => setEditData({ ...editData, transactionDate: e.target.value })}
+                        />
+                      </div>
+                      <Input 
+                        value={editData.description}
+                        onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                        placeholder="Description"
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleSaveEdit}><Save className="h-4 w-4 mr-1" />Save</Button>
+                        <Button size="sm" variant="outline" onClick={handleCancelEdit}><X className="h-4 w-4 mr-1" />Cancel</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{t.description || "Revenue"}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(t.transactionDate).toLocaleDateString()}
+                          {t.receiptNumber && ` • ${t.receiptNumber}`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <p className="font-bold text-green-600">+₦{parseFloat(t.amount).toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">{t.currency}</p>
+                        </div>
+                        {canManageFinancial && (
+                          <Button size="sm" variant="ghost" onClick={() => handleStartEdit(t)}>
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -249,18 +332,71 @@ export default function Financial() {
           {expenseTransactions.length > 0 ? (
             <div className="space-y-3">
               {expenseTransactions.slice(0, 10).map((t) => (
-                <div key={t.id} className="flex items-center justify-between border-b pb-3 last:border-0">
-                  <div>
-                    <p className="font-medium capitalize">{t.transactionType.replace('_', ' ')}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(t.transactionDate).toLocaleDateString()}
-                      {t.description && ` • ${t.description}`}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-red-600">-₦{parseFloat(t.amount).toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">{t.currency}</p>
-                  </div>
+                <div key={t.id} className="border-b pb-3 last:border-0">
+                  {editingTransactionId === t.id ? (
+                    <div className="space-y-3">
+                      <Select 
+                        value={editData.transactionType}
+                        onValueChange={(value) => setEditData({ ...editData, transactionType: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="acquisition">Acquisition</SelectItem>
+                          <SelectItem value="maintenance">Maintenance</SelectItem>
+                          <SelectItem value="repair">Repair</SelectItem>
+                          <SelectItem value="disposal">Disposal</SelectItem>
+                          <SelectItem value="depreciation">Depreciation</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          value={editData.amount}
+                          onChange={(e) => setEditData({ ...editData, amount: e.target.value })}
+                          placeholder="Amount"
+                        />
+                        <Input 
+                          type="date"
+                          value={editData.transactionDate}
+                          onChange={(e) => setEditData({ ...editData, transactionDate: e.target.value })}
+                        />
+                      </div>
+                      <Input 
+                        value={editData.description}
+                        onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                        placeholder="Description"
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleSaveEdit}><Save className="h-4 w-4 mr-1" />Save</Button>
+                        <Button size="sm" variant="outline" onClick={handleCancelEdit}><X className="h-4 w-4 mr-1" />Cancel</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium capitalize">{t.transactionType.replace('_', ' ')}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(t.transactionDate).toLocaleDateString()}
+                          {t.description && ` • ${t.description}`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <p className="font-bold text-red-600">-₦{parseFloat(t.amount).toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">{t.currency}</p>
+                        </div>
+                        {canManageFinancial && (
+                          <Button size="sm" variant="ghost" onClick={() => handleStartEdit(t)}>
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

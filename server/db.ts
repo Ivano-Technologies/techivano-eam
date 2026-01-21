@@ -807,6 +807,13 @@ export async function getFinancialTransactionById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function updateFinancialTransaction(id: number, data: Partial<typeof financialTransactions.$inferInsert>) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.update(financialTransactions).set(data).where(eq(financialTransactions.id, id));
+  return await getFinancialTransactionById(id);
+}
+
 
 // ============= QuickBooks Configuration =============
 export async function getQuickBooksConfig() {
