@@ -775,3 +775,9 @@
 - [x] Implement inline editing for Users page (edit name, email, role)
 - [x] Implement user deletion capability for admins
 - [x] Implement inline editing for Financial page (edit amount, type, description, date)
+
+## Phase 72: Sidebar Width Settings Update
+- [x] Update narrow width to show only logo and icons (no text)
+- [x] Set medium width as default with full text visible
+- [x] Update wide width to 380px
+- [x] Ensure medium is the default on first load

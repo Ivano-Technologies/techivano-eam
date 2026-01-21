@@ -871,7 +871,18 @@ export async function getUserPreferences(userId: number) {
   if (!db) return null;
   
   const result = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
-  return result.length > 0 ? result[0] : null;
+  if (result.length > 0) {
+    return result[0];
+  }
+  // Return default preferences with medium sidebar width (260px)
+  return {
+    userId,
+    sidebarWidth: 260,
+    sidebarCollapsed: 0,
+    dashboardWidgets: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as any;
 }
 
 export async function upsertUserPreferences(prefs: InsertUserPreferences) {
