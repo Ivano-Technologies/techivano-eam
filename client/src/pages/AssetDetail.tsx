@@ -22,6 +22,9 @@ export default function AssetDetail() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [photoCaption, setPhotoCaption] = useState('');
 
   const assetId = params?.id ? Number(params.id) : 0;
   const { data: asset, isLoading, refetch } = trpc.assets.getById.useQuery({ id: assetId });
@@ -68,44 +71,62 @@ export default function AssetDetail() {
     },
   });
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      return;
-    }
+    const validFiles = files.filter(file => {
+      if (!file.type.startsWith('image/')) {
+        toast.error(`${file.name} is not an image file`);
+        return false;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`${file.name} exceeds 5MB limit`);
+        return false;
+      }
+      return true;
+    });
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size must be less than 5MB');
-      return;
+    if (validFiles.length > 0) {
+      setPendingFiles(validFiles);
+      setIsUploadDialogOpen(true);
     }
+    e.target.value = '';
+  };
+
+  const handleUploadWithCaption = async () => {
+    if (pendingFiles.length === 0) return;
 
     setUploadingPhoto(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      for (const file of pendingFiles) {
+        const formData = new FormData();
+        formData.append('file', file);
 
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
 
-      if (!response.ok) throw new Error('Upload failed');
+        if (!response.ok) throw new Error(`Upload failed for ${file.name}`);
 
-      const { url, key } = await response.json();
+        const { url, key } = await response.json();
 
-      await createPhotoMutation.mutateAsync({
-        assetId,
-        photoUrl: url,
-        photoKey: key,
-      });
+        await createPhotoMutation.mutateAsync({
+          assetId,
+          photoUrl: url,
+          photoKey: key,
+          caption: photoCaption || undefined,
+        });
+      }
+      toast.success(`Successfully uploaded ${pendingFiles.length} photo(s)`);
+      setIsUploadDialogOpen(false);
+      setPendingFiles([]);
+      setPhotoCaption('');
     } catch (error: any) {
       toast.error(`Upload failed: ${error.message}`);
     } finally {
       setUploadingPhoto(false);
-      e.target.value = '';
     }
   };
 
@@ -408,7 +429,8 @@ export default function AssetDetail() {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={handlePhotoUpload}
+                  multiple
+                  onChange={handleFileSelect}
                   className="hidden"
                   id="photo-upload"
                   disabled={uploadingPhoto}
@@ -491,6 +513,52 @@ export default function AssetDetail() {
 
       {/* Maintenance Timeline */}
       <AssetMaintenanceTimeline assetId={assetId} />
+
+      {/* Photo Upload Dialog with Caption */}
+      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload Photos</DialogTitle>
+            <DialogDescription>
+              {pendingFiles.length} photo(s) selected. Add an optional caption that will apply to all photos.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="photo-caption">Caption (Optional)</Label>
+              <Input
+                id="photo-caption"
+                placeholder="e.g., Front view, After maintenance, etc."
+                value={photoCaption}
+                onChange={(e) => setPhotoCaption(e.target.value)}
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <p className="font-medium mb-1">Selected files:</p>
+              <ul className="list-disc list-inside space-y-1">
+                {pendingFiles.map((file, idx) => (
+                  <li key={idx} className="truncate">{file.name}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsUploadDialogOpen(false);
+                setPendingFiles([]);
+                setPhotoCaption('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUploadWithCaption} disabled={uploadingPhoto}>
+              {uploadingPhoto ? 'Uploading...' : `Upload ${pendingFiles.length} Photo(s)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

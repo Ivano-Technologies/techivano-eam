@@ -794,3 +794,10 @@
 - [x] Support multiple photo uploads per asset
 - [x] Add photo deletion capability
 - [x] Test upload, display, and deletion
+
+## Phase 75: Photo Feature Enhancements
+- [x] Add caption input dialog for photo uploads
+- [x] Implement bulk photo upload (multiple files at once)
+- [ ] Include asset photos in PDF compliance reports (requires PDFKit enhancement - future)
+- [x] Test caption functionality
+- [x] Test bulk upload with multiple images
