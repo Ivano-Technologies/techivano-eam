@@ -28,6 +28,7 @@ import { trpc } from "@/lib/trpc";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { NotificationCenter } from "./NotificationCenter";
+import Footer from "./Footer";
 
 const allMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: false, sortOrder: 0 },
@@ -425,6 +426,7 @@ function DashboardLayoutContent({
           </div>
         )}
         <main className="flex-1 p-4">{children}</main>
+        <Footer />
       </SidebarInset>
     </>
   );

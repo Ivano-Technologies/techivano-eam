@@ -37,6 +37,8 @@ import WarrantyAlerts from "./pages/WarrantyAlerts";
 import CostAnalytics from "./pages/CostAnalytics";
 import AuditTrail from "./pages/AuditTrail";
 import ActivityLog from "./pages/ActivityLog";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
 function Router() {
@@ -74,6 +76,8 @@ function Router() {
       <Route path="/quickbooks" component={QuickBooksSettings} />
         <Route path="/email-notifications" component={EmailNotifications} />
         <Route path="/dashboard-settings" component={DashboardSettings} />
+      <Route path="/legal/terms" component={TermsOfService} />
+      <Route path="/legal/privacy" component={PrivacyPolicy} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

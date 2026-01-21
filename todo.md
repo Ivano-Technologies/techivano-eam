@@ -801,3 +801,10 @@
 - [ ] Include asset photos in PDF compliance reports (requires PDFKit enhancement - future)
 - [x] Test caption functionality
 - [x] Test bulk upload with multiple images
+
+## Phase 76: Legal Pages (EULA & Privacy Policy)
+- [x] Create Terms of Service (EULA) page with standard sections
+- [x] Create Privacy Policy page with standard sections
+- [x] Add footer component with links to legal pages
+- [x] Add routes for /legal/terms and /legal/privacy
+- [x] Test legal pages accessibility
