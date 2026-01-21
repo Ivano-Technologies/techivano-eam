@@ -202,6 +202,13 @@ export async function updateAsset(id: number, data: Partial<InsertAsset>) {
   return await getAssetById(id);
 }
 
+export async function deleteAsset(id: number) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.delete(assets).where(eq(assets.id, id));
+  return true;
+}
+
 export async function searchAssets(searchTerm: string) {
   const db = await getDb();
   if (!db) return [];
@@ -344,6 +351,20 @@ export async function updateInventoryItem(id: number, data: Partial<InsertInvent
   if (!db) return null;
   await db.update(inventoryItems).set(data).where(eq(inventoryItems.id, id));
   return await db.select().from(inventoryItems).where(eq(inventoryItems.id, id)).limit(1).then(r => r[0] || null);
+}
+
+export async function deleteInventoryItem(id: number) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.delete(inventoryItems).where(eq(inventoryItems.id, id));
+  return true;
+}
+
+export async function deleteSite(id: number) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.delete(sites).where(eq(sites.id, id));
+  return true;
 }
 
 export async function createInventoryTransaction(transaction: typeof inventoryTransactions.$inferInsert) {

@@ -111,6 +111,27 @@ export const appRouter = router({
         const { id, ...data } = input;
         return await db.updateSite(id, data);
       }),
+
+    bulkDelete: adminProcedure
+      .input(z.object({ ids: z.array(z.number()) }))
+      .mutation(async ({ input, ctx }) => {
+        let deleted = 0;
+        for (const id of input.ids) {
+          try {
+            await db.deleteSite(id);
+            await db.createAuditLog({
+              userId: ctx.user.id,
+              action: "bulk_delete_site",
+              entityType: "site",
+              entityId: id,
+            });
+            deleted++;
+          } catch (error) {
+            console.error(`Failed to delete site ${id}:`, error);
+          }
+        }
+        return { deleted, total: input.ids.length };
+      }),
   }),
 
   // ============= ASSET CATEGORIES =============
@@ -334,6 +355,52 @@ export const appRouter = router({
         });
 
         return { success: true };
+      }),
+
+    bulkDelete: adminProcedure
+      .input(z.object({ ids: z.array(z.number()) }))
+      .mutation(async ({ input, ctx }) => {
+        let deleted = 0;
+        for (const id of input.ids) {
+          try {
+            await db.deleteAsset(id);
+            await db.createAuditLog({
+              userId: ctx.user.id,
+              action: "bulk_delete_asset",
+              entityType: "asset",
+              entityId: id,
+            });
+            deleted++;
+          } catch (error) {
+            console.error(`Failed to delete asset ${id}:`, error);
+          }
+        }
+        return { deleted, total: input.ids.length };
+      }),
+
+    bulkUpdateStatus: managerOrAdminProcedure
+      .input(z.object({
+        ids: z.array(z.number()),
+        status: z.enum(["operational", "maintenance", "repair", "retired", "disposed"]),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        let updated = 0;
+        for (const id of input.ids) {
+          try {
+            await db.updateAsset(id, { status: input.status });
+            await db.createAuditLog({
+              userId: ctx.user.id,
+              action: "bulk_update_asset_status",
+              entityType: "asset",
+              entityId: id,
+              changes: JSON.stringify({ status: input.status }),
+            });
+            updated++;
+          } catch (error) {
+            console.error(`Failed to update asset ${id}:`, error);
+          }
+        }
+        return { updated, total: input.ids.length };
       }),
   }),
 
@@ -633,6 +700,27 @@ export const appRouter = router({
         }
         
         return transaction;
+      }),
+
+    bulkDelete: adminProcedure
+      .input(z.object({ ids: z.array(z.number()) }))
+      .mutation(async ({ input, ctx }) => {
+        let deleted = 0;
+        for (const id of input.ids) {
+          try {
+            await db.deleteInventoryItem(id);
+            await db.createAuditLog({
+              userId: ctx.user.id,
+              action: "bulk_delete_inventory",
+              entityType: "inventory",
+              entityId: id,
+            });
+            deleted++;
+          } catch (error) {
+            console.error(`Failed to delete inventory item ${id}:`, error);
+          }
+        }
+        return { deleted, total: input.ids.length };
       }),
   }),
 

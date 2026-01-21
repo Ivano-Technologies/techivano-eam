@@ -817,3 +817,20 @@
 - [x] Implement camera scanning for Asset Scanner (QR/barcode)
 - [x] Implement mobile photo capture for work orders (already in AssetDetail)
 - [x] Test all newly activated features
+
+## Phase 78: System Enhancements - Bulk Operations, Filtering & PWA
+- [x] Add bulk delete backend for Assets, Inventory, Sites
+- [x] Add bulk update status backend for Assets
+- [x] Create BulkActionsToolbar reusable component
+- [ ] Add multi-select checkboxes UI to Assets page
+- [ ] Add multi-select checkboxes UI to Inventory page
+- [ ] Add multi-select checkboxes UI to Sites page
+- [ ] Implement advanced filter panel for Assets (date range, status, site, category)
+- [ ] Implement advanced filter panel for Maintenance (date range, status, frequency)
+- [ ] Implement advanced filter panel for Compliance (status, regulatory body, due date)
+- [x] Create PWA manifest.json with app metadata and icons (already exists)
+- [x] Configure service worker for offline caching (already exists)
+- [x] Add install prompt for mobile app installation (already exists)
+- [x] Test PWA features (manifest, service worker, install prompt)
+- [ ] Test bulk operations backend APIs
+- [ ] Test filtering functionality
