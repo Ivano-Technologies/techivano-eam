@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
+import { Html5Qrcode } from "html5-qrcode";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,8 @@ export default function AssetScanner() {
     location: "",
     notes: "",
   });
+  const [isScanning, setIsScanning] = useState(false);
+  const html5QrcodeRef = useRef<Html5Qrcode | null>(null);
 
   const { data: asset, refetch: searchAsset } = trpc.assets.getByTag.useQuery(
     { assetTag },
@@ -64,7 +67,7 @@ export default function AssetScanner() {
     }
   };
 
-  const handleQuickUpdate = () => {
+    const handleQuickUpdate = () => {
     if (!scannedAsset) return;
 
     updateAssetMutation.mutate({
@@ -72,10 +75,68 @@ export default function AssetScanner() {
       status: updateForm.status || scannedAsset.status,
       location: updateForm.location || scannedAsset.location,
       notes: updateForm.notes 
-        ? `${scannedAsset.notes || ""}\n\n[Scanner Update ${new Date().toLocaleString()}]\n${updateForm.notes}`
+        ? `${scannedAsset.notes || ""}
+
+[Scanner Update ${new Date().toLocaleString()}]
+${updateForm.notes}`
         : scannedAsset.notes,
     });
   };
+
+  const startCameraScanning = async () => {
+    try {
+      if (!html5QrcodeRef.current) {
+        html5QrcodeRef.current = new Html5Qrcode("qr-reader");
+      }
+
+      setIsScanning(true);
+      await html5QrcodeRef.current.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          setAssetTag(decodedText);
+          toast.success(`Scanned: ${decodedText}`);
+          stopCameraScanning();
+          // Auto-search after scan
+          setTimeout(() => {
+            handleScan();
+          }, 500);
+        },
+        (error) => {
+          // Ignore scanning errors (happens continuously while scanning)
+        }
+      );
+    } catch (error) {
+      toast.error("Failed to start camera. Please check permissions.");
+      setIsScanning(false);
+      setScanMode("manual");
+    }
+  };
+
+  const stopCameraScanning = async () => {
+    try {
+      if (html5QrcodeRef.current && isScanning) {
+        await html5QrcodeRef.current.stop();
+        setIsScanning(false);
+      }
+    } catch (error) {
+      console.error("Error stopping camera:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (scanMode === "camera" && !isScanning) {
+      startCameraScanning();
+    } else if (scanMode === "manual" && isScanning) {
+      stopCameraScanning();
+    }
+
+    return () => {
+      if (isScanning) {
+        stopCameraScanning();
+      }
+    };
+  }, [scanMode]);;
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -112,16 +173,26 @@ export default function AssetScanner() {
               </Button>
               <Button
                 variant={scanMode === "camera" ? "default" : "outline"}
-                onClick={() => {
-                  setScanMode("camera");
-                  toast.info("Camera scanning coming soon!");
-                }}
+                onClick={() => setScanMode("camera")}
                 className="flex-1"
               >
                 <Camera className="h-4 w-4 mr-2" />
                 Camera Scan
               </Button>
             </div>
+
+            {/* Camera Scan */}
+            {scanMode === "camera" && (
+              <div className="space-y-3">
+                <div id="qr-reader" className="w-full rounded-lg overflow-hidden border bg-black"></div>
+                <p className="text-sm text-center text-muted-foreground">
+                  {isScanning ? "Point camera at QR code or barcode..." : "Starting camera..."}
+                </p>
+                <Button onClick={() => setScanMode("manual")} variant="outline" className="w-full">
+                  Switch to Manual Entry
+                </Button>
+              </div>
+            )}
 
             {/* Manual Entry */}
             {scanMode === "manual" && (

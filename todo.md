@@ -808,3 +808,12 @@
 - [x] Add footer component with links to legal pages
 - [x] Add routes for /legal/terms and /legal/privacy
 - [x] Test legal pages accessibility
+
+## Phase 77: Fix Inactive Features (Critical Priority)
+- [x] Implement Maintenance Schedule Add dialog and connect to backend
+- [x] Implement Inventory Item Add dialog and connect to backend
+- [x] Implement Vendor Add dialog and connect to backend
+- [x] Implement Compliance Record Add dialog and connect to backend
+- [x] Implement camera scanning for Asset Scanner (QR/barcode)
+- [x] Implement mobile photo capture for work orders (already in AssetDetail)
+- [x] Test all newly activated features
