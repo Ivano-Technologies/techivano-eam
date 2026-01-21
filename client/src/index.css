@@ -137,6 +137,11 @@
 }
 
 @layer components {
+  /* Smooth transition for sidebar width changes */
+  [data-sidebar] {
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
   /**
    * Custom container utility that centers content and adds responsive padding.
    *
