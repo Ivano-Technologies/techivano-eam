@@ -834,3 +834,7 @@
 - [x] Test PWA features (manifest, service worker, install prompt)
 - [ ] Test bulk operations backend APIs
 - [ ] Test filtering functionality
+
+## Phase 79: Add Building and Infrastructure Category
+- [x] Add "Building and Infrastructure" asset category to database
+- [x] Verify category appears in asset creation dropdown
