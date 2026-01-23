@@ -70,12 +70,12 @@ const getMenuItems = (userRole?: string) => {
 };
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
-const DEFAULT_WIDTH = 260;
+const DEFAULT_WIDTH = 360;
 const MIN_WIDTH = 80;
 const MAX_WIDTH = 480;
 const PRESET_WIDTHS = {
   narrow: 80,
-  wide: 260,
+  wide: 360,
 };
 
 export default function DashboardLayout({

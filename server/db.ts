@@ -895,10 +895,10 @@ export async function getUserPreferences(userId: number) {
   if (result.length > 0) {
     return result[0];
   }
-  // Return default preferences with wide sidebar width (260px)
+  // Return default preferences with wide sidebar width (360px)
   return {
     userId,
-    sidebarWidth: 260,
+    sidebarWidth: 360,
     sidebarCollapsed: 0,
     dashboardWidgets: null,
     createdAt: new Date(),

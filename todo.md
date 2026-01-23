@@ -856,3 +856,9 @@
 - [x] Test keyboard shortcut on Windows/Mac
 - [x] Test tooltips in narrow mode
 - [x] Test visual feedback animation
+
+## Phase 82: Production Guide PDF & Sidebar Width Update
+- [x] Create Production Publishing Guide as Markdown document
+- [x] Convert guide to PDF format
+- [x] Update wide sidebar width from 260px to 360px
+- [x] Test new sidebar width
