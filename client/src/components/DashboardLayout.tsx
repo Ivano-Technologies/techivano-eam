@@ -75,8 +75,7 @@ const MIN_WIDTH = 80;
 const MAX_WIDTH = 480;
 const PRESET_WIDTHS = {
   narrow: 80,
-  medium: 260,
-  wide: 380,
+  wide: 260,
 };
 
 export default function DashboardLayout({
@@ -153,7 +152,7 @@ export default function DashboardLayout({
         } as CSSProperties
       }
     >
-      <DashboardLayoutContent setSidebarWidth={setSidebarWidth}>
+      <DashboardLayoutContent setSidebarWidth={setSidebarWidth} sidebarWidth={sidebarWidth}>
         {children}
       </DashboardLayoutContent>
     </SidebarProvider>
@@ -163,11 +162,13 @@ export default function DashboardLayout({
 type DashboardLayoutContentProps = {
   children: React.ReactNode;
   setSidebarWidth: (width: number) => void;
+  sidebarWidth: number;
 };
 
 function DashboardLayoutContent({
   children,
   setSidebarWidth,
+  sidebarWidth,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
@@ -186,7 +187,7 @@ function DashboardLayoutContent({
   const isMobile = useIsMobile();
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showWidthPresets, setShowWidthPresets] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredMenuItems = menuItems.filter((item: any) =>
@@ -195,10 +196,10 @@ function DashboardLayoutContent({
 
   const updatePrefsMutation = trpc.userPreferences.update.useMutation();
 
-  const applyWidthPreset = (preset: keyof typeof PRESET_WIDTHS) => {
-    const newWidth = PRESET_WIDTHS[preset];
+  const toggleSidebarWidth = () => {
+    const currentWidth = sidebarWidth;
+    const newWidth = currentWidth === PRESET_WIDTHS.narrow ? PRESET_WIDTHS.wide : PRESET_WIDTHS.narrow;
     setSidebarWidth(newWidth);
-    setShowWidthPresets(false);
     if (user) {
       updatePrefsMutation.mutate({ sidebarWidth: newWidth });
     }
@@ -273,56 +274,46 @@ function DashboardLayoutContent({
                   alt="Nigerian Red Cross Society" 
                   className="h-12 w-12 shrink-0"
                 />
-                <div className="flex flex-col min-w-0">
-                  <span className="font-bold text-sm text-sidebar-foreground truncate">
-                    Nigerian Red Cross Society
-                  </span>
-                  <span className="text-xs text-sidebar-foreground/70 truncate">
-                    Enterprise Asset Management
-                  </span>
-                </div>
+                {sidebarWidth > PRESET_WIDTHS.narrow && (
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-bold text-[18px] text-sidebar-foreground truncate">
+                      Nigerian Red Cross Society
+                    </span>
+                    <span className="text-[16px] text-sidebar-foreground/70 truncate">
+                      Enterprise Asset Management
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2">
-                <DropdownMenu open={showWidthPresets} onOpenChange={setShowWidthPresets}>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      className="h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 border border-sidebar-border hover:border-primary/50"
-                      aria-label="Sidebar width presets"
-                      title="Sidebar width presets"
-                    >
-                      <Maximize2 className="h-3.5 w-3.5 text-sidebar-foreground" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-36">
-                    <DropdownMenuItem onClick={() => applyWidthPreset('narrow')} className="cursor-pointer">
-                      <span className="text-xs">Narrow</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => applyWidthPreset('medium')} className="cursor-pointer">
-                      <span className="text-xs">Medium</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => applyWidthPreset('wide')} className="cursor-pointer">
-                      <span className="text-xs">Wide</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <button
+                  onClick={toggleSidebarWidth}
+                  className="h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 border border-sidebar-border hover:border-primary/50"
+                  aria-label="Toggle sidebar width"
+                  title="Toggle sidebar width"
+                >
+                  <Maximize2 className="h-3.5 w-3.5 text-sidebar-foreground" />
+                </button>
               </div>
             </div>
           </SidebarHeader>
 
           <SidebarContent className="gap-0">
             {/* Search Bar */}
-            <div className="px-3 py-2 border-b border-sidebar-border">
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search menu..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-9 pl-8 pr-3 text-sm bg-sidebar-accent/50 border border-sidebar-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
-                />
+            {sidebarWidth > PRESET_WIDTHS.narrow && (
+              <div className="px-3 py-2 border-b border-sidebar-border">
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-[20px] w-[20px] text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search menu..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full h-9 pl-8 pr-3 text-[17px] bg-sidebar-accent/50 border border-sidebar-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
+                  />
+                </div>
               </div>
-            </div>
+            )}
             
             <SidebarMenu className="px-2 py-1">
               {filteredMenuItems.map((item: any) => {
@@ -333,12 +324,12 @@ function DashboardLayoutContent({
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
                       tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
+                      className={`h-10 transition-all font-normal ${sidebarWidth === PRESET_WIDTHS.narrow ? 'justify-center' : ''}`}
                     >
                       <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                        className={`h-[20px] w-[20px] ${isActive ? "text-primary" : ""}`}
                       />
-                      <span>{item.label}</span>
+                      {sidebarWidth > PRESET_WIDTHS.narrow && <span className="text-[17px]">{item.label}</span>}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -354,26 +345,28 @@ function DashboardLayoutContent({
                 size="sm"
                 className="w-full justify-start gap-2 text-xs h-9 border-primary/30 hover:bg-primary/10"
               >
-                <Download className="h-3.5 w-3.5" />
-                <span className="group-data-[collapsible=icon]:hidden">Install App</span>
+                <Download className="h-[18px] w-[18px]" />
+                {sidebarWidth > PRESET_WIDTHS.narrow && <span className="text-[16px]">Install App</span>}
               </Button>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <Avatar className="h-9 w-9 border shrink-0">
-                    <AvatarFallback className="text-xs font-medium">
+                <button className={`flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${sidebarWidth === PRESET_WIDTHS.narrow ? 'justify-center' : ''}`}>
+                  <Avatar className="h-[47px] w-[47px] border shrink-0">
+                    <AvatarFallback className="text-[16px] font-medium">
                       {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-medium truncate leading-none">
-                      {user?.name || "-"}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate mt-1.5">
-                      {user?.email || "-"}
-                    </p>
-                  </div>
+                  {sidebarWidth > PRESET_WIDTHS.narrow && (
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[18px] font-medium truncate leading-none">
+                        {user?.name || "-"}
+                      </p>
+                      <p className="text-[16px] text-muted-foreground truncate mt-1.5">
+                        {user?.email || "-"}
+                      </p>
+                    </div>
+                  )}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">

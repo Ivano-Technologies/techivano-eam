@@ -838,3 +838,13 @@
 ## Phase 79: Add Building and Infrastructure Category
 - [x] Add "Building and Infrastructure" asset category to database
 - [x] Verify category appears in asset creation dropdown
+
+## Phase 80: Simplify Sidebar Collapse to Two States
+- [x] Remove medium width option, keep only narrow (80px) and wide (260px)
+- [x] Remove dropdown menu for width selection
+- [x] Change button to direct toggle between narrow and wide
+- [x] Ensure narrow shows only logo and icons (no text labels)
+- [x] Increase icon and font sizes by 30%
+- [x] Update backend default to wide
+- [x] Test on mobile and desktop
+- [x] Test in PWA app mode
