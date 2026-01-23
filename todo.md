@@ -848,3 +848,11 @@
 - [x] Update backend default to wide
 - [x] Test on mobile and desktop
 - [x] Test in PWA app mode
+
+## Phase 81: Sidebar Toggle Enhancements
+- [x] Add keyboard shortcut (Ctrl+B / Cmd+B) to toggle sidebar width
+- [x] Ensure hover tooltips appear in narrow mode for menu items
+- [x] Add visual feedback animation when toggle button is clicked
+- [x] Test keyboard shortcut on Windows/Mac
+- [x] Test tooltips in narrow mode
+- [x] Test visual feedback animation

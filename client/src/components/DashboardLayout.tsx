@@ -187,7 +187,7 @@ function DashboardLayoutContent({
   const isMobile = useIsMobile();
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-
+  const [toggleFeedback, setToggleFeedback] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredMenuItems = menuItems.filter((item: any) =>
@@ -203,9 +203,24 @@ function DashboardLayoutContent({
     if (user) {
       updatePrefsMutation.mutate({ sidebarWidth: newWidth });
     }
+    // Visual feedback
+    setToggleFeedback(true);
+    setTimeout(() => setToggleFeedback(false), 300);
   };
 
 
+
+  // Keyboard shortcut for sidebar toggle (Ctrl+B / Cmd+B)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        toggleSidebarWidth();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [sidebarWidth]);
 
   // PWA install prompt
   useEffect(() => {
@@ -288,9 +303,9 @@ function DashboardLayoutContent({
               <div className="flex items-center gap-2">
                 <button
                   onClick={toggleSidebarWidth}
-                  className="h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 border border-sidebar-border hover:border-primary/50"
-                  aria-label="Toggle sidebar width"
-                  title="Toggle sidebar width"
+                  className={`h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 border border-sidebar-border hover:border-primary/50 ${toggleFeedback ? 'bg-primary/20 scale-110 border-primary' : ''}`}
+                  aria-label="Toggle sidebar width (Ctrl+B)"
+                  title="Toggle sidebar width (Ctrl+B)"
                 >
                   <Maximize2 className="h-3.5 w-3.5 text-sidebar-foreground" />
                 </button>
