@@ -10,9 +10,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Package, Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
 
 export default function Inventory() {
   const [open, setOpen] = useState(false);
+  
+  // Pull-to-refresh for mobile
+  const { pullDistance, isRefreshing } = usePullToRefresh({
+    onRefresh: async () => {
+      await refetch();
+      toast.success('Inventory refreshed');
+    },
+    enabled: true,
+  });
   const [formData, setFormData] = useState({
     itemCode: "",
     name: "",
@@ -29,7 +40,7 @@ export default function Inventory() {
   });
 
   const utils = trpc.useUtils();
-  const { data: items, isLoading } = trpc.inventory.list.useQuery();
+  const { data: items, isLoading, refetch } = trpc.inventory.list.useQuery();
   const { data: lowStock } = trpc.inventory.lowStock.useQuery();
   const { data: sites } = trpc.sites.list.useQuery();
 
@@ -87,7 +98,9 @@ export default function Inventory() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Inventory Management</h1>
@@ -286,6 +299,7 @@ export default function Inventory() {
           </Card>
         ))}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

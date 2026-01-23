@@ -9,7 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Camera, Search, Package, MapPin, CheckCircle, XCircle } from "lucide-react";
+import { Camera, Search, Package, MapPin, CheckCircle, XCircle, Navigation } from "lucide-react";
+import { useGeolocation, formatCoordinates } from "@/hooks/useGeolocation";
+import { useHaptic } from "@/hooks/useHaptic";
 
 export default function AssetScanner() {
   const [, setLocation] = useLocation();
@@ -23,6 +25,8 @@ export default function AssetScanner() {
   });
   const [isScanning, setIsScanning] = useState(false);
   const html5QrcodeRef = useRef<Html5Qrcode | null>(null);
+  const { coordinates, loading: gpsLoading, captureLocation, hasLocation } = useGeolocation();
+  const { vibrateSuccess, vibrateError } = useHaptic();
 
   const { data: asset, refetch: searchAsset } = trpc.assets.getByTag.useQuery(
     { assetTag },
@@ -31,12 +35,14 @@ export default function AssetScanner() {
 
   const updateAssetMutation = trpc.assets.update.useMutation({
     onSuccess: () => {
+      vibrateSuccess();
       toast.success("Asset updated successfully");
       setScannedAsset(null);
       setAssetTag("");
       setUpdateForm({ status: "", location: "", notes: "" });
     },
     onError: (error) => {
+      vibrateError();
       toast.error(`Failed to update asset: ${error.message}`);
     },
   });
@@ -47,21 +53,32 @@ export default function AssetScanner() {
       return;
     }
 
+    // Auto-capture GPS location when scanning
+    captureLocation();
+
     try {
       const result = await searchAsset();
       if (result.data) {
         setScannedAsset(result.data);
+        // Pre-fill location with GPS coordinates if available
+        const locationText = coordinates 
+          ? `${result.data.location || ''} (GPS: ${formatCoordinates(coordinates.latitude, coordinates.longitude)})`
+          : result.data.location || "";
+        
         setUpdateForm({
           status: result.data.status || "",
-          location: result.data.location || "",
+          location: locationText,
           notes: "",
         });
+        vibrateSuccess();
         toast.success("Asset found!");
       } else {
+        vibrateError();
         toast.error("Asset not found");
         setScannedAsset(null);
       }
     } catch (error) {
+      vibrateError();
       toast.error("Failed to find asset");
       setScannedAsset(null);
     }
@@ -312,14 +329,43 @@ ${updateForm.notes}`
 
                 <div>
                   <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    placeholder="Enter new location..."
-                    value={updateForm.location}
-                    onChange={(e) =>
-                      setUpdateForm({ ...updateForm, location: e.target.value })
-                    }
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="location"
+                      placeholder="Enter new location..."
+                      value={updateForm.location}
+                      onChange={(e) =>
+                        setUpdateForm({ ...updateForm, location: e.target.value })
+                      }
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        captureLocation();
+                        if (coordinates) {
+                          const gpsText = `GPS: ${formatCoordinates(coordinates.latitude, coordinates.longitude)}`;
+                          setUpdateForm({ 
+                            ...updateForm, 
+                            location: updateForm.location 
+                              ? `${updateForm.location} (${gpsText})`
+                              : gpsText
+                          });
+                        }
+                      }}
+                      disabled={gpsLoading}
+                      title="Capture GPS location"
+                    >
+                      <Navigation className={`h-4 w-4 ${gpsLoading ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </div>
+                  {hasLocation && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      GPS: {formatCoordinates(coordinates!.latitude, coordinates!.longitude)}
+                    </p>
+                  )}
                 </div>
 
                 <div>

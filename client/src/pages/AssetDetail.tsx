@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
+import { QuickActions } from "@/components/QuickActions";
 
 export default function AssetDetail() {
   const [, params] = useRoute("/assets/:id");
@@ -212,7 +213,7 @@ export default function AssetDetail() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" onClick={() => setLocation("/assets")}>
@@ -231,6 +232,14 @@ export default function AssetDetail() {
           </Button>
         )}
       </div>
+
+      {/* Quick Actions Component */}
+      <QuickActions
+        assetId={asset.id}
+        assetName={asset.name}
+        assetTag={asset.assetTag}
+        currentStatus={asset.status}
+      />
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
@@ -512,7 +521,9 @@ export default function AssetDetail() {
       )}
 
       {/* Maintenance Timeline */}
-      <AssetMaintenanceTimeline assetId={assetId} />
+      <div id="maintenance-timeline">
+        <AssetMaintenanceTimeline assetId={assetId} />
+      </div>
 
       {/* Photo Upload Dialog with Caption */}
       <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>

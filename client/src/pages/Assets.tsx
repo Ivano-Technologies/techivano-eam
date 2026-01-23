@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
 
 export default function Assets() {
   const { user } = useAuth();
@@ -25,6 +27,15 @@ export default function Assets() {
   const { data: assets, isLoading, refetch } = trpc.assets.list.useQuery({
     siteId: siteFilter !== "all" ? Number(siteFilter) : undefined,
     status: statusFilter !== "all" ? statusFilter : undefined,
+  });
+
+  // Pull-to-refresh for mobile
+  const { pullDistance, isRefreshing } = usePullToRefresh({
+    onRefresh: async () => {
+      await refetch();
+      toast.success('Assets refreshed');
+    },
+    enabled: true,
   });
 
   const { data: sites } = trpc.sites.list.useQuery();
@@ -213,7 +224,9 @@ export default function Assets() {
   const canCreateAsset = user?.role === "admin" || user?.role === "manager";
 
   return (
-    <div className="space-y-6">
+    <>
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Assets</h1>
@@ -654,6 +667,7 @@ export default function Assets() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </>
   );
 }

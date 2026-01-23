@@ -881,7 +881,9 @@
 ## Phase 85: Mobile Optimization - Phase 1 (Week 1 - Critical Features)
 - [x] Create bottom navigation bar component for mobile
 - [x] Add floating action button (FAB) for scanner
-- [ ] Implement one-tap quick actions on asset detail page
-- [ ] Add GPS auto-capture on QR scan
-- [ ] Enhance offline sync banner with pending count
+- [x] Implement one-tap quick actions on asset detail page
+- [x] Add GPS auto-capture on QR scan
+- [x] Enhance offline sync banner with pending count
+- [x] Implement pull-to-refresh on Assets, Work Orders, Inventory pages
+- [x] Add haptic feedback for mobile actions (success, error patterns)
 - [ ] Test all Phase 1 features on mobile devices

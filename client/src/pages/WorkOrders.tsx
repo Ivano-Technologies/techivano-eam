@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
 
 export default function WorkOrders() {
   const { user } = useAuth();
@@ -20,6 +22,15 @@ export default function WorkOrders() {
 
   const { data: workOrders, isLoading, refetch } = trpc.workOrders.list.useQuery({
     status: statusFilter !== "all" ? statusFilter : undefined,
+  });
+
+  // Pull-to-refresh for mobile
+  const { pullDistance, isRefreshing } = usePullToRefresh({
+    onRefresh: async () => {
+      await refetch();
+      toast.success('Work orders refreshed');
+    },
+    enabled: true,
   });
 
   const { data: assets } = trpc.assets.list.useQuery();
@@ -101,7 +112,9 @@ export default function WorkOrders() {
   };
 
   return (
-    <div className="space-y-6">
+    <>
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Work Orders</h1>
@@ -324,6 +337,7 @@ export default function WorkOrders() {
           </CardContent>
         </Card>
       )}
-    </div>
+      </div>
+    </>
   );
 }

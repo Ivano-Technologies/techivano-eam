@@ -30,6 +30,7 @@ import { Button } from "./ui/button";
 import { NotificationCenter } from "./NotificationCenter";
 import Footer from "./Footer";
 import { MobileBottomNav } from "./MobileBottomNav";
+import { OfflineBanner } from "./OfflineBanner";
 
 const allMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: false, sortOrder: 0 },
@@ -278,6 +279,9 @@ function DashboardLayoutContent({
 
   return (
     <>
+      {/* Offline Banner - Shows at top when offline or with pending changes */}
+      <OfflineBanner />
+      
       <div className="relative" ref={sidebarRef}>
         <Sidebar
           className="border-r-0"
