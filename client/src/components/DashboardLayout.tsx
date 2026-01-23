@@ -29,6 +29,7 @@ import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { NotificationCenter } from "./NotificationCenter";
 import Footer from "./Footer";
+import { MobileBottomNav } from "./MobileBottomNav";
 
 const allMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: false, sortOrder: 0 },
@@ -433,9 +434,10 @@ function DashboardLayoutContent({
             <NotificationCenter />
           </div>
         )}
-        <main className="flex-1 p-4">{children}</main>
+        <main className="flex-1 p-4 pb-20 md:pb-4">{children}</main>
         <Footer />
       </SidebarInset>
+      <MobileBottomNav />
     </>
   );
 }
