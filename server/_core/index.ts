@@ -1,4 +1,8 @@
 import "dotenv/config";
+// Initialize Sentry first for error tracking
+import { initSentry } from "./sentry";
+initSentry();
+
 import express from "express";
 import { createServer } from "http";
 import net from "net";

@@ -1,3 +1,7 @@
+// Initialize Sentry first for error tracking
+import { initSentry } from "@/lib/sentry";
+initSentry();
+
 import { trpc } from "@/lib/trpc";
 import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
