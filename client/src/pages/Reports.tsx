@@ -131,7 +131,7 @@ export default function Reports() {
         <p className="text-muted-foreground">Generate and export comprehensive reports</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
         {/* Report Configuration */}
         <Card className="border-l-4 border-l-primary">
           <CardHeader>

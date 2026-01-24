@@ -290,7 +290,7 @@ export default function WorkOrders() {
       {isLoading ? (
         <ShimmerLoader type="card" count={6} />
       ) : workOrders && workOrders.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {workOrders.map((wo) => (
             <Link key={wo.id} href={`/work-orders/${wo.id}`}>
               <Card className="hover:shadow-lg transition-shadow cursor-pointer">

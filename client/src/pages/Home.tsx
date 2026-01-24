@@ -79,7 +79,7 @@ export default function Home() {
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {metrics.map((metric) => {
           const Icon = metric.icon;
           return (
@@ -104,7 +104,7 @@ export default function Home() {
       </div>
 
       {/* Two Column Layout */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
         {/* Upcoming Maintenance */}
         <Card className="border-t-4 border-t-blue-500 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
@@ -186,7 +186,7 @@ export default function Home() {
       </div>
 
       {/* Analytics Widgets */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {/* Assets by Status */}
         <Card className="border-t-4 border-t-blue-500">
           <CardHeader>

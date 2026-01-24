@@ -89,6 +89,7 @@ export default function DashboardLayout({
 }) {
   const { loading, user } = useAuth();
   const { data: userPrefs } = trpc.userPreferences.get.useQuery(undefined, { enabled: !!user });
+  const isMobile = useIsMobile();
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
@@ -150,6 +151,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider
+      defaultOpen={!isMobile}
       style={
         {
           "--sidebar-width": `${sidebarWidth}px`,
@@ -176,6 +178,7 @@ function DashboardLayoutContent({
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
+  const { setOpen } = useSidebar();
   
   // Auto-redirect first-time users to welcome page
   useEffect(() => {
@@ -344,7 +347,12 @@ function DashboardLayoutContent({
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
                       isActive={isActive}
-                      onClick={() => setLocation(item.path)}
+                      onClick={() => {
+                        setLocation(item.path);
+                        if (isMobile) {
+                          setOpen(false);
+                        }
+                      }}
                       tooltip={item.label}
                       className={`h-10 transition-all font-normal ${sidebarWidth === PRESET_WIDTHS.narrow ? 'justify-center' : ''}`}
                     >
