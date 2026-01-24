@@ -1002,3 +1002,22 @@
 - [x] Reset/wipe database (clear all data)
 - [x] Verify database is clean
 - [x] Test application with empty database
+
+## Phase 98: Bulk Import, User Roles & Dashboard Customization
+- [x] Install Excel parsing library (xlsx or exceljs)
+- [x] Create bulk import API for assets (CSV + Excel)
+- [x] Create bulk import API for sites (CSV + Excel)
+- [x] Create bulk import API for inventory (CSV + Excel)
+- [x] Create bulk import API for vendors (CSV + Excel)
+- [x] Add file upload UI components for bulk import
+- [x] Generate downloadable templates (CSV + Excel)
+- [x] Add data validation and error reporting
+- [x] Create user role management page (already exists)
+- [x] Add role assignment UI to Users page (already exists)
+- [x] Implement role-based permissions enforcement (already exists)
+- [x] Create dashboard widget customization UI (already exists)
+- [x] Add widget visibility toggles (already exists)
+- [x] Save widget preferences per user (already exists)
+- [x] Test all bulk import functionality
+- [x] Test role management and permissions
+- [x] Test dashboard customization

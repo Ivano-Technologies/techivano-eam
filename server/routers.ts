@@ -7,6 +7,7 @@ import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import * as db from "./db";
 import * as notificationHelper from "./notificationHelper";
 import { generatePDFReport, generateExcelReport } from "./reportGenerator";
+import { parseFileData, bulkImportAssets, bulkImportSites, bulkImportVendors, generateAssetsTemplate, generateSitesTemplate, generateVendorsTemplate } from "./bulkImport";
 
 // Role-based middleware
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -131,6 +132,23 @@ export const appRouter = router({
           }
         }
         return { deleted, total: input.ids.length };
+      }),
+
+    bulkImport: adminProcedure
+      .input(z.object({
+        fileContent: z.string(),
+        fileType: z.enum(['csv', 'excel']),
+      }))
+      .mutation(async ({ input }) => {
+        const data = parseFileData(input.fileContent, input.fileType);
+        return await bulkImportSites(data);
+      }),
+
+    downloadTemplate: protectedProcedure
+      .input(z.object({ format: z.enum(['csv', 'excel']) }))
+      .query(({ input }) => {
+        const template = generateSitesTemplate(input.format);
+        return { template, format: input.format };
       }),
   }),
 
@@ -401,6 +419,23 @@ export const appRouter = router({
           }
         }
         return { updated, total: input.ids.length };
+      }),
+
+    bulkImport: adminProcedure
+      .input(z.object({
+        fileContent: z.string(),
+        fileType: z.enum(['csv', 'excel']),
+      }))
+      .mutation(async ({ input }) => {
+        const data = parseFileData(input.fileContent, input.fileType);
+        return await bulkImportAssets(data);
+      }),
+
+    downloadTemplate: protectedProcedure
+      .input(z.object({ format: z.enum(['csv', 'excel']) }))
+      .query(({ input }) => {
+        const template = generateAssetsTemplate(input.format);
+        return { template, format: input.format };
       }),
   }),
 
@@ -766,6 +801,23 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const { id, ...data } = input;
         return await db.updateVendor(id, data);
+      }),
+
+    bulkImport: adminProcedure
+      .input(z.object({
+        fileContent: z.string(),
+        fileType: z.enum(['csv', 'excel']),
+      }))
+      .mutation(async ({ input }) => {
+        const data = parseFileData(input.fileContent, input.fileType);
+        return await bulkImportVendors(data);
+      }),
+
+    downloadTemplate: protectedProcedure
+      .input(z.object({ format: z.enum(['csv', 'excel']) }))
+      .query(({ input }) => {
+        const template = generateVendorsTemplate(input.format);
+        return { template, format: input.format };
       }),
   }),
 
