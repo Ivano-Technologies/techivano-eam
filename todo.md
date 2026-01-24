@@ -1048,3 +1048,19 @@
 - [x] Fix card layouts in portrait view (18 pages updated)
 - [x] Test all pages on mobile viewport
 - [x] Verify touch interactions work properly
+
+## Phase 101: Mobile UX Enhancements
+- [x] Add swipe-right gesture to open sidebar on mobile
+- [x] Add swipe-left gesture to close sidebar on mobile
+- [x] Implement touch event handlers with proper threshold
+- [x] Add visual feedback during swipe
+- [x] Audit all buttons and interactive elements for size (already optimized in CSS)
+- [x] Increase touch targets to minimum 44×44px (already in index.css)
+- [x] Add proper spacing between touch targets (already in CSS)
+- [x] Test touch target accessibility
+- [x] Create pull-to-refresh component
+- [x] Add pull-to-refresh to Dashboard page
+- [ ] Add pull-to-refresh to Assets page (deferred)
+- [ ] Add pull-to-refresh to Work Orders page (deferred)
+- [ ] Add pull-to-refresh to other list pages (deferred)
+- [x] Test all mobile UX enhancements

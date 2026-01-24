@@ -5,12 +5,24 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { ShimmerLoader } from "@/components/ShimmerLoader";
+import { PullToRefresh } from "@/components/PullToRefresh";
+import { useIsMobile } from "@/hooks/useMobile";
 
 export default function Home() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
+  const utils = trpc.useUtils();
   const { data: stats, isLoading } = trpc.dashboard.stats.useQuery();
   const { data: upcomingMaintenance } = trpc.maintenance.upcoming.useQuery({ days: 7 });
   const { data: lowStockItems } = trpc.inventory.lowStock.useQuery();
+  
+  const handleRefresh = async () => {
+    await Promise.all([
+      utils.dashboard.stats.invalidate(),
+      utils.maintenance.upcoming.invalidate(),
+      utils.inventory.lowStock.invalidate(),
+    ]);
+  };
 
   if (isLoading) {
     return (
@@ -69,7 +81,7 @@ export default function Home() {
     !user?.role || metric.roles.includes(user.role)
   );
 
-  return (
+  const content = (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -314,4 +326,14 @@ export default function Home() {
       </Card>
     </div>
   );
+  
+  if (isMobile) {
+    return (
+      <PullToRefresh onRefresh={handleRefresh}>
+        {content}
+      </PullToRefresh>
+    );
+  }
+  
+  return content;
 }

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
+import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan, Search, AlertTriangle, BarChart3, History } from "lucide-react";
 import { NairaIcon } from "./icons/NairaIcon";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -178,7 +179,24 @@ function DashboardLayoutContent({
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
-  const { setOpen } = useSidebar();
+  const { setOpen, open } = useSidebar();
+  const isMobile = useIsMobile();
+  
+  // Swipe gestures for mobile sidebar
+  useSwipeGesture({
+    onSwipeRight: () => {
+      if (isMobile && !open) {
+        setOpen(true);
+      }
+    },
+    onSwipeLeft: () => {
+      if (isMobile && open) {
+        setOpen(false);
+      }
+    },
+    threshold: 80,
+    enabled: isMobile,
+  });
   
   // Auto-redirect first-time users to welcome page
   useEffect(() => {
@@ -191,7 +209,6 @@ function DashboardLayoutContent({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const menuItems = getMenuItems(user?.role);
   const activeMenuItem = menuItems.find((item: any) => item.path === location);
-  const isMobile = useIsMobile();
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [toggleFeedback, setToggleFeedback] = useState(false);
