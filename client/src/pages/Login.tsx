@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { trpc } from "@/lib/trpc";
+import { ButtonLoader } from "@/components/ButtonLoader";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -112,11 +113,16 @@ export default function Login() {
               className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
               disabled={passwordLoginMutation.isPending || magicLinkMutation.isPending}
             >
-              {passwordLoginMutation.isPending || magicLinkMutation.isPending
-                ? "Processing..."
-                : usePassword
-                ? "Sign In"
-                : "Send Magic Link"}
+              {passwordLoginMutation.isPending || magicLinkMutation.isPending ? (
+                <>
+                  <ButtonLoader className="mr-2" />
+                  Processing...
+                </>
+              ) : usePassword ? (
+                "Sign In"
+              ) : (
+                "Send Magic Link"
+              )}
             </Button>
 
             <div className="flex justify-between items-center">

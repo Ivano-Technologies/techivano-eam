@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { trpc } from "@/lib/trpc";
+import { ButtonLoader } from "@/components/ButtonLoader";
 
 export default function Signup() {
   const [email, setEmail] = useState("");
@@ -111,7 +112,14 @@ export default function Signup() {
               className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
               disabled={signupMutation.isPending}
             >
-              {signupMutation.isPending ? "Submitting..." : "Request Access"}
+              {signupMutation.isPending ? (
+                <>
+                  <ButtonLoader className="mr-2" />
+                  Submitting...
+                </>
+              ) : (
+                "Request Access"
+              )}
             </Button>
 
             <div className="text-center text-sm text-gray-600">
