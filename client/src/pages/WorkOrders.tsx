@@ -14,9 +14,12 @@ import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
+import { MobileCard, MobileCardList } from "@/components/MobileCard";
+import { useIsMobile } from "@/hooks/useMobile";
 
 export default function WorkOrders() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
@@ -287,48 +290,78 @@ export default function WorkOrders() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : workOrders && workOrders.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {workOrders.map((wo) => (
-            <Link key={wo.id} href={`/work-orders/${wo.id}`}>
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <Wrench className="h-5 w-5 text-primary" />
-                      <div>
-                        <CardTitle className="text-lg">{wo.title}</CardTitle>
-                        <CardDescription className="text-xs mt-1">
-                          {wo.workOrderNumber}
-                        </CardDescription>
+        isMobile ? (
+          <MobileCardList>
+            {workOrders.map((wo) => (
+              <Link key={wo.id} href={`/work-orders/${wo.id}`}>
+                <MobileCard
+                  title={wo.title}
+                  subtitle={wo.workOrderNumber}
+                  badge={{
+                    text: wo.status.replace("_", " "),
+                    className: getStatusColor(wo.status),
+                  }}
+                  fields={[
+                    { label: "Priority", value: <Badge className={getPriorityColor(wo.priority)}>{wo.priority}</Badge> },
+                    { label: "Type", value: wo.type },
+                    ...(wo.scheduledStart ? [{
+                      label: "Scheduled",
+                      value: (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{new Date(wo.scheduledStart).toLocaleDateString()}</span>
+                        </div>
+                      ),
+                    }] : []),
+                  ]}
+                />
+              </Link>
+            ))}
+          </MobileCardList>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {workOrders.map((wo) => (
+              <Link key={wo.id} href={`/work-orders/${wo.id}`}>
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Wrench className="h-5 w-5 text-primary" />
+                        <div>
+                          <CardTitle className="text-lg">{wo.title}</CardTitle>
+                          <CardDescription className="text-xs mt-1">
+                            {wo.workOrderNumber}
+                          </CardDescription>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <Badge className={getStatusColor(wo.status)}>
+                          {wo.status.replace("_", " ")}
+                        </Badge>
+                        <Badge className={getPriorityColor(wo.priority)}>
+                          {wo.priority}
+                        </Badge>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <Badge className={getStatusColor(wo.status)}>
-                        {wo.status.replace("_", " ")}
-                      </Badge>
-                      <Badge className={getPriorityColor(wo.priority)}>
-                        {wo.priority}
-                      </Badge>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm">
+                      <p className="text-muted-foreground">
+                        <span className="font-medium">Type:</span> {wo.type}
+                      </p>
+                      {wo.scheduledStart && (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          <span>{new Date(wo.scheduledStart).toLocaleDateString()}</span>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <p className="text-muted-foreground">
-                      <span className="font-medium">Type:</span> {wo.type}
-                    </p>
-                    {wo.scheduledStart && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        <span>{new Date(wo.scheduledStart).toLocaleDateString()}</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )
       ) : (
         <Card>
           <CardContent className="flex flex-col items-center justify-center h-64">

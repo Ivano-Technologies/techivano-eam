@@ -887,3 +887,14 @@
 - [x] Implement pull-to-refresh on Assets, Work Orders, Inventory pages
 - [x] Add haptic feedback for mobile actions (success, error patterns)
 - [ ] Test all Phase 1 features on mobile devices
+
+## Phase 86: Mobile Optimization - Phase 2 (Enhanced UX)
+- [x] Convert Assets table to mobile-friendly card layout
+- [x] Convert Work Orders table to mobile-friendly card layout
+- [x] Convert Inventory table to mobile-friendly card layout
+- [x] Implement client-side image compression before upload
+- [x] Add lazy loading with infinite scroll on Assets page
+- [ ] Add lazy loading with infinite scroll on Work Orders page
+- [ ] Add lazy loading with infinite scroll on Inventory page
+- [x] Reduce sidebar font size by 15%
+- [ ] Test all Phase 2 features on mobile devices

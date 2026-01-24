@@ -12,8 +12,11 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
+import { MobileCard, MobileCardList } from "@/components/MobileCard";
+import { useIsMobile } from "@/hooks/useMobile";
 
 export default function Inventory() {
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   
   // Pull-to-refresh for mobile
@@ -280,25 +283,58 @@ export default function Inventory() {
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {items?.map((item) => (
-          <Card key={item.id}>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-primary" />
-                <div><CardTitle className="text-lg">{item.name}</CardTitle><p className="text-xs text-muted-foreground">{item.itemCode}</p></div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Stock:</span><span className="font-medium">{item.currentStock} {item.unitOfMeasure}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Reorder Point:</span><span>{item.reorderPoint}</span></div>
-                {item.unitCost && <div className="flex justify-between"><span className="text-muted-foreground">Unit Cost:</span><span>₦{parseFloat(item.unitCost).toLocaleString()}</span></div>}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {isMobile ? (
+        <MobileCardList>
+          {items?.map((item) => {
+            const isLowStock = item.currentStock <= item.reorderPoint;
+            return (
+              <MobileCard
+                key={item.id}
+                title={item.name}
+                subtitle={item.itemCode}
+                badge={isLowStock ? {
+                  text: "Low Stock",
+                  variant: "destructive",
+                } : undefined}
+                fields={[
+                  { 
+                    label: "Current Stock", 
+                    value: `${item.currentStock} ${item.unitOfMeasure}`,
+                  },
+                  { 
+                    label: "Reorder Point", 
+                    value: item.reorderPoint,
+                  },
+                  ...(item.unitCost ? [{
+                    label: "Unit Cost",
+                    value: `₦${parseFloat(item.unitCost).toLocaleString()}`,
+                  }] : []),
+                ]}
+              />
+            );
+          })}
+        </MobileCardList>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {items?.map((item) => (
+            <Card key={item.id}>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Package className="h-5 w-5 text-primary" />
+                  <div><CardTitle className="text-lg">{item.name}</CardTitle><p className="text-xs text-muted-foreground">{item.itemCode}</p></div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Stock:</span><span className="font-medium">{item.currentStock} {item.unitOfMeasure}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Reorder Point:</span><span>{item.reorderPoint}</span></div>
+                  {item.unitCost && <div className="flex justify-between"><span className="text-muted-foreground">Unit Cost:</span><span>₦{parseFloat(item.unitCost).toLocaleString()}</span></div>}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
       </div>
     </>
   );
