@@ -1021,3 +1021,20 @@
 - [x] Test all bulk import functionality
 - [x] Test role management and permissions
 - [x] Test dashboard customization
+
+## Phase 99: Import Buttons, History Log & Export
+- [x] Add bulk import button to Assets page header
+- [x] Add bulk import button to Sites page header
+- [x] Add bulk import button to Vendors page header
+- [x] Wire BulkImportDialog to each page
+- [x] Create importHistory table in schema
+- [x] Add import history logging to bulk import functions
+- [ ] Create ImportHistory page (deferred)
+- [ ] Add import history link to navigation (deferred)
+- [x] Create bulk export API for assets
+- [x] Create bulk export API for sites
+- [x] Create bulk export API for vendors
+- [ ] Add export buttons to each page (backend ready, UI pending)
+- [ ] Test import with sample data
+- [ ] Test export functionality
+- [x] Test import history logging

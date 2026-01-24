@@ -16,6 +16,7 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
 import { ShimmerLoader } from "@/components/ShimmerLoader";
 import { CheckAnimation } from "@/components/CheckAnimation";
+import { BulkImportDialog } from "@/components/BulkImportDialog";
 
 export default function Assets() {
   const { user } = useAuth();
@@ -45,62 +46,9 @@ export default function Assets() {
   const { data: sites } = trpc.sites.list.useQuery();
   const { data: categories } = trpc.assetCategories.list.useQuery();
   
-  const [importFile, setImportFile] = useState<File | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const utils = trpc.useUtils();
-  const [isDownloading, setIsDownloading] = useState(false);
-
-  const handleDownloadTemplate = async () => {
-    try {
-      setIsDownloading(true);
-      const result = await utils.client.bulkOperations.getImportTemplate.query({ entity: "assets" });
-      if (result) {
-        const blob = new Blob([Uint8Array.from(atob(result.data), c => c.charCodeAt(0))], { type: result.mimeType });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = result.filename;
-        link.click();
-        URL.revokeObjectURL(url);
-        toast.success("Template downloaded");
-      }
-    } catch (error: any) {
-      toast.error(`Failed to download template: ${error.message}`);
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  const importAssetsMutation = trpc.bulkOperations.importAssets.useMutation({
-    onSuccess: (result: any) => {
-      toast.success(`Imported ${result.imported || 0} assets successfully`);
-      if (result.failed > 0) {
-        toast.error(`${result.failed} errors occurred`);
-      }
-      setIsImportDialogOpen(false);
-      setImportFile(null);
-      refetch();
-    },
-    onError: (error: any) => {
-      toast.error(`Import failed: ${error.message}`);
-    },
-  });
-
-  const handleImport = async () => {
-    if (!importFile) {
-      toast.error("Please select a file");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const data = e.target?.result as string;
-      const base64Data = data.split(',')[1];
-      importAssetsMutation.mutate({ fileData: base64Data });
-    };
-    reader.readAsDataURL(importFile);
-  };
 
   const createAssetMutation = trpc.assets.create.useMutation({
     onSuccess: () => {
@@ -245,14 +193,6 @@ export default function Assets() {
         </div>
         {canCreateAsset && (
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={handleDownloadTemplate}
-              disabled={isDownloading}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Template
-            </Button>
             <Button 
               variant="outline" 
               onClick={() => setIsImportDialogOpen(true)}
@@ -637,43 +577,12 @@ export default function Assets() {
       </Dialog>
 
       {/* Import Dialog */}
-      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Import Assets</DialogTitle>
-            <DialogDescription>
-              Upload an Excel file to bulk import assets
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="import-file">Select Excel File</Label>
-              <Input
-                id="import-file"
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-              />
-            </div>
-            {importFile && (
-              <p className="text-sm text-muted-foreground">
-                Selected: {importFile.name}
-              </p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleImport}
-              disabled={!importFile || importAssetsMutation.isPending}
-            >
-              {importAssetsMutation.isPending ? "Importing..." : "Import"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <BulkImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        entityType="assets"
+        onSuccess={() => refetch()}
+      />
       </div>
     </>
   );

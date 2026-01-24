@@ -527,3 +527,23 @@ export const emailNotifications = mysqlTable("emailNotifications", {
 
 export type EmailNotification = typeof emailNotifications.$inferSelect;
 export type InsertEmailNotification = typeof emailNotifications.$inferInsert;
+
+/**
+ * Import History - Track bulk import operations
+ */
+export const importHistory = mysqlTable("importHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  entityType: mysqlEnum("entityType", ["assets", "sites", "vendors"]).notNull(),
+  fileName: varchar("fileName", { length: 255 }).notNull(),
+  fileType: mysqlEnum("fileType", ["csv", "excel"]).notNull(),
+  importedBy: int("importedBy").notNull().references(() => users.id),
+  totalRows: int("totalRows").notNull(),
+  successCount: int("successCount").notNull(),
+  failedCount: int("failedCount").notNull(),
+  errors: text("errors"), // JSON array of error objects
+  status: mysqlEnum("status", ["success", "partial", "failed"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ImportHistory = typeof importHistory.$inferSelect;
+export type InsertImportHistory = typeof importHistory.$inferInsert;

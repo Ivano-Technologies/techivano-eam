@@ -6,12 +6,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, Plus, Mail, Phone } from "lucide-react";
+import { Building2, Plus, Mail, Phone, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
+import { BulkImportDialog } from "@/components/BulkImportDialog";
 
 export default function Vendors() {
   const [open, setOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     vendorCode: "",
@@ -87,10 +89,14 @@ export default function Vendors() {
           <h1 className="text-3xl font-bold">Vendor Management</h1>
           <p className="text-muted-foreground mt-2">Manage suppliers and contractors</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Add Vendor</Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />Import
+          </Button>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="mr-2 h-4 w-4" />Add Vendor</Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Vendor</DialogTitle>
@@ -221,6 +227,7 @@ export default function Vendors() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -245,6 +252,13 @@ export default function Vendors() {
           </Card>
         ))}
       </div>
+
+      <BulkImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        entityType="vendors"
+        onSuccess={() => utils.vendors.list.invalidate()}
+      />
     </div>
   );
 }

@@ -1,5 +1,8 @@
 import * as XLSX from 'xlsx';
 import * as db from './db';
+import { mysqlTable } from 'drizzle-orm/mysql-core';
+import { getDb } from './db';
+import { importHistory } from '../drizzle/schema';
 
 export interface ImportResult {
   success: boolean;
@@ -34,7 +37,7 @@ export function parseFileData(fileContent: string, fileType: 'csv' | 'excel'): a
 /**
  * Bulk import assets
  */
-export async function bulkImportAssets(data: any[]): Promise<ImportResult> {
+export async function bulkImportAssets(data: any[], userId: number, fileName: string, fileType: 'csv' | 'excel'): Promise<ImportResult> {
   const result: ImportResult = {
     success: true,
     imported: 0,
@@ -79,14 +82,34 @@ export async function bulkImportAssets(data: any[]): Promise<ImportResult> {
     }
   }
 
-  result.success = result.failed === 0;
+  if (result.failed > 0) {
+    result.success = false;
+  }
+
+  // Log import history
+  const status = result.failed === 0 ? 'success' : (result.imported > 0 ? 'partial' : 'failed');
+  const dbConn = await getDb();
+  if (dbConn) {
+    await dbConn.insert(importHistory).values({
+    entityType: 'assets',
+    fileName,
+    fileType,
+    importedBy: userId,
+    totalRows: data.length,
+    successCount: result.imported,
+    failedCount: result.failed,
+      errors: JSON.stringify(result.errors),
+      status,
+    });
+  }
+
   return result;
 }
 
 /**
  * Bulk import sites
  */
-export async function bulkImportSites(data: any[]): Promise<ImportResult> {
+export async function bulkImportSites(data: any[], userId: number, fileName: string, fileType: 'csv' | 'excel'): Promise<ImportResult> {
   const result: ImportResult = {
     success: true,
     imported: 0,
@@ -135,7 +158,7 @@ export async function bulkImportSites(data: any[]): Promise<ImportResult> {
 /**
  * Bulk import vendors
  */
-export async function bulkImportVendors(data: any[]): Promise<ImportResult> {
+export async function bulkImportVendors(data: any[], userId: number, fileName: string, fileType: 'csv' | 'excel'): Promise<ImportResult> {
   const result: ImportResult = {
     success: true,
     imported: 0,

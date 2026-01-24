@@ -8,6 +8,7 @@ import * as db from "./db";
 import * as notificationHelper from "./notificationHelper";
 import { generatePDFReport, generateExcelReport } from "./reportGenerator";
 import { parseFileData, bulkImportAssets, bulkImportSites, bulkImportVendors, generateAssetsTemplate, generateSitesTemplate, generateVendorsTemplate } from "./bulkImport";
+import { exportToCSV, exportToExcel, formatAssetsForExport, formatSitesForExport, formatVendorsForExport } from "./bulkExport";
 
 // Role-based middleware
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -138,10 +139,11 @@ export const appRouter = router({
       .input(z.object({
         fileContent: z.string(),
         fileType: z.enum(['csv', 'excel']),
+        fileName: z.string(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const data = parseFileData(input.fileContent, input.fileType);
-        return await bulkImportSites(data);
+        return await bulkImportSites(data, ctx.user.id, input.fileName, input.fileType);
       }),
 
     downloadTemplate: protectedProcedure
@@ -149,6 +151,15 @@ export const appRouter = router({
       .query(({ input }) => {
         const template = generateSitesTemplate(input.format);
         return { template, format: input.format };
+      }),
+
+    export: protectedProcedure
+      .input(z.object({ format: z.enum(['csv', 'excel']) }))
+      .query(async ({ input }) => {
+        const sites = await db.getAllSites();
+        const formatted = formatSitesForExport(sites);
+        const data = input.format === 'csv' ? exportToCSV(formatted) : exportToExcel(formatted, 'Sites');
+        return { data, format: input.format, filename: `sites_export.${input.format === 'csv' ? 'csv' : 'xlsx'}` };
       }),
   }),
 
@@ -425,10 +436,11 @@ export const appRouter = router({
       .input(z.object({
         fileContent: z.string(),
         fileType: z.enum(['csv', 'excel']),
+        fileName: z.string(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const data = parseFileData(input.fileContent, input.fileType);
-        return await bulkImportAssets(data);
+        return await bulkImportAssets(data, ctx.user.id, input.fileName, input.fileType);
       }),
 
     downloadTemplate: protectedProcedure
@@ -436,6 +448,15 @@ export const appRouter = router({
       .query(({ input }) => {
         const template = generateAssetsTemplate(input.format);
         return { template, format: input.format };
+      }),
+
+    export: protectedProcedure
+      .input(z.object({ format: z.enum(['csv', 'excel']) }))
+      .query(async ({ input }) => {
+        const assets = await db.getAllAssets();
+        const formatted = formatAssetsForExport(assets);
+        const data = input.format === 'csv' ? exportToCSV(formatted) : exportToExcel(formatted, 'Assets');
+        return { data, format: input.format, filename: `assets_export.${input.format === 'csv' ? 'csv' : 'xlsx'}` };
       }),
   }),
 
@@ -807,10 +828,11 @@ export const appRouter = router({
       .input(z.object({
         fileContent: z.string(),
         fileType: z.enum(['csv', 'excel']),
+        fileName: z.string(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const data = parseFileData(input.fileContent, input.fileType);
-        return await bulkImportVendors(data);
+        return await bulkImportVendors(data, ctx.user.id, input.fileName, input.fileType);
       }),
 
     downloadTemplate: protectedProcedure
@@ -818,6 +840,15 @@ export const appRouter = router({
       .query(({ input }) => {
         const template = generateVendorsTemplate(input.format);
         return { template, format: input.format };
+      }),
+
+    export: protectedProcedure
+      .input(z.object({ format: z.enum(['csv', 'excel']) }))
+      .query(async ({ input }) => {
+        const vendors = await db.getAllVendors();
+        const formatted = formatVendorsForExport(vendors);
+        const data = input.format === 'csv' ? exportToCSV(formatted) : exportToExcel(formatted, 'Vendors');
+        return { data, format: input.format, filename: `vendors_export.${input.format === 'csv' ? 'csv' : 'xlsx'}` };
       }),
   }),
 

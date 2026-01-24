@@ -129,7 +129,7 @@ export function BulkImportDialog({ open, onOpenChange, entityType, onSuccess }: 
         }
       });
 
-      bulkImportMutation.mutate({ fileContent, fileType });
+      bulkImportMutation.mutate({ fileContent, fileType, fileName: file.name });
     } catch (error) {
       toast.error('Failed to read file');
       setImporting(false);

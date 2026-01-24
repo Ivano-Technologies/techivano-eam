@@ -10,29 +10,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { BulkImportDialog } from "@/components/BulkImportDialog";
 
 export default function Sites() {
   const { user } = useAuth();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingSiteId, setEditingSiteId] = useState<number | null>(null);
   const [editData, setEditData] = useState<any>({});
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const { data: sites, isLoading, refetch } = trpc.sites.list.useQuery();
-  
-  const downloadTemplateMutation = trpc.bulkOperations.downloadSiteTemplate.useQuery(undefined, { enabled: false });
-  const importSitesMutation = trpc.bulkOperations.importSites.useMutation({
-    onSuccess: (result) => {
-      if (result.success) {
-        toast.success(`Successfully imported ${result.imported} sites`);
-      } else {
-        toast.warning(`Imported ${result.imported} sites, ${result.failed} failed`);
-      }
-      refetch();
-    },
-    onError: (error) => {
-      toast.error(`Import failed: ${error.message}`);
-    },
-  });
 
   const createSiteMutation = trpc.sites.create.useMutation({
     onSuccess: () => {
@@ -59,45 +45,6 @@ export default function Sites() {
   });
 
   const [newSite, setNewSite] = useState({ name: "", address: "", city: "", state: "", contactPerson: "", contactPhone: "", contactEmail: "" });
-
-  const handleDownloadTemplate = async () => {
-    try {
-      const response = await fetch('/api/trpc/bulkOperations.downloadSiteTemplate');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'site_import_template.xlsx';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      toast.success('Template downloaded successfully');
-    } catch (error) {
-      toast.error('Failed to download template');
-    }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const base64 = event.target?.result as string;
-        importSitesMutation.mutate({ fileData: base64.split(',')[1] });
-      } catch (error) {
-        toast.error('Failed to read file');
-      }
-    };
-    reader.readAsDataURL(file);
-    
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
 
   const handleCreateSite = () => {
     if (!newSite.name) {
@@ -167,19 +114,9 @@ export default function Sites() {
                 <Button onClick={handleCreateSite} disabled={createSiteMutation.isPending}>{createSiteMutation.isPending ? "Creating..." : "Create Site"}</Button>
               </DialogFooter>
             </DialogContent>
-            <Button variant="outline" onClick={handleDownloadTemplate}>
-              <Download className="mr-2 h-4 w-4" />Template
-            </Button>
-            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
               <Upload className="mr-2 h-4 w-4" />Import
             </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              className="hidden"
-              onChange={handleFileUpload}
-            />
           </Dialog>
           </div>
         )}
@@ -280,6 +217,13 @@ export default function Sites() {
           </Card>
         ))}
       </div>
+
+      <BulkImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        entityType="sites"
+        onSuccess={() => refetch()}
+      />
     </div>
   );
 }
