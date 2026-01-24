@@ -71,7 +71,7 @@ export default function Home() {
       description: "Need reordering",
       color: "text-foreground",
       bgColor: "bg-background",
-      iconBg: "bg-gradient-to-br from-purple-500 to-purple-600",
+      iconBg: "bg-gradient-to-br from-teal-500 to-teal-600",
       roles: ["admin", "manager"],
     },
   ];
@@ -95,12 +95,12 @@ export default function Home() {
         {metrics.map((metric) => {
           const Icon = metric.icon;
           return (
-            <Card key={metric.title} className="border-t-4 border-t-red-600 hover:shadow-lg transition-all duration-200">
+            <Card key={metric.title} className="border-2 border-[#DC2626] glass dark:glass-dark hover:shadow-2xl transition-all duration-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-foreground">
                   {metric.title}
                 </CardTitle>
-                <div className={`p-2.5 rounded-xl ${metric.iconBg} shadow-sm`}>
+                <div className={`p-2.5 rounded-xl ${metric.iconBg} glass-icon shadow-lg`}>
                   <Icon className="h-5 w-5 text-white" />
                 </div>
               </CardHeader>
@@ -118,7 +118,7 @@ export default function Home() {
       {/* Two Column Layout */}
       <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
         {/* Upcoming Maintenance */}
-        <Card className="border-t-4 border-t-red-600 shadow-md hover:shadow-lg transition-shadow">
+        <Card className="border-2 border-[#DC2626] glass dark:glass-dark shadow-lg hover:shadow-2xl transition-all">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -156,7 +156,7 @@ export default function Home() {
         </Card>
 
         {/* Low Stock Alerts */}
-        <Card className="border-t-4 border-t-red-600 shadow-md hover:shadow-lg transition-shadow">
+        <Card className="border-2 border-[#DC2626] glass dark:glass-dark shadow-lg hover:shadow-2xl transition-all">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -281,7 +281,7 @@ export default function Home() {
               </p>
               <div className="mt-4 h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-purple-500" 
+                  className="h-full bg-teal-500" 
                   style={{ width: `${(stats as any)?.totalWorkOrders ? ((stats as any).completedWorkOrders / (stats as any).totalWorkOrders * 100) : 0}%` }}
                 />
               </div>

@@ -66,7 +66,7 @@ export default function NotificationPreferences() {
       label: "Asset Status Changes",
       description: "Get notified when asset status changes",
       icon: RefreshCw,
-      color: "text-purple-600",
+      color: "text-teal-600",
     },
     {
       key: "complianceDue",

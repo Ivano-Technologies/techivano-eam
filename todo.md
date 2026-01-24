@@ -1107,3 +1107,13 @@
 - [x] Add toggle between password and magic link
 - [x] Test password signup and login (5/5 tests passed)
 - [x] Write authentication tests
+
+## Phase 105: Glassmorphism Design
+- [x] Add glassmorphism CSS utilities to index.css
+- [x] Apply frosted glass effect to dashboard widgets
+- [x] Add backdrop-blur and semi-transparent backgrounds
+- [x] Restore blue/orange/red/teal color scheme for widget icons
+- [x] Replace purple with teal throughout (4 files updated)
+- [x] Keep NRCS red borders on all widgets
+- [x] Add subtle shadows for depth
+- [x] Test glassmorphism across all pages

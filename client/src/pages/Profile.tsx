@@ -45,7 +45,7 @@ export default function Profile() {
     .slice(0, 2);
 
   const roleColors = {
-    admin: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+    admin: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200",
     manager: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
     technician: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
   };
