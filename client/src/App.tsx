@@ -25,6 +25,7 @@ import Compliance from "./pages/Compliance";
 import Sites from "./pages/Sites";
 import Users from "./pages/Users";
 import NotificationPreferences from "./pages/NotificationPreferences";
+import BiometricSetup from "./pages/BiometricSetup";
 import Reports from "./pages/Reports";
 import QuickBooksSettings from "./pages/QuickBooksSettings";
 import EmailNotifications from "./pages/EmailNotifications";
@@ -70,7 +71,8 @@ function Router() {
       <Route path="/sites" component={Sites} />
       <Route path="/users" component={Users} />
       <Route path="/pending-users" component={PendingUsers} />
-      <Route path="/notification-preferences" component={NotificationPreferences} />
+            <Route path="/notification-preferences" component={NotificationPreferences} />
+            <Route path="/biometric-setup" component={BiometricSetup} />
       <Route path="/reports" component={Reports} />
       <Route path="/report-scheduling" component={ReportScheduling} />
       <Route path="/quickbooks" component={QuickBooksSettings} />

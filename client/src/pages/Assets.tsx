@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Package, MapPin, Download, Upload, Edit2 } from "lucide-react";
+import { Plus, Search, Package, MapPin, Download, Upload, Edit2, Scan } from "lucide-react";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ import { MobileCard, MobileCardList } from "@/components/MobileCard";
 import { useIsMobile } from "@/hooks/useMobile";
 import { usePaginatedData, useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { SwipeableCard } from "@/components/SwipeableCard";
+import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
 
 export default function Assets() {
   const { user } = useAuth();
@@ -47,6 +48,7 @@ export default function Assets() {
   const { data: categories } = trpc.assetCategories.list.useQuery();
   
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const utils = trpc.useUtils();
@@ -238,9 +240,22 @@ export default function Assets() {
 
   const canCreateAsset = user?.role === "admin" || user?.role === "manager";
 
+  const handleBarcodeScan = (code: string, format: string) => {
+    // Search for asset by serial number or asset tag
+    setSearchTerm(code);
+    toast.success(`Scanned ${format}: ${code}`);
+  };
+
   return (
     <>
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
+      <BarcodeScannerDialog
+        open={showBarcodeScanner}
+        onOpenChange={setShowBarcodeScanner}
+        onScan={handleBarcodeScan}
+        title="Scan Asset Barcode"
+        description="Scan the barcode or serial number on the asset"
+      />
       <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -269,9 +284,16 @@ export default function Assets() {
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Asset
-                </Button>
+                  <Search className="mr-2 h-4 w-4" />
+              Search Assets
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowBarcodeScanner(true)}
+            >
+              <Scan className="mr-2 h-4 w-4" />
+              Scan Barcode
+            </Button>
               </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>

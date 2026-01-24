@@ -7,17 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, Plus, AlertTriangle } from "lucide-react";
+import { Package, Plus, AlertTriangle, Scan } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
+import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
 import { MobileCard, MobileCardList } from "@/components/MobileCard";
 import { useIsMobile } from "@/hooks/useMobile";
 
 export default function Inventory() {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   
   // Pull-to-refresh for mobile
   const { pullDistance, isRefreshing } = usePullToRefresh({
@@ -103,16 +106,34 @@ export default function Inventory() {
   return (
     <>
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
+      <BarcodeScannerDialog
+        open={showBarcodeScanner}
+        onOpenChange={setShowBarcodeScanner}
+        onScan={(code, format) => {
+          setSearchTerm(code);
+          toast.success(`Scanned ${format}: ${code}`);
+        }}
+        title="Scan Item Barcode"
+        description="Scan the barcode on the inventory item"
+      />
       <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Inventory Management</h1>
           <p className="text-muted-foreground mt-2">Track spare parts and supplies</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Add Item</Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowBarcodeScanner(true)}
+          >
+            <Scan className="mr-2 h-4 w-4" />
+            Scan Barcode
+          </Button>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="mr-2 h-4 w-4" />Add Item</Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add Inventory Item</DialogTitle>
@@ -265,6 +286,7 @@ export default function Inventory() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {lowStock && lowStock.length > 0 && (

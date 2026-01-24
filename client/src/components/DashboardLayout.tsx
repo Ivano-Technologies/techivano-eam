@@ -21,13 +21,14 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan, Search, AlertTriangle, BarChart3, History } from "lucide-react";
+import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan, Search, AlertTriangle, BarChart3, History, Fingerprint } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { NotificationCenter } from "./NotificationCenter";
+import { useBiometricAuth } from "@/hooks/useBiometricAuth";
 import Footer from "./Footer";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { OfflineBanner } from "./OfflineBanner";
@@ -395,7 +396,14 @@ function DashboardLayoutContent({
                   className="cursor-pointer"
                 >
                   <Settings className="mr-2 h-4 w-4" />
-                  <span>Notification Settings</span>
+                  Notification Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setLocation("/biometric-setup")}
+                  className="cursor-pointer"
+                >
+                  <Fingerprint className="mr-2 h-4 w-4" />
+                  Biometric Login
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={logout}
