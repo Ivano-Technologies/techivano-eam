@@ -990,3 +990,15 @@
 - [x] Create Mobile Scanner Tutorial document
 - [x] Create Offline Mode Usage Guide
 - [x] Test all training materials for clarity
+
+## Phase 97: Design Refinements & Database Reset
+- [x] Remove JetBrains Mono font from HTML
+- [x] Update number displays to use Inter with tabular-nums (built-in)
+- [x] Add emerald green (#10B981) color for active/switched-on buttons
+- [x] Update toggle switches to use emerald green when active
+- [x] Implement Material Design Dark theme (#202124 bg, #E0E0E0 text)
+- [x] Update dark mode CSS variables
+- [x] Test dark mode across all pages
+- [x] Reset/wipe database (clear all data)
+- [x] Verify database is clean
+- [x] Test application with empty database
