@@ -108,6 +108,44 @@ export const appRouter = router({
         ctx.res.cookie(COOKIE_NAME, token, cookieOptions);
         return { success: true, user };
       }),
+    requestPasswordReset: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+      }))
+      .mutation(async ({ input }) => {
+        const { generateResetToken } = await import("./passwordReset");
+        const result = await generateResetToken(input.email);
+        
+        if (!result) {
+          // Don't reveal if email exists - security best practice
+          return { success: true, message: "If an account exists with this email, you will receive a password reset link." };
+        }
+        
+        // TODO: Send email with reset link
+        // For now, return success (email integration pending)
+        const resetLink = `${process.env.VITE_OAUTH_PORTAL_URL || 'http://localhost:3000'}/reset-password?token=${result.token}`;
+        console.log(`[Password Reset] Link for ${input.email}: ${resetLink}`);
+        
+        return { success: true, message: "If an account exists with this email, you will receive a password reset link." };
+      }),
+    resetPassword: publicProcedure
+      .input(z.object({
+        token: z.string(),
+        newPassword: z.string().min(6, "Password must be at least 6 characters"),
+      }))
+      .mutation(async ({ input }) => {
+        const { resetPassword } = await import("./passwordReset");
+        const success = await resetPassword(input.token, input.newPassword);
+        
+        if (!success) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Invalid or expired reset token',
+          });
+        }
+        
+        return { success: true, message: "Password reset successfully. You can now log in with your new password." };
+      }),
   }),
 
   // ============= SITES MANAGEMENT =============

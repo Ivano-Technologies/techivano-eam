@@ -119,17 +119,26 @@ export default function Login() {
                 : "Send Magic Link"}
             </Button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setUsePassword(!usePassword);
-                setPassword("");
-                setMessage(null);
-              }}
-              className="w-full text-sm text-[#1E3A8A] hover:underline"
-            >
-              {usePassword ? "Use magic link instead" : "Use password instead"}
-            </button>
+            <div className="flex justify-between items-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setUsePassword(!usePassword);
+                  setPassword("");
+                  setMessage(null);
+                }}
+                className="text-sm text-[#1E3A8A] hover:underline"
+              >
+                {usePassword ? "Use magic link instead" : "Use password instead"}
+              </button>
+              {usePassword && (
+                <Link href="/forgot-password">
+                  <button type="button" className="text-sm text-[#1E3A8A] hover:underline">
+                    Forgot password?
+                  </button>
+                </Link>
+              )}
+            </div>
 
             <div className="text-center text-sm text-gray-600">
               Don't have an account?{" "}

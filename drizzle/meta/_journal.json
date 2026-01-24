@@ -141,6 +141,13 @@
       "when": 1769248824164,
       "tag": "0019_nasty_purple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1769249813751,
+      "tag": "0020_typical_prism",
+      "breakpoints": true
     }
   ]
 }

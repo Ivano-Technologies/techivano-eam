@@ -457,6 +457,17 @@ export type InsertQuickBooksConfig = typeof quickbooksConfig.$inferInsert;
 /**
  * User Preferences for UI state
  */
+export const passwordResetTokens = mysqlTable("passwordResetTokens", {
+  id: int("id").primaryKey().autoincrement(),
+  userId: int("user_id").notNull(),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
+export type SelectPasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
 export const userPreferences = mysqlTable("userPreferences", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().unique(),

@@ -4,7 +4,9 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
-import VerifyMagicLink from "@/pages/VerifyMagicLink";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import VerifyMagicLink from "./pages/VerifyMagicLink";
 import Welcome from "@/pages/Welcome";
 import PendingUsers from "./pages/PendingUsers";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -51,7 +53,9 @@ function Router() {
       <Switch>
         <Route path="/signup" component={Signup} />
         <Route path="/login" component={Login} />
-        <Route path="/auth/verify" component={VerifyMagicLink} />
+        <Route path="/forgot-password" component={ForgotPassword} />
+        <Route path="/reset-password" component={ResetPassword} />
+        <Route path="/verify-magic-link" component={VerifyMagicLink} />
         <Route path="/welcome" component={Welcome} />
       <Route path="/" component={Home} />
       <Route path="/assets" component={Assets} />

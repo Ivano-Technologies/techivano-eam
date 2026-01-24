@@ -1117,3 +1117,17 @@
 - [x] Keep NRCS red borders on all widgets
 - [x] Add subtle shadows for depth
 - [x] Test glassmorphism across all pages
+
+## Phase 106: Forgot Password Flow
+- [x] Add passwordResetTokens table to schema
+- [x] Push database schema changes
+- [x] Create password reset token generation logic
+- [x] Add token expiration (15 minutes)
+- [x] Create requestPasswordReset endpoint
+- [x] Create resetPassword endpoint
+- [x] Send password reset email with token link (console logs for now)
+- [x] Create ForgotPassword page
+- [x] Create ResetPassword page
+- [x] Add "Forgot password?" link to Login page
+- [x] Test complete password reset flow (6/6 tests passed)
+- [x] Write password reset tests
