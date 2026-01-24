@@ -1,0 +1,21 @@
+{
+  "query": "\nSELECT \n  (SELECT COUNT(*) FROM assets) as assets_count,\n  (SELECT COUNT(*) FROM sites) as sites_count,\n  (SELECT COUNT(*) FROM workOrders) as workorders_count,\n  (SELECT COUNT(*) FROM auditLogs) as auditlogs_count,\n  (SELECT COUNT(*) FROM emailNotifications) as emails_count,\n  (SELECT COUNT(*) FROM notifications) as notifications_count,\n  (SELECT COUNT(*) FROM inventoryItems) as inventory_count,\n  (SELECT COUNT(*) FROM financialTransactions) as financial_count,\n  (SELECT COUNT(*) FROM complianceRecords) as compliance_count;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user TomGb9tuntH4B4d.7e6b3ba34d8a --database YNihSyDPBSASM93ZxstDRD --execute \nSELECT \n  (SELECT COUNT(*) FROM assets) as assets_count,\n  (SELECT COUNT(*) FROM sites) as sites_count,\n  (SELECT COUNT(*) FROM workOrders) as workorders_count,\n  (SELECT COUNT(*) FROM auditLogs) as auditlogs_count,\n  (SELECT COUNT(*) FROM emailNotifications) as emails_count,\n  (SELECT COUNT(*) FROM notifications) as notifications_count,\n  (SELECT COUNT(*) FROM inventoryItems) as inventory_count,\n  (SELECT COUNT(*) FROM financialTransactions) as financial_count,\n  (SELECT COUNT(*) FROM complianceRecords) as compliance_count;\n",
+  "rows": [
+    {
+      "assets_count": "0",
+      "sites_count": "0",
+      "workorders_count": "0",
+      "auditlogs_count": "0",
+      "emails_count": "0",
+      "notifications_count": "0",
+      "inventory_count": "0",
+      "financial_count": "0",
+      "compliance_count": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "assets_count\tsites_count\tworkorders_count\tauditlogs_count\temails_count\tnotifications_count\tinventory_count\tfinancial_count\tcompliance_count\n0\t0\t0\t0\t0\t0\t0\t0\t0\n",
+  "stderr": "",
+  "execution_time_ms": 66
+}
