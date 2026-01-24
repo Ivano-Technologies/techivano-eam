@@ -920,3 +920,11 @@
 - [x] Add barcode scan button to Inventory page
 - [ ] Test biometric authentication on mobile devices
 - [ ] Test barcode scanning on mobile devices
+
+## Mobile Bug Fixes
+- [x] Fix OAuth callback error on mobile devices (redirect to login with error message)
+- [x] Fix Profile button navigation in mobile bottom nav (created Profile page)
+- [x] Fix Asset button navigation in mobile bottom nav (route already exists)
+- [x] Add error handling for OAuth failures on Login page
+- [ ] Test authentication flow on mobile
+- [ ] Test navigation on mobile devices

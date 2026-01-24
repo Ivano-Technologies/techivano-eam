@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,10 +6,26 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { trpc } from "@/lib/trpc";
+import { useLocation } from "wouter";
 
 export default function Login() {
+  const [location] = useLocation();
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Check for OAuth error in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+    if (error === 'oauth_failed') {
+      setMessage({ 
+        type: "error", 
+        text: "Authentication failed. Please try again or contact support if the issue persists." 
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', '/login');
+    }
+  }, []);
   
   const loginMutation = trpc.auth.requestMagicLink.useMutation({
     onSuccess: (data) => {
