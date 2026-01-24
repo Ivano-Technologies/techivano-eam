@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatNaira } from "@/lib/formatNaira";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -214,7 +215,7 @@ export default function Financial() {
             <ArrowUpCircle className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">₦{totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-green-600 font-mono tabular-nums">{formatNaira(totalRevenue)}</div>
             <p className="text-xs text-muted-foreground mt-1">{revenueTransactions.length} transactions</p>
           </CardContent>
         </Card>
@@ -225,7 +226,7 @@ export default function Financial() {
             <ArrowDownCircle className="h-5 w-5 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">₦{totalExpenses.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-red-600 font-mono tabular-nums">{formatNaira(totalExpenses)}</div>
             <p className="text-xs text-muted-foreground mt-1">{expenseTransactions.length} transactions</p>
           </CardContent>
         </Card>
@@ -240,8 +241,8 @@ export default function Financial() {
             )}
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
-              ₦{netProfit.toLocaleString()}
+            <div className={`text-2xl font-bold font-mono tabular-nums ${netProfit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+              {formatNaira(netProfit)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {netProfit >= 0 ? 'Profit' : 'Loss'}
@@ -300,7 +301,7 @@ export default function Financial() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="text-right">
-                          <p className="font-bold text-green-600 font-mono tabular-nums">+₦{parseFloat(t.amount).toLocaleString()}</p>
+                          <p className="font-bold text-green-600 font-mono tabular-nums">+{formatNaira(t.amount)}</p>
                           <p className="text-xs text-muted-foreground">{t.currency}</p>
                         </div>
                         {canManageFinancial && (
@@ -386,7 +387,7 @@ export default function Financial() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="text-right">
-                          <p className="font-bold text-red-600 font-mono tabular-nums">-₦{parseFloat(t.amount).toLocaleString()}</p>
+                          <p className="font-bold text-red-600 font-mono tabular-nums">-{formatNaira(t.amount)}</p>
                           <p className="text-xs text-muted-foreground">{t.currency}</p>
                         </div>
                         {canManageFinancial && (

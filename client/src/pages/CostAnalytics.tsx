@@ -1,4 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatNaira } from "@/lib/formatNaira";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { DollarSign, TrendingUp, Wrench, Building2, Users } from "lucide-react";
@@ -52,8 +53,8 @@ export default function CostAnalytics() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              ₦{analytics?.totalCost.toLocaleString() || '0'}
+            <div className="text-2xl font-bold font-mono tabular-nums">
+              {formatNaira(analytics?.totalCost || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               All expenses in selected period
@@ -107,7 +108,7 @@ export default function CostAnalytics() {
                     <div className="w-2 h-2 rounded-full bg-primary"></div>
                     <span className="font-medium">{cat.categoryName}</span>
                   </div>
-                  <span className="font-bold">₦{cat.total.toLocaleString()}</span>
+                  <span className="font-bold font-mono tabular-nums">{formatNaira(cat.total)}</span>
                 </div>
               ))}
             </div>
@@ -135,7 +136,7 @@ export default function CostAnalytics() {
                     <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                     <span className="font-medium">{site.siteName}</span>
                   </div>
-                  <span className="font-bold">₦{site.total.toLocaleString()}</span>
+                  <span className="font-bold font-mono tabular-nums">{formatNaira(site.total)}</span>
                 </div>
               ))}
             </div>
@@ -168,7 +169,7 @@ export default function CostAnalytics() {
                       </span>
                     </div>
                   </div>
-                  <span className="font-bold">₦{vendor.total.toLocaleString()}</span>
+                  <span className="font-bold font-mono tabular-nums">{formatNaira(vendor.total)}</span>
                 </div>
               ))}
             </div>

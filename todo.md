@@ -943,3 +943,12 @@
 - [x] Reduce sidebar install app button font size by 15%
 - [ ] Test all design refinements on desktop and mobile
 - [ ] Change Financial sidebar icon from dollar sign to Naira sign for localization
+
+## Phase 93: Nigerian Naira Currency Formatting
+- [x] Create formatNaira utility function with ₦ symbol and thousand separators
+- [x] Apply Naira formatting to Financial page amounts (revenue, expenses, net profit)
+- [x] Apply Naira formatting to Cost Analytics page (total cost, categories, sites, vendors)
+- [x] Apply Naira formatting to Asset depreciation (book value, accumulated, annual, schedule)
+- [x] Apply Naira formatting to Inventory item unit costs
+- [x] Add font-mono and tabular-nums classes to all currency displays
+- [ ] Test Naira formatting across all pages

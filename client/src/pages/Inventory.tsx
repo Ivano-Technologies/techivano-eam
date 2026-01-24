@@ -1,5 +1,6 @@
 import { trpc } from "@/lib/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatNaira } from "@/lib/formatNaira";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -298,7 +299,7 @@ export default function Inventory() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">Stock:</span><span className="font-medium tabular-nums">{item.currentStock} {item.unitOfMeasure}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Reorder Point:</span><span className="tabular-nums">{item.reorderPoint}</span></div>
-                {item.unitCost && <div className="flex justify-between"><span className="text-muted-foreground">Unit Cost:</span><span className="font-mono tabular-nums">₦{parseFloat(item.unitCost).toLocaleString()}</span></div>}
+                {item.unitCost && <div className="flex justify-between"><span className="text-muted-foreground">Unit Cost:</span><span className="font-mono tabular-nums">{formatNaira(item.unitCost)}</span></div>}
               </div>
             </CardContent>
           </Card>

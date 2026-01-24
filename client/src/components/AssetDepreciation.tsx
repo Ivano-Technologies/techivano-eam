@@ -1,5 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatNaira } from "@/lib/formatNaira";
 import { TrendingDown, DollarSign, Calendar, Percent } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -61,8 +62,8 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
               <DollarSign className="h-4 w-4" />
               Current Book Value
             </div>
-            <div className="text-2xl font-bold text-green-600">
-              ₦{depreciation.currentBookValue.toLocaleString()}
+            <div className="text-2xl font-bold text-green-600 font-mono tabular-nums">
+              {formatNaira(depreciation.currentBookValue)}
             </div>
           </div>
 
@@ -71,8 +72,8 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
               <TrendingDown className="h-4 w-4" />
               Accumulated Depreciation
             </div>
-            <div className="text-2xl font-bold text-red-600">
-              ₦{depreciation.accumulatedDepreciation.toLocaleString()}
+            <div className="text-2xl font-bold text-red-600 font-mono tabular-nums">
+              {formatNaira(depreciation.accumulatedDepreciation)}
             </div>
           </div>
 
@@ -101,7 +102,7 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Annual Depreciation:</span>
-            <span className="font-medium">₦{depreciation.annualDepreciation.toLocaleString()}</span>
+            <span className="font-medium font-mono tabular-nums">{formatNaira(depreciation.annualDepreciation)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Years Elapsed:</span>
@@ -131,17 +132,17 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(entry.date).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="text-right">
-                      ₦{entry.beginningValue.toLocaleString()}
+                    <TableCell className="text-right font-mono tabular-nums">
+                      {formatNaira(entry.beginningValue)}
                     </TableCell>
-                    <TableCell className="text-right text-red-600">
-                      -₦{entry.depreciationExpense.toLocaleString()}
+                    <TableCell className="text-right text-red-600 font-mono tabular-nums">
+                      -{formatNaira(entry.depreciationExpense)}
                     </TableCell>
-                    <TableCell className="text-right">
-                      ₦{entry.accumulatedDepreciation.toLocaleString()}
+                    <TableCell className="text-right font-mono tabular-nums">
+                      {formatNaira(entry.accumulatedDepreciation)}
                     </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ₦{entry.endingValue.toLocaleString()}
+                    <TableCell className="text-right font-medium font-mono tabular-nums">
+                      {formatNaira(entry.endingValue)}
                     </TableCell>
                   </TableRow>
                 ))}
