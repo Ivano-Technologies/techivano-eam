@@ -213,8 +213,8 @@ ${updateForm.notes}`
 
             {/* Manual Entry */}
             {scanMode === "manual" && (
-              <div className="space-y-3">
-                <div>
+              <div className="space-y-4">
+                <div className="space-y-2">
                   <Label htmlFor="assetTag">Asset Tag / Barcode</Label>
                   <Input
                     id="assetTag"

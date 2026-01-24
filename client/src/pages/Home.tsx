@@ -125,8 +125,8 @@ export default function Home() {
                 <CardTitle className="text-lg font-bold">Upcoming Maintenance</CardTitle>
                 <CardDescription>Next 7 days</CardDescription>
               </div>
-              <div className="p-2 rounded-lg bg-blue-100">
-                <Calendar className="h-5 w-5 text-blue-600" />
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 glass-icon shadow-lg">
+                <Calendar className="h-5 w-5 text-white" />
               </div>
             </div>
           </CardHeader>
@@ -163,8 +163,8 @@ export default function Home() {
                 <CardTitle className="text-lg font-bold">Low Stock Alerts</CardTitle>
                 <CardDescription>Items below reorder point</CardDescription>
               </div>
-              <div className="p-2 rounded-lg bg-orange-100">
-                <AlertTriangle className="h-5 w-5 text-orange-600" />
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 glass-icon shadow-lg">
+                <AlertTriangle className="h-5 w-5 text-white" />
               </div>
             </div>
           </CardHeader>

@@ -1131,3 +1131,11 @@
 - [x] Add "Forgot password?" link to Login page
 - [x] Test complete password reset flow (6/6 tests passed)
 - [x] Write password reset tests
+
+## Phase 107: Fix Reported Errors
+- [x] Fix dashboard icons display in dark theme
+- [x] Fix dashboard widgets display in dark theme
+- [x] Fix dashboard icons display in light theme
+- [x] Add adequate spacing beneath Asset Tag/Barcode fields
+- [x] Replace JetBrains Mono with Inter font (already done - verified)
+- [x] Test all fixes in both themes
