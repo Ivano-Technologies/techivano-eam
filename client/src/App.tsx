@@ -14,6 +14,7 @@ import Home from "./pages/Home";
 import Assets from "./pages/Assets";
 import AssetDetail from "./pages/AssetDetail";
 import AssetScanner from "./pages/AssetScanner";
+import OfflineQueue from "./pages/OfflineQueue";
 import AssetMap from "./pages/AssetMap";
 import WorkOrders from "./pages/WorkOrders";
 import WorkOrderDetail from "./pages/WorkOrderDetail";
@@ -52,6 +53,7 @@ function Router() {
       <Route path="/assets" component={Assets} />
         <Route path="/assets/:id" component={AssetDetail} />
         <Route path="/scanner" component={AssetScanner} />
+        <Route path="/offline-queue" component={OfflineQueue} />
       <Route path="/asset-map" component={AssetMap} />
       <Route path="/warranty-alerts" component={WarrantyAlerts} />
       <Route path="/cost-analytics" component={CostAnalytics} />

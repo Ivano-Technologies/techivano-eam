@@ -4,7 +4,9 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit } from "lucide-react";
+import { ArrowLeft, Edit, CheckCircle, Camera } from "lucide-react";
+import { FloatingActionGroup, FloatingActionButton } from "@/components/FloatingActionButton";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,6 +20,7 @@ export default function WorkOrderDetail() {
 
   const workOrderId = params?.id ? Number(params.id) : 0;
   const { data: workOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({ id: workOrderId });
+  const isMobile = useIsMobile();
 
   const updateMutation = trpc.workOrders.update.useMutation({
     onSuccess: () => {
@@ -84,6 +87,32 @@ export default function WorkOrderDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Floating Action Buttons - Mobile Only */}
+      {isMobile && workOrder.status !== 'completed' && (
+        <FloatingActionGroup position="bottom-right">
+          <FloatingActionButton
+            icon={<Camera className="h-6 w-6" />}
+            label="Add Photo"
+            onClick={() => toast.info("Photo upload coming soon")}
+            variant="secondary"
+            size="default"
+          />
+          <FloatingActionButton
+            icon={<CheckCircle className="h-7 w-7" />}
+            label="Complete Work Order"
+            onClick={() => {
+              updateMutation.mutate({
+                id: workOrderId,
+                status: 'completed',
+                completionNotes: 'Completed via mobile quick action',
+              });
+            }}
+            variant="success"
+            size="large"
+          />
+        </FloatingActionGroup>
+      )}
     </div>
   );
 }

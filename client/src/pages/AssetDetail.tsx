@@ -14,7 +14,10 @@ import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
-import { QuickActions } from "@/components/QuickActions";
+import { QuickActionsSheet } from "@/components/QuickActionsSheet";
+import { FloatingActionButton } from "@/components/FloatingActionButton";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { RefreshCw } from "lucide-react";
 
 export default function AssetDetail() {
   const [, params] = useRoute("/assets/:id");
@@ -29,6 +32,8 @@ export default function AssetDetail() {
 
   const assetId = params?.id ? Number(params.id) : 0;
   const { data: asset, isLoading, refetch } = trpc.assets.getById.useQuery({ id: assetId });
+  const isMobile = useIsMobile();
+  const [isQuickUpdateOpen, setIsQuickUpdateOpen] = useState(false);
   const { data: photos, refetch: refetchPhotos } = trpc.photos.listByAsset.useQuery({ assetId }, { enabled: !!assetId });
 
   const generateQRCodeMutation = trpc.assets.generateQRCode.useMutation({
@@ -233,8 +238,8 @@ export default function AssetDetail() {
         )}
       </div>
 
-      {/* Quick Actions Component */}
-      <QuickActions
+      {/* Quick Actions Sheet - Mobile Only */}
+      <QuickActionsSheet
         assetId={asset.id}
         assetName={asset.name}
         assetTag={asset.assetTag}
@@ -664,6 +669,18 @@ export default function AssetDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Floating Action Button - Mobile Only */}
+      {isMobile && (
+        <FloatingActionButton
+          icon={<RefreshCw className="h-6 w-6" />}
+          label="Quick Update"
+          onClick={() => setIsEditDialogOpen(true)}
+          variant="primary"
+          size="large"
+          position="bottom-right"
+        />
+      )}
     </div>
   );
 }
