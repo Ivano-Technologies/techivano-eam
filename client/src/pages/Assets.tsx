@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Package, MapPin, Download, Upload, Edit2, Scan } from "lucide-react";
+import { Plus, Search, Package, MapPin, Download, Upload, Edit2 } from "lucide-react";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -14,15 +14,9 @@ import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
-import { MobileCard, MobileCardList } from "@/components/MobileCard";
-import { useIsMobile } from "@/hooks/useMobile";
-import { usePaginatedData, useInfiniteScroll } from "@/hooks/useInfiniteScroll";
-import { SwipeableCard } from "@/components/SwipeableCard";
-import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
 
 export default function Assets() {
   const { user } = useAuth();
-  const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [siteFilter, setSiteFilter] = useState<string>("all");
@@ -48,7 +42,6 @@ export default function Assets() {
   const { data: categories } = trpc.assetCategories.list.useQuery();
   
   const [importFile, setImportFile] = useState<File | null>(null);
-  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const utils = trpc.useUtils();
@@ -217,16 +210,6 @@ export default function Assets() {
     asset.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Infinite scroll pagination
-  const { displayedItems, hasMore, loadMore, displayedCount, totalCount } = usePaginatedData(
-    filteredAssets || [],
-    isMobile ? 10 : 20 // Smaller page size on mobile
-  );
-
-  const { sentinelRef, isLoading: isLoadingMore } = useInfiniteScroll(loadMore, {
-    enabled: hasMore && !isLoading,
-  });
-
   const getStatusColor = (status: string) => {
     const colors = {
       operational: "bg-green-100 text-green-800",
@@ -240,22 +223,9 @@ export default function Assets() {
 
   const canCreateAsset = user?.role === "admin" || user?.role === "manager";
 
-  const handleBarcodeScan = (code: string, format: string) => {
-    // Search for asset by serial number or asset tag
-    setSearchTerm(code);
-    toast.success(`Scanned ${format}: ${code}`);
-  };
-
   return (
     <>
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
-      <BarcodeScannerDialog
-        open={showBarcodeScanner}
-        onOpenChange={setShowBarcodeScanner}
-        onScan={handleBarcodeScan}
-        title="Scan Asset Barcode"
-        description="Scan the barcode or serial number on the asset"
-      />
       <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -284,16 +254,9 @@ export default function Assets() {
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
-                  <Search className="mr-2 h-4 w-4" />
-              Search Assets
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowBarcodeScanner(true)}
-            >
-              <Scan className="mr-2 h-4 w-4" />
-              Scan Barcode
-            </Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Asset
+                </Button>
               </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
@@ -466,131 +429,65 @@ export default function Assets() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : filteredAssets && filteredAssets.length > 0 ? (
-        isMobile ? (
-          <MobileCardList>
-            {displayedItems.map((asset) => (
-              <SwipeableCard
-                key={asset.id}
-                onRefresh={async () => { await refetch(); }}
-              >
-                <Link href={`/assets/${asset.id}`}>
-                  <MobileCard
-                  title={asset.name}
-                  subtitle={asset.assetTag}
-                  badge={{
-                    text: asset.status,
-                    className: getStatusColor(asset.status),
-                  }}
-                  fields={[
-                    ...(asset.manufacturer ? [{ label: "Manufacturer", value: asset.manufacturer }] : []),
-                    ...(asset.model ? [{ label: "Model", value: asset.model }] : []),
-                    ...(asset.location ? [{ 
-                      label: "Location", 
-                      value: (
-                        <div className="flex items-center gap-1">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredAssets.map((asset) => (
+            <div key={asset.id} className="relative">
+              <Link href={`/assets/${asset.id}`}>
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-5 w-5 text-primary" />
+                        <div>
+                          <CardTitle className="text-lg">{asset.name}</CardTitle>
+                          <CardDescription className="text-xs mt-1">
+                            {asset.assetTag}
+                          </CardDescription>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusColor(asset.status)}>
+                          {asset.status}
+                        </Badge>
+                        {canCreateAsset && (
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={(e) => handleStartEdit(asset, e)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm">
+                      {asset.manufacturer && (
+                        <p className="text-muted-foreground">
+                          <span className="font-medium">Manufacturer:</span> {asset.manufacturer}
+                        </p>
+                      )}
+                      {asset.model && (
+                        <p className="text-muted-foreground">
+                          <span className="font-medium">Model:</span> {asset.model}
+                        </p>
+                      )}
+                      {asset.location && (
+                        <div className="flex items-center gap-1 text-muted-foreground">
                           <MapPin className="h-3 w-3" />
                           <span>{asset.location}</span>
                         </div>
-                      ),
-                      fullWidth: true 
-                    }] : []),
-                  ]}
-                  actions={
-                    canCreateAsset ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleStartEdit(asset, e);
-                        }}
-                        className="flex-1"
-                      >
-                        <Edit2 className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    ) : undefined
-                  }
-                />
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </Link>
-              </SwipeableCard>
-            ))}
-          </MobileCardList>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {displayedItems.map((asset) => (
-              <div key={asset.id} className="relative">
-                <Link href={`/assets/${asset.id}`}>
-                  <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <Package className="h-5 w-5 text-primary" />
-                          <div>
-                            <CardTitle className="text-lg">{asset.name}</CardTitle>
-                            <CardDescription className="text-xs mt-1">
-                              {asset.assetTag}
-                            </CardDescription>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className={getStatusColor(asset.status)}>
-                            {asset.status}
-                          </Badge>
-                          {canCreateAsset && (
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              onClick={(e) => handleStartEdit(asset, e)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2 text-sm">
-                        {asset.manufacturer && (
-                          <p className="text-muted-foreground">
-                            <span className="font-medium">Manufacturer:</span> {asset.manufacturer}
-                          </p>
-                        )}
-                        {asset.model && (
-                          <p className="text-muted-foreground">
-                            <span className="font-medium">Model:</span> {asset.model}
-                          </p>
-                        )}
-                        {asset.location && (
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            <span>{asset.location}</span>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              </div>
-            ))}
-          </div>
-        )
-      ) : null}
-      
-      {/* Infinite scroll sentinel */}
-      {hasMore && filteredAssets && filteredAssets.length > 0 && (
-        <div ref={sentinelRef} className="flex justify-center py-4">
-          {isLoadingMore && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-              <span className="text-sm">Loading more...</span>
             </div>
-          )}
+          ))}
         </div>
-      )}
-      
-      {filteredAssets && filteredAssets.length === 0 && (
+      ) : (
         <Card>
           <CardContent className="flex flex-col items-center justify-center h-64">
             <Package className="h-12 w-12 text-muted-foreground mb-4" />

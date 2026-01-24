@@ -21,14 +21,13 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan, Search, AlertTriangle, BarChart3, History, Fingerprint } from "lucide-react";
+import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan, Search, AlertTriangle, BarChart3, History } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { NotificationCenter } from "./NotificationCenter";
-import { useBiometricAuth } from "@/hooks/useBiometricAuth";
 import Footer from "./Footer";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { OfflineBanner } from "./OfflineBanner";
@@ -297,10 +296,10 @@ function DashboardLayoutContent({
                 />
                 {sidebarWidth > PRESET_WIDTHS.narrow && (
                   <div className="flex flex-col min-w-0">
-                    <span className="font-bold text-[15.3px] text-sidebar-foreground truncate">
+                    <span className="font-bold text-[18px] text-sidebar-foreground truncate">
                       Nigerian Red Cross Society
                     </span>
-                    <span className="text-[13.6px] text-sidebar-foreground/70 truncate">
+                    <span className="text-[16px] text-sidebar-foreground/70 truncate">
                       Enterprise Asset Management
                     </span>
                   </div>
@@ -374,16 +373,16 @@ function DashboardLayoutContent({
               <DropdownMenuTrigger asChild>
                 <button className={`flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${sidebarWidth === PRESET_WIDTHS.narrow ? 'justify-center' : ''}`}>
                   <Avatar className="h-[47px] w-[47px] border shrink-0">
-                    <AvatarFallback className="text-[13.6px] font-medium">
+                    <AvatarFallback className="text-[16px] font-medium">
                       {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   {sidebarWidth > PRESET_WIDTHS.narrow && (
                     <div className="flex-1 min-w-0">
-                      <p className="text-[15.3px] font-medium truncate leading-none">
+                      <p className="text-[18px] font-medium truncate leading-none">
                         {user?.name || "-"}
                       </p>
-                      <p className="text-[13.6px] text-muted-foreground truncate mt-1.5">
+                      <p className="text-[16px] text-muted-foreground truncate mt-1.5">
                         {user?.email || "-"}
                       </p>
                     </div>
@@ -396,14 +395,7 @@ function DashboardLayoutContent({
                   className="cursor-pointer"
                 >
                   <Settings className="mr-2 h-4 w-4" />
-                  Notification Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setLocation("/biometric-setup")}
-                  className="cursor-pointer"
-                >
-                  <Fingerprint className="mr-2 h-4 w-4" />
-                  Biometric Login
+                  <span>Notification Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={logout}

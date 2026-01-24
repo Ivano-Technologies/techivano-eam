@@ -7,20 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, Plus, AlertTriangle, Scan } from "lucide-react";
+import { Package, Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
-import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
-import { MobileCard, MobileCardList } from "@/components/MobileCard";
-import { useIsMobile } from "@/hooks/useMobile";
 
 export default function Inventory() {
-  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
-  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   
   // Pull-to-refresh for mobile
   const { pullDistance, isRefreshing } = usePullToRefresh({
@@ -106,34 +100,16 @@ export default function Inventory() {
   return (
     <>
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
-      <BarcodeScannerDialog
-        open={showBarcodeScanner}
-        onOpenChange={setShowBarcodeScanner}
-        onScan={(code, format) => {
-          setSearchTerm(code);
-          toast.success(`Scanned ${format}: ${code}`);
-        }}
-        title="Scan Item Barcode"
-        description="Scan the barcode on the inventory item"
-      />
       <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Inventory Management</h1>
           <p className="text-muted-foreground mt-2">Track spare parts and supplies</p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowBarcodeScanner(true)}
-          >
-            <Scan className="mr-2 h-4 w-4" />
-            Scan Barcode
-          </Button>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button><Plus className="mr-2 h-4 w-4" />Add Item</Button>
-            </DialogTrigger>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button><Plus className="mr-2 h-4 w-4" />Add Item</Button>
+          </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add Inventory Item</DialogTitle>
@@ -286,7 +262,6 @@ export default function Inventory() {
             </form>
           </DialogContent>
         </Dialog>
-        </div>
       </div>
 
       {lowStock && lowStock.length > 0 && (
@@ -305,58 +280,25 @@ export default function Inventory() {
         </Card>
       )}
 
-      {isMobile ? (
-        <MobileCardList>
-          {items?.map((item) => {
-            const isLowStock = item.currentStock <= item.reorderPoint;
-            return (
-              <MobileCard
-                key={item.id}
-                title={item.name}
-                subtitle={item.itemCode}
-                badge={isLowStock ? {
-                  text: "Low Stock",
-                  variant: "destructive",
-                } : undefined}
-                fields={[
-                  { 
-                    label: "Current Stock", 
-                    value: `${item.currentStock} ${item.unitOfMeasure}`,
-                  },
-                  { 
-                    label: "Reorder Point", 
-                    value: item.reorderPoint,
-                  },
-                  ...(item.unitCost ? [{
-                    label: "Unit Cost",
-                    value: `₦${parseFloat(item.unitCost).toLocaleString()}`,
-                  }] : []),
-                ]}
-              />
-            );
-          })}
-        </MobileCardList>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {items?.map((item) => (
-            <Card key={item.id}>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-primary" />
-                  <div><CardTitle className="text-lg">{item.name}</CardTitle><p className="text-xs text-muted-foreground">{item.itemCode}</p></div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Stock:</span><span className="font-medium">{item.currentStock} {item.unitOfMeasure}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Reorder Point:</span><span>{item.reorderPoint}</span></div>
-                  {item.unitCost && <div className="flex justify-between"><span className="text-muted-foreground">Unit Cost:</span><span>₦{parseFloat(item.unitCost).toLocaleString()}</span></div>}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {items?.map((item) => (
+          <Card key={item.id}>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                <div><CardTitle className="text-lg">{item.name}</CardTitle><p className="text-xs text-muted-foreground">{item.itemCode}</p></div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Stock:</span><span className="font-medium">{item.currentStock} {item.unitOfMeasure}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Reorder Point:</span><span>{item.reorderPoint}</span></div>
+                {item.unitCost && <div className="flex justify-between"><span className="text-muted-foreground">Unit Cost:</span><span>₦{parseFloat(item.unitCost).toLocaleString()}</span></div>}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
       </div>
     </>
   );

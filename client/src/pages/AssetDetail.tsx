@@ -15,21 +15,18 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
 import { QuickActions } from "@/components/QuickActions";
-import { useImageCompression } from "@/hooks/useImageCompression";
-import { PhotoQueueStatus } from "@/components/PhotoQueueStatus";
 
 export default function AssetDetail() {
   const [, params] = useRoute("/assets/:id");
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [photoCaption, setPhotoCaption] = useState("");
-  const { compressImages, isCompressing, formatFileSize, getCompressionRatio } = useImageCompression();
-  
+  const [photoCaption, setPhotoCaption] = useState('');
+
   const assetId = params?.id ? Number(params.id) : 0;
   const { data: asset, isLoading, refetch } = trpc.assets.getById.useQuery({ id: assetId });
   const { data: photos, refetch: refetchPhotos } = trpc.photos.listByAsset.useQuery({ assetId }, { enabled: !!assetId });
@@ -75,7 +72,7 @@ export default function AssetDetail() {
     },
   });
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
@@ -84,35 +81,15 @@ export default function AssetDetail() {
         toast.error(`${file.name} is not an image file`);
         return false;
       }
-      // Increased limit since we'll compress
-      if (file.size > 20 * 1024 * 1024) {
-        toast.error(`${file.name} exceeds 20MB limit`);
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`${file.name} exceeds 5MB limit`);
         return false;
       }
       return true;
     });
 
     if (validFiles.length > 0) {
-      // Show compression progress
-      toast.info('Compressing images...');
-      
-      // Compress images before upload
-      const compressedFiles = await compressImages(validFiles, {
-        maxSizeMB: 1,
-        maxWidthOrHeight: 1920,
-        quality: 0.8,
-      });
-      
-      // Calculate total savings
-      const originalSize = validFiles.reduce((sum, f) => sum + f.size, 0);
-      const compressedSize = compressedFiles.reduce((sum, f) => sum + f.size, 0);
-      const savings = getCompressionRatio(originalSize, compressedSize);
-      
-      if (savings > 10) {
-        toast.success(`Images compressed! Saved ${savings}% (${formatFileSize(originalSize - compressedSize)})`);
-      }
-      
-      setPendingFiles(compressedFiles);
+      setPendingFiles(validFiles);
       setIsUploadDialogOpen(true);
     }
     e.target.value = '';
@@ -447,9 +424,6 @@ export default function AssetDetail() {
           </Card>
         )}
       </div>
-
-      {/* Photo Upload Queue Status */}
-      <PhotoQueueStatus />
 
       {/* Photo Gallery */}
       <Card>
