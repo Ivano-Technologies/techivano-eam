@@ -300,7 +300,7 @@ export default function Financial() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="text-right">
-                          <p className="font-bold text-green-600">+₦{parseFloat(t.amount).toLocaleString()}</p>
+                          <p className="font-bold text-green-600 font-mono tabular-nums">+₦{parseFloat(t.amount).toLocaleString()}</p>
                           <p className="text-xs text-muted-foreground">{t.currency}</p>
                         </div>
                         {canManageFinancial && (
@@ -386,7 +386,7 @@ export default function Financial() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="text-right">
-                          <p className="font-bold text-red-600">-₦{parseFloat(t.amount).toLocaleString()}</p>
+                          <p className="font-bold text-red-600 font-mono tabular-nums">-₦{parseFloat(t.amount).toLocaleString()}</p>
                           <p className="text-xs text-muted-foreground">{t.currency}</p>
                         </div>
                         {canManageFinancial && (

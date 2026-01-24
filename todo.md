@@ -908,3 +908,21 @@
 - [x] Create ShimmerLoader component for loading states
 - [x] Update theme color in HTML meta tags
 - [ ] Test design consistency across all pages
+
+## Phase 91: Design System Application & Theme Settings
+- [ ] Replace loading spinners with ShimmerLoader on Assets page
+- [ ] Replace loading spinners with ShimmerLoader on Work Orders page
+- [ ] Replace loading spinners with ShimmerLoader on Dashboard page
+- [ ] Replace loading spinners with ShimmerLoader on Inventory page
+- [ ] Add CheckAnimation to work order creation success
+- [ ] Add CheckAnimation to work order completion success
+- [ ] Add CheckAnimation to asset update success
+- [ ] Add CheckAnimation to inventory update success
+- [ ] Apply font-mono to Financial page numeric columns
+- [ ] Apply font-mono to Cost Analytics page numeric columns
+- [ ] Apply font-mono to Inventory page numeric columns
+- [ ] Apply tabular-nums to all dashboard metrics
+- [ ] Create theme settings page with light/dark/system options
+- [ ] Add theme switcher to Profile page or Settings menu
+- [ ] Test theme persistence across sessions
+- [ ] Test all updates on both desktop and mobile

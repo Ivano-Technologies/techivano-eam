@@ -40,6 +40,7 @@ import AuditTrail from "./pages/AuditTrail";
 import ActivityLog from "./pages/ActivityLog";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import ThemeSettings from "./pages/ThemeSettings";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
 function Router() {
@@ -54,6 +55,7 @@ function Router() {
         <Route path="/assets/:id" component={AssetDetail} />
         <Route path="/scanner" component={AssetScanner} />
         <Route path="/offline-queue" component={OfflineQueue} />
+        <Route path="/settings/theme" component={ThemeSettings} />
       <Route path="/asset-map" component={AssetMap} />
       <Route path="/warranty-alerts" component={WarrantyAlerts} />
       <Route path="/cost-analytics" component={CostAnalytics} />

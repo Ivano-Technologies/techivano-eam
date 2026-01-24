@@ -4,6 +4,7 @@ import { Package, Wrench, AlertTriangle, DollarSign, Calendar, TrendingUp } from
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { ShimmerLoader } from "@/components/ShimmerLoader";
 
 export default function Home() {
   const { user } = useAuth();
@@ -13,8 +14,8 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="space-y-6">
+        <ShimmerLoader type="card" count={4} />
       </div>
     );
   }
@@ -92,7 +93,7 @@ export default function Home() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{metric.value}</div>
+                <div className="text-2xl font-bold tabular-nums">{metric.value}</div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {metric.description}
                 </p>

@@ -35,6 +35,7 @@ import { OfflineBanner } from "./OfflineBanner";
 const allMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: false, sortOrder: 0 },
   { icon: Settings, label: "Dashboard Settings", path: "/dashboard-settings", adminOnly: false },
+  { icon: Settings, label: "Theme Settings", path: "/settings/theme", adminOnly: false },
   { icon: Package, label: "Assets", path: "/assets", adminOnly: false },
   { icon: Map, label: "Asset Map", path: "/asset-map", adminOnly: false },
   { icon: Scan, label: "Asset Scanner", path: "/scanner", adminOnly: false },

@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
+import { ShimmerLoader } from "@/components/ShimmerLoader";
 
 export default function Inventory() {
   const [open, setOpen] = useState(false);
@@ -94,7 +95,7 @@ export default function Inventory() {
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
+    return <ShimmerLoader type="card" count={6} />;
   }
 
   return (
@@ -291,9 +292,9 @@ export default function Inventory() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Stock:</span><span className="font-medium">{item.currentStock} {item.unitOfMeasure}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Reorder Point:</span><span>{item.reorderPoint}</span></div>
-                {item.unitCost && <div className="flex justify-between"><span className="text-muted-foreground">Unit Cost:</span><span>₦{parseFloat(item.unitCost).toLocaleString()}</span></div>}
+                <div className="flex justify-between"><span className="text-muted-foreground">Stock:</span><span className="font-medium tabular-nums">{item.currentStock} {item.unitOfMeasure}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Reorder Point:</span><span className="tabular-nums">{item.reorderPoint}</span></div>
+                {item.unitCost && <div className="flex justify-between"><span className="text-muted-foreground">Unit Cost:</span><span className="font-mono tabular-nums">₦{parseFloat(item.unitCost).toLocaleString()}</span></div>}
               </div>
             </CardContent>
           </Card>

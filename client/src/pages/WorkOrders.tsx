@@ -14,11 +14,14 @@ import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
+import { ShimmerLoader } from "@/components/ShimmerLoader";
+import { CheckAnimation } from "@/components/CheckAnimation";
 
 export default function WorkOrders() {
   const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const { data: workOrders, isLoading, refetch } = trpc.workOrders.list.useQuery({
     status: statusFilter !== "all" ? statusFilter : undefined,
@@ -41,6 +44,7 @@ export default function WorkOrders() {
 
   const createWorkOrderMutation = trpc.workOrders.create.useMutation({
     onSuccess: () => {
+      setShowSuccess(true);
       toast.success("Work order created successfully");
       setIsCreateDialogOpen(false);
       refetch();
@@ -113,6 +117,7 @@ export default function WorkOrders() {
 
   return (
     <>
+      <CheckAnimation show={showSuccess} message="Work Order Created!" onComplete={() => setShowSuccess(false)} />
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -283,9 +288,7 @@ export default function WorkOrders() {
       </Card>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
+        <ShimmerLoader type="card" count={6} />
       ) : workOrders && workOrders.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {workOrders.map((wo) => (

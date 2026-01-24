@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { CheckAnimation } from "@/components/CheckAnimation";
 
 export default function WorkOrderDetail() {
   const [, params] = useRoute("/work-orders/:id");
@@ -22,8 +23,11 @@ export default function WorkOrderDetail() {
   const { data: workOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({ id: workOrderId });
   const isMobile = useIsMobile();
 
+  const [showSuccess, setShowSuccess] = useState(false);
+
   const updateMutation = trpc.workOrders.update.useMutation({
     onSuccess: () => {
+      setShowSuccess(true);
       toast.success("Work order updated");
       setIsEditDialogOpen(false);
       refetch();
@@ -44,7 +48,9 @@ export default function WorkOrderDetail() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <CheckAnimation show={showSuccess} message="Work Order Updated!" onComplete={() => setShowSuccess(false)} />
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" onClick={() => setLocation("/work-orders")}><ArrowLeft className="h-4 w-4" /></Button>
@@ -113,6 +119,7 @@ export default function WorkOrderDetail() {
           />
         </FloatingActionGroup>
       )}
-    </div>
+      </div>
+    </>
   );
 }
