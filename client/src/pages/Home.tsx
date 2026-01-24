@@ -7,6 +7,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { ShimmerLoader } from "@/components/ShimmerLoader";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { useIsMobile } from "@/hooks/useMobile";
+import { useRipple } from "@/hooks/useRipple";
+import { Ripple } from "@/components/Ripple";
 
 export default function Home() {
   const { user } = useAuth();
@@ -94,8 +96,14 @@ export default function Home() {
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {metrics.map((metric) => {
           const Icon = metric.icon;
+          const { ripples, addRipple } = useRipple();
           return (
-            <Card key={metric.title} className="border-2 border-[#DC2626] glass dark:glass-dark transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:-translate-y-1">
+            <Card 
+              key={metric.title} 
+              className="relative overflow-hidden border-2 border-[#DC2626] glass dark:glass-dark transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:-translate-y-1 cursor-pointer"
+              onClick={addRipple}
+            >
+              <Ripple ripples={ripples} />
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-foreground">
                   {metric.title}
