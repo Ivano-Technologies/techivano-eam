@@ -13,9 +13,11 @@ import { useState } from "react";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
 import { ShimmerLoader } from "@/components/ShimmerLoader";
+import { CheckAnimation } from "@/components/CheckAnimation";
 
 export default function Inventory() {
   const [open, setOpen] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   
   // Pull-to-refresh for mobile
   const { pullDistance, isRefreshing } = usePullToRefresh({
@@ -47,6 +49,7 @@ export default function Inventory() {
 
   const createMutation = trpc.inventory.create.useMutation({
     onSuccess: () => {
+      setShowSuccess(true);
       toast.success("Inventory item created successfully");
       utils.inventory.list.invalidate();
       utils.inventory.lowStock.invalidate();
@@ -100,6 +103,7 @@ export default function Inventory() {
 
   return (
     <>
+      <CheckAnimation show={showSuccess} message="Inventory Item Created!" onComplete={() => setShowSuccess(false)} />
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <div className="space-y-6">
       <div className="flex items-center justify-between">

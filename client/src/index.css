@@ -49,18 +49,18 @@
 
 :root {
   /* Sophisticated Utility Color Palette */
-  --primary: oklch(0.18 0.02 250); /* Sovereign Navy #0F172A */
+  --primary: oklch(0.30 0.06 250); /* Sovereign Navy #1E3A5F - Lighter, more readable */
   --primary-foreground: oklch(0.99 0 0);
   
-  /* Sidebar: Sovereign Navy */
-  --sidebar: oklch(0.18 0.02 250);
+  /* Sidebar: Sovereign Navy #1E3A5F */
+  --sidebar: oklch(0.30 0.06 250);
   --sidebar-foreground: oklch(0.99 0 0);
-  --sidebar-primary: oklch(0.18 0.02 250);
+  --sidebar-primary: oklch(0.30 0.06 250);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.22 0.02 250); /* Slightly lighter for hover */
+  --sidebar-accent: oklch(0.35 0.06 250); /* Slightly lighter for hover */
   --sidebar-accent-foreground: oklch(0.99 0 0);
-  --sidebar-border: oklch(0.15 0.02 250);
-  --sidebar-ring: oklch(0.18 0.02 250);
+  --sidebar-border: oklch(0.25 0.06 250);
+  --sidebar-ring: oklch(0.30 0.06 250);
   
   /* Error Crimson */
   --destructive: oklch(0.58 0.22 25); /* #EF4444 */
@@ -68,18 +68,18 @@
   
   /* Secondary Slate Canvas - reduces eye strain */
   --background: oklch(0.985 0.001 250); /* #F8FAFC */
-  --foreground: oklch(0.18 0.02 250); /* Sovereign Navy text */
+  --foreground: oklch(0.30 0.06 250); /* Sovereign Navy text */
   
   /* Card backgrounds - pure white for contrast */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.02 250);
+  --card-foreground: oklch(0.30 0.06 250);
   
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.02 250);
+  --popover-foreground: oklch(0.30 0.06 250);
   
   /* Secondary: Light slate for subtle backgrounds */
   --secondary: oklch(0.96 0.002 250);
-  --secondary-foreground: oklch(0.18 0.02 250);
+  --secondary-foreground: oklch(0.30 0.06 250);
   
   /* Muted: Medium slate for disabled states */
   --muted: oklch(0.94 0.002 250);
@@ -87,14 +87,14 @@
   
   /* Accent: Subtle blue-slate */
   --accent: oklch(0.94 0.002 250);
-  --accent-foreground: oklch(0.18 0.02 250);
+  --accent-foreground: oklch(0.30 0.06 250);
   
   /* Borders: Soft slate */
   --border: oklch(0.90 0.002 250);
   --input: oklch(0.90 0.002 250);
   
   /* Focus ring: Sovereign Navy */
-  --ring: oklch(0.18 0.02 250);
+  --ring: oklch(0.30 0.06 250);
   
   /* Chart colors: Professional blues and slates */
   --chart-1: oklch(0.60 0.10 250);

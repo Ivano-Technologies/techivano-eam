@@ -15,6 +15,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
 import { ShimmerLoader } from "@/components/ShimmerLoader";
+import { CheckAnimation } from "@/components/CheckAnimation";
 
 export default function Assets() {
   const { user } = useAuth();
@@ -24,6 +25,8 @@ export default function Assets() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const { data: assets, isLoading, refetch } = trpc.assets.list.useQuery({
     siteId: siteFilter !== "all" ? Number(siteFilter) : undefined,
@@ -101,6 +104,8 @@ export default function Assets() {
 
   const createAssetMutation = trpc.assets.create.useMutation({
     onSuccess: () => {
+      setSuccessMessage("Asset Created!");
+      setShowSuccess(true);
       toast.success("Asset created successfully");
       setIsCreateDialogOpen(false);
       refetch();
@@ -123,6 +128,8 @@ export default function Assets() {
 
   const updateAssetMutation = trpc.assets.update.useMutation({
     onSuccess: () => {
+      setSuccessMessage("Asset Updated!");
+      setShowSuccess(true);
       toast.success("Asset updated successfully");
       setIsEditDialogOpen(false);
       setEditingAsset(null);
@@ -226,6 +233,7 @@ export default function Assets() {
 
   return (
     <>
+      <CheckAnimation show={showSuccess} message={successMessage} onComplete={() => setShowSuccess(false)} />
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <div className="space-y-6">
       <div className="flex items-center justify-between">

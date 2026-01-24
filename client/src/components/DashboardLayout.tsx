@@ -22,6 +22,7 @@ import {
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan, Search, AlertTriangle, BarChart3, History } from "lucide-react";
+import { NairaIcon } from "./icons/NairaIcon";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -41,7 +42,7 @@ const allMenuItems = [
   { icon: Scan, label: "Asset Scanner", path: "/scanner", adminOnly: false },
   { icon: FileText, label: "Compliance", path: "/compliance", adminOnly: false },
   { icon: Mail, label: "Email Notifications", path: "/email-notifications", adminOnly: true },
-  { icon: DollarSign, label: "Financial", path: "/financial", adminOnly: false },
+  { icon: NairaIcon, label: "Financial", path: "/financial", adminOnly: false },
   { icon: TrendingUp, label: "Inventory", path: "/inventory", adminOnly: false },
   { icon: Calendar, label: "Maintenance", path: "/maintenance", adminOnly: false },
   { icon: DollarSign, label: "QuickBooks", path: "/quickbooks", adminOnly: true },
@@ -297,10 +298,10 @@ function DashboardLayoutContent({
                 />
                 {sidebarWidth > PRESET_WIDTHS.narrow && (
                   <div className="flex flex-col min-w-0">
-                    <span className="font-bold text-[18px] text-sidebar-foreground truncate">
+                    <span className="font-bold text-[15px] text-sidebar-foreground truncate">
                       Nigerian Red Cross Society
                     </span>
-                    <span className="text-[16px] text-sidebar-foreground/70 truncate">
+                    <span className="text-[13.5px] text-sidebar-foreground/70 truncate">
                       Enterprise Asset Management
                     </span>
                   </div>
@@ -330,7 +331,7 @@ function DashboardLayoutContent({
                     placeholder="Search menu..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full h-9 pl-8 pr-3 text-[17px] bg-sidebar-accent/50 border border-sidebar-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
+                    className="w-full h-9 pl-8 pr-3 text-[14.5px] bg-sidebar-accent/50 border border-sidebar-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
                   />
                 </div>
               </div>
@@ -350,7 +351,7 @@ function DashboardLayoutContent({
                       <item.icon
                         className={`h-[20px] w-[20px] ${isActive ? "text-primary" : ""}`}
                       />
-                      {sidebarWidth > PRESET_WIDTHS.narrow && <span className="text-[17px]">{item.label}</span>}
+                      {sidebarWidth > PRESET_WIDTHS.narrow && <span className="text-[14.5px]">{item.label}</span>}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -367,23 +368,23 @@ function DashboardLayoutContent({
                 className="w-full justify-start gap-2 text-xs h-9 border-primary/30 hover:bg-primary/10"
               >
                 <Download className="h-[18px] w-[18px]" />
-                {sidebarWidth > PRESET_WIDTHS.narrow && <span className="text-[16px]">Install App</span>}
+                {sidebarWidth > PRESET_WIDTHS.narrow && <span className="text-[13.5px]">Install App</span>}
               </Button>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className={`flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${sidebarWidth === PRESET_WIDTHS.narrow ? 'justify-center' : ''}`}>
                   <Avatar className="h-[47px] w-[47px] border shrink-0">
-                    <AvatarFallback className="text-[16px] font-medium">
+                    <AvatarFallback className="text-[13.5px] font-medium">
                       {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   {sidebarWidth > PRESET_WIDTHS.narrow && (
                     <div className="flex-1 min-w-0">
-                      <p className="text-[18px] font-medium truncate leading-none">
+                      <p className="text-[15px] font-medium truncate leading-none">
                         {user?.name || "-"}
                       </p>
-                      <p className="text-[16px] text-muted-foreground truncate mt-1.5">
+                      <p className="text-[13.5px] text-muted-foreground truncate mt-1.5">
                         {user?.email || "-"}
                       </p>
                     </div>
