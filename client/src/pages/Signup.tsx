@@ -10,17 +10,15 @@ import { trpc } from "@/lib/trpc";
 export default function Signup() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   
-  const signupMutation = trpc.auth.signup.useMutation({
+  const signupMutation = trpc.auth.signupWithPassword.useMutation({
     onSuccess: (data) => {
-      if (data.success) {
-        setMessage({ type: "success", text: data.message });
-        setEmail("");
-        setName("");
-      } else {
-        setMessage({ type: "error", text: data.message });
-      }
+      setMessage({ type: "success", text: data.message });
+      setEmail("");
+      setName("");
+      setPassword("");
     },
     onError: (error) => {
       setMessage({ type: "error", text: error.message || "Signup failed. Please try again." });
@@ -31,12 +29,17 @@ export default function Signup() {
     e.preventDefault();
     setMessage(null);
     
-    if (!email || !name) {
+    if (!email || !name || !password) {
       setMessage({ type: "error", text: "Please fill in all fields" });
       return;
     }
+    
+    if (password.length < 6) {
+      setMessage({ type: "error", text: "Password must be at least 6 characters" });
+      return;
+    }
 
-    signupMutation.mutate({ email, name });
+    signupMutation.mutate({ email, name, password });
   };
 
   return (
@@ -86,6 +89,20 @@ export default function Signup() {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={signupMutation.isPending}
                 required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="At least 6 characters"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={signupMutation.isPending}
+                required
+                minLength={6}
               />
             </div>
 

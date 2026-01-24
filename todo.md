@@ -1096,3 +1096,14 @@
 - [x] Add persistent install button to UI
 - [x] Test PWA install on repeat visits
 - [x] Test all design changes across pages
+
+## Phase 104: Add Password Authentication
+- [x] Add password field to user schema
+- [x] Push database schema changes
+- [x] Install bcrypt for password hashing
+- [x] Create password authentication backend (login/signup)
+- [x] Add password field to signup form (min 6 characters)
+- [x] Update login page with password option
+- [x] Add toggle between password and magic link
+- [x] Test password signup and login (5/5 tests passed)
+- [x] Write authentication tests

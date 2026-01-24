@@ -9,9 +9,11 @@ import { trpc } from "@/lib/trpc";
 
 export default function Login() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [usePassword, setUsePassword] = useState(true); // Default to password login
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   
-  const loginMutation = trpc.auth.requestMagicLink.useMutation({
+  const magicLinkMutation = trpc.auth.requestMagicLink.useMutation({
     onSuccess: (data) => {
       if (data.success) {
         setMessage({ type: "success", text: data.message });
@@ -24,6 +26,15 @@ export default function Login() {
     },
   });
 
+  const passwordLoginMutation = trpc.auth.loginWithPassword.useMutation({
+    onSuccess: () => {
+      window.location.href = "/";
+    },
+    onError: (error: any) => {
+      setMessage({ type: "error", text: error.message || "Login failed" });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
@@ -33,7 +44,15 @@ export default function Login() {
       return;
     }
 
-    loginMutation.mutate({ email });
+    if (usePassword) {
+      if (!password) {
+        setMessage({ type: "error", text: "Please enter your password" });
+        return;
+      }
+      passwordLoginMutation.mutate({ email, password });
+    } else {
+      magicLinkMutation.mutate({ email });
+    }
   };
 
   return (
@@ -68,18 +87,49 @@ export default function Login() {
                 placeholder="your@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={loginMutation.isPending}
+                disabled={passwordLoginMutation.isPending || magicLinkMutation.isPending}
                 required
               />
             </div>
 
+            {usePassword && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={passwordLoginMutation.isPending}
+                  required
+                />
+              </div>
+            )}
+
             <Button
               type="submit"
               className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
-              disabled={loginMutation.isPending}
+              disabled={passwordLoginMutation.isPending || magicLinkMutation.isPending}
             >
-              {loginMutation.isPending ? "Sending..." : "Send Magic Link"}
+              {passwordLoginMutation.isPending || magicLinkMutation.isPending
+                ? "Processing..."
+                : usePassword
+                ? "Sign In"
+                : "Send Magic Link"}
             </Button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setUsePassword(!usePassword);
+                setPassword("");
+                setMessage(null);
+              }}
+              className="w-full text-sm text-[#1E3A8A] hover:underline"
+            >
+              {usePassword ? "Use magic link instead" : "Use password instead"}
+            </button>
 
             <div className="text-center text-sm text-gray-600">
               Don't have an account?{" "}
@@ -89,10 +139,12 @@ export default function Login() {
             </div>
           </form>
 
-          <div className="mt-6 pt-6 border-t text-center text-xs text-gray-500">
-            <p>We'll send a secure sign-in link to your email.</p>
-            <p className="mt-1">No password required.</p>
-          </div>
+          {!usePassword && (
+            <div className="mt-6 pt-6 border-t text-center text-xs text-gray-500">
+              <p>We'll send a secure sign-in link to your email.</p>
+              <p className="mt-1">No password required.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -68,6 +68,46 @@ export const appRouter = router({
         }
         return { success: false, message: "Failed to send magic link" };
       }),
+    signupWithPassword: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        name: z.string().min(1),
+        password: z.string().min(6, "Password must be at least 6 characters"),
+      }))
+      .mutation(async ({ input }) => {
+        // Check if user already exists
+        const existing = await db.getUserByEmail(input.email);
+        if (existing) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'An account with this email already exists',
+          });
+        }
+        const { createUserWithPassword } = await import("./passwordAuth");
+        const user = await createUserWithPassword(input.email, input.name, input.password);
+        return { success: true, message: "Account created successfully. You can now log in.", user };
+      }),
+    loginWithPassword: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { authenticateWithPassword } = await import("./passwordAuth");
+        const user = await authenticateWithPassword(input.email, input.password);
+        if (!user) {
+          throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: 'Invalid email or password',
+          });
+        }
+        // Create session by setting JWT cookie
+        const { sdk } = await import("./_core/sdk");
+        const token = await sdk.createSessionToken(user.openId, { name: user.name || "" });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, cookieOptions);
+        return { success: true, user };
+      }),
   }),
 
   // ============= SITES MANAGEMENT =============
