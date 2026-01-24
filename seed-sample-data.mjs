@@ -136,7 +136,7 @@ console.log(`✓ Created ${assetCount} assets`);
 
 // Sample Work Orders
 const workOrderStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
-const priorities = ['low', 'medium', 'high', 'urgent'];
+const priorities = ['low', 'medium', 'high', 'critical'];
 const workOrderTypes = ['corrective', 'preventive', 'inspection', 'emergency'];
 
 console.log('\nInserting work orders...');

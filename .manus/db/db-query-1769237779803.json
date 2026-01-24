@@ -1,0 +1,38 @@
+{
+  "query": "\nSELECT 'Sites' as entity, COUNT(*) as count FROM sites\nUNION ALL\nSELECT 'Vendors', COUNT(*) FROM vendors\nUNION ALL\nSELECT 'Asset Categories', COUNT(*) FROM assetCategories\nUNION ALL\nSELECT 'Assets', COUNT(*) FROM assets\nUNION ALL\nSELECT 'Work Orders', COUNT(*) FROM workOrders\nUNION ALL\nSELECT 'Maintenance Schedules', COUNT(*) FROM maintenanceSchedules\nUNION ALL\nSELECT 'Financial Transactions', COUNT(*) FROM financialTransactions;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user TomGb9tuntH4B4d.7e6b3ba34d8a --database YNihSyDPBSASM93ZxstDRD --execute \nSELECT 'Sites' as entity, COUNT(*) as count FROM sites\nUNION ALL\nSELECT 'Vendors', COUNT(*) FROM vendors\nUNION ALL\nSELECT 'Asset Categories', COUNT(*) FROM assetCategories\nUNION ALL\nSELECT 'Assets', COUNT(*) FROM assets\nUNION ALL\nSELECT 'Work Orders', COUNT(*) FROM workOrders\nUNION ALL\nSELECT 'Maintenance Schedules', COUNT(*) FROM maintenanceSchedules\nUNION ALL\nSELECT 'Financial Transactions', COUNT(*) FROM financialTransactions;\n",
+  "rows": [
+    {
+      "entity": "Asset Categories",
+      "count": "20"
+    },
+    {
+      "entity": "Work Orders",
+      "count": "2"
+    },
+    {
+      "entity": "Vendors",
+      "count": "14"
+    },
+    {
+      "entity": "Assets",
+      "count": "75"
+    },
+    {
+      "entity": "Sites",
+      "count": "56"
+    },
+    {
+      "entity": "Maintenance Schedules",
+      "count": "0"
+    },
+    {
+      "entity": "Financial Transactions",
+      "count": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "entity\tcount\nAsset Categories\t20\nWork Orders\t2\nVendors\t14\nAssets\t75\nSites\t56\nMaintenance Schedules\t0\nFinancial Transactions\t0\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT 'Sites' as entity, COUNT(*) as count FROM sites\nUNION ALL\nSELECT 'Vendors', COUNT(*) FROM vendors\nUNION ALL\nSELECT 'Asset Categories', COUNT(*) FROM assetCategories\nUNION ALL\nSELECT 'Assets', COUNT(*) FROM assets\nUNION ALL\nSELECT 'Work Orders', COUNT(*) FROM workOrders\nUNION ALL\nSELECT 'Inventory Items', COUNT(*) FROM inventory\nUNION ALL\nSELECT 'Maintenance Schedules', COUNT(*) FROM maintenanceSchedules\nUNION ALL\nSELECT 'Financial Transactions', COUNT(*) FROM financialTransactions;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user TomGb9tuntH4B4d.7e6b3ba34d8a --database YNihSyDPBSASM93ZxstDRD --execute \nSELECT 'Sites' as entity, COUNT(*) as count FROM sites\nUNION ALL\nSELECT 'Vendors', COUNT(*) FROM vendors\nUNION ALL\nSELECT 'Asset Categories', COUNT(*) FROM assetCategories\nUNION ALL\nSELECT 'Assets', COUNT(*) FROM assets\nUNION ALL\nSELECT 'Work Orders', COUNT(*) FROM workOrders\nUNION ALL\nSELECT 'Inventory Items', COUNT(*) FROM inventory\nUNION ALL\nSELECT 'Maintenance Schedules', COUNT(*) FROM maintenanceSchedules\nUNION ALL\nSELECT 'Financial Transactions', COUNT(*) FROM financialTransactions;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 2: Table 'ynihsydpbsasm93zxstdrd.inventory' doesn't exist"
+  ]
+}
