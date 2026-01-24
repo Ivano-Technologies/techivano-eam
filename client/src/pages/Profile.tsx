@@ -52,9 +52,9 @@ export default function Profile() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-3xl font-bold">Profile</h1>
-        <Button variant="outline" onClick={() => setLocation("/dashboard-settings")}>
+        <Button variant="outline" onClick={() => setLocation("/dashboard-settings")} className="w-full sm:w-auto">
           <Settings className="mr-2 h-4 w-4" />
           Settings
         </Button>
@@ -67,26 +67,26 @@ export default function Profile() {
           <CardDescription>Your personal details and role</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-start gap-6">
-            <Avatar className="h-20 w-20">
+          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+            <Avatar className="h-20 w-20 flex-shrink-0">
               <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 space-y-3">
-              <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-semibold">{user.name}</h2>
+            <div className="flex-1 space-y-3 min-w-0 w-full">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <h2 className="text-2xl font-semibold break-words">{user.name}</h2>
                 <Badge className={roleColors[user.role as keyof typeof roleColors]}>
                   {user.role}
                 </Badge>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
-                <Mail className="h-4 w-4" />
-                <span>{user.email}</span>
+                <Mail className="h-4 w-4 flex-shrink-0" />
+                <span className="break-all text-sm sm:text-base">{user.email}</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
-                <Shield className="h-4 w-4" />
-                <span>Member since {new Date(user.createdAt).toLocaleDateString()}</span>
+                <Shield className="h-4 w-4 flex-shrink-0" />
+                <span className="text-sm sm:text-base">Member since {new Date(user.createdAt).toLocaleDateString()}</span>
               </div>
             </div>
           </div>

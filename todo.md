@@ -1172,3 +1172,8 @@
 - [x] Add ripple effect to metric cards
 - [x] Test ripple animation on click
 - [x] Ensure ripple respects card boundaries (overflow-hidden)
+
+## Phase 60: Profile Page Mobile Alignment Fix
+- [x] Fix Settings button overflow on mobile
+- [x] Optimize profile layout for mobile screens
+- [x] Adjust spacing and alignment in Account Information card
