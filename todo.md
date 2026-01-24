@@ -1152,3 +1152,9 @@
 - [x] Add loading overlays to form submissions (Login, Signup)
 - [x] Add loading states to bulk import/export (already exists)
 - [x] Test all loading animations
+
+## Phase 109: Remove Glassmorphism from Icons
+- [x] Remove glass/glass-dark classes from icon backgrounds in Home.tsx
+- [x] Replace with solid color backgrounds (gradient backgrounds remain)
+- [x] Keep glassmorphism on widget cards
+- [x] Test icon appearance in both themes
