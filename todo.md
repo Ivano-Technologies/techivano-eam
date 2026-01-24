@@ -952,3 +952,25 @@
 - [x] Apply Naira formatting to Inventory item unit costs
 - [x] Add font-mono and tabular-nums classes to all currency displays
 - [ ] Test Naira formatting across all pages
+
+## Phase 94: Complete Naira Currency System
+- [ ] Find and format Work Order estimated costs
+- [ ] Find and format Work Order actual costs
+- [ ] Find and format Work Order parts pricing
+- [ ] Create NairaCurrencyInput component with automatic formatting
+- [ ] Replace cost/price input fields with NairaCurrencyInput
+- [ ] Add PDF export functionality to Financial page
+- [ ] Add Excel export functionality to Cost Analytics
+- [ ] Ensure exports preserve ₦ symbol and thousand separators
+- [ ] Test all Naira formatting and exports
+
+## Phase 95: Complete Outstanding Features
+- [x] Enhance Profile page with user stats, recent activity, preferences shortcuts
+- [x] Wire Smart Scanner Hub to mobile bottom nav FAB
+- [x] Create NairaCurrencyInput component with automatic thousand separator formatting
+- [x] Replace cost/price input fields with NairaCurrencyInput across app
+- [x] Add PDF export button to Financial page
+- [x] Add Excel export button to Cost Analytics page
+- [x] Configure service worker for PWA offline caching
+- [x] Add BiometricSetup route to App.tsx
+- [x] Test all completed features

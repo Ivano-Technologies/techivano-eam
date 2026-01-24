@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DollarSign, Plus, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, Edit2, Save, X } from "lucide-react";
+import { DollarSign, Plus, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, Edit2, Save, X, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -43,6 +43,22 @@ export default function Financial() {
     },
     onError: (error: any) => {
       toast.error(`Failed to create transaction: ${error.message}`);
+    },
+  });
+
+  const exportMutation = trpc.reports.financial.useMutation({
+    onSuccess: (data: any) => {
+      const blob = new Blob([Buffer.from(data.data, 'base64')], { type: data.mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = data.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Report exported successfully');
+    },
+    onError: (error: any) => {
+      toast.error(`Export failed: ${error.message}`);
     },
   });
 
@@ -125,8 +141,27 @@ export default function Financial() {
           <h1 className="text-3xl font-bold">Financial Tracking</h1>
           <p className="text-muted-foreground mt-2">Monitor revenue, costs, and expenses</p>
         </div>
-        {canManageFinancial && (
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportMutation.mutate({ format: 'pdf' })}
+            disabled={exportMutation.isPending}
+          >
+            <FileDown className="mr-2 h-4 w-4" />
+            Export PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportMutation.mutate({ format: 'excel' })}
+            disabled={exportMutation.isPending}
+          >
+            <FileDown className="mr-2 h-4 w-4" />
+            Export Excel
+          </Button>
+          {canManageFinancial && (
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="mr-2 h-4 w-4" />Add Transaction</Button>
             </DialogTrigger>
@@ -204,7 +239,8 @@ export default function Financial() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Summary Cards */}

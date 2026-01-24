@@ -18,7 +18,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: Home, label: 'Dashboard', to: '/' },
   { icon: Package, label: 'Assets', to: '/assets' },
-  { icon: QrCode, label: 'Scan', to: '/scanner', isFAB: true },
+  { icon: QrCode, label: 'Scan', to: '/smart-scanner', isFAB: true },
   { icon: Wrench, label: 'Work Orders', to: '/work-orders' },
   { icon: User, label: 'Profile', to: '/profile' },
 ];

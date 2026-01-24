@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatNaira } from "@/lib/formatNaira";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Edit, CheckCircle, Camera } from "lucide-react";
@@ -68,6 +69,8 @@ export default function WorkOrderDetail() {
           <div><p className="text-sm font-medium text-muted-foreground">Priority</p><Badge>{workOrder.priority}</Badge></div>
           <div><p className="text-sm font-medium text-muted-foreground">Type</p><p>{workOrder.type}</p></div>
           {workOrder.description && <div><p className="text-sm font-medium text-muted-foreground">Description</p><p>{workOrder.description}</p></div>}
+          {workOrder.estimatedCost && <div><p className="text-sm font-medium text-muted-foreground">Estimated Cost</p><p className="font-mono tabular-nums">{formatNaira(workOrder.estimatedCost)}</p></div>}
+          {workOrder.actualCost && <div><p className="text-sm font-medium text-muted-foreground">Actual Cost</p><p className="font-mono tabular-nums">{formatNaira(workOrder.actualCost)}</p></div>}
         </CardContent>
       </Card>
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

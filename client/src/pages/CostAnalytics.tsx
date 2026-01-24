@@ -2,12 +2,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { formatNaira } from "@/lib/formatNaira";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { DollarSign, TrendingUp, Wrench, Building2, Users } from "lucide-react";
+import { DollarSign, TrendingUp, Wrench, Building2, Users, FileDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { useState } from "react";
 
 export default function CostAnalytics() {
   const [days, setDays] = useState(30);
   const { data: analytics, isLoading } = trpc.financial.getCostAnalytics.useQuery({ days });
+
+  const exportMutation = trpc.reports.workOrders.useMutation({
+    onSuccess: (data: any) => {
+      const blob = new Blob([Buffer.from(data.data, 'base64')], { type: data.mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = data.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Report exported successfully');
+    },
+    onError: (error: any) => {
+      toast.error(`Export failed: ${error.message}`);
+    },
+  });
 
   if (isLoading) {
     return (
@@ -31,7 +49,26 @@ export default function CostAnalytics() {
           <h1 className="text-3xl font-bold tracking-tight">Cost Analytics</h1>
           <p className="text-muted-foreground">Maintenance and operational cost breakdown</p>
         </div>
-        <Select value={days.toString()} onValueChange={(v) => setDays(parseInt(v))}>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportMutation.mutate({ format: 'pdf' })}
+            disabled={exportMutation.isPending}
+          >
+            <FileDown className="mr-2 h-4 w-4" />
+            Export PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportMutation.mutate({ format: 'excel' })}
+            disabled={exportMutation.isPending}
+          >
+            <FileDown className="mr-2 h-4 w-4" />
+            Export Excel
+          </Button>
+          <Select value={days.toString()} onValueChange={(v) => setDays(parseInt(v))}>
           <SelectTrigger className="w-[180px]">
             <SelectValue />
           </SelectTrigger>
@@ -43,6 +80,7 @@ export default function CostAnalytics() {
             <SelectItem value="365">Last year</SelectItem>
           </SelectContent>
         </Select>
+        </div>
       </div>
 
       {/* Summary Cards */}

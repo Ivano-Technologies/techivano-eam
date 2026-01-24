@@ -41,6 +41,9 @@ import ActivityLog from "./pages/ActivityLog";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import ThemeSettings from "./pages/ThemeSettings";
+import Profile from "./pages/Profile";
+import SmartScanner from "./pages/SmartScanner";
+import BiometricSetup from "./pages/BiometricSetup";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
 function Router() {
@@ -56,6 +59,9 @@ function Router() {
         <Route path="/scanner" component={AssetScanner} />
         <Route path="/offline-queue" component={OfflineQueue} />
         <Route path="/settings/theme" component={ThemeSettings} />
+        <Route path="/profile" component={Profile} />
+        <Route path="/biometric-setup" component={BiometricSetup} />
+        <Route path="/smart-scanner" component={SmartScanner} />
       <Route path="/asset-map" component={AssetMap} />
       <Route path="/warranty-alerts" component={WarrantyAlerts} />
       <Route path="/cost-analytics" component={CostAnalytics} />
