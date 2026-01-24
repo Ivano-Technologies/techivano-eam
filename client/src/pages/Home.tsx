@@ -39,8 +39,8 @@ export default function Home() {
       value: stats?.totalAssets || 0,
       icon: Package,
       description: `${stats?.operationalAssets || 0} operational`,
-      color: "text-blue-700",
-      bgColor: "bg-blue-100",
+      color: "text-foreground",
+      bgColor: "bg-background",
       iconBg: "bg-gradient-to-br from-blue-500 to-blue-600",
       roles: ["admin", "manager"],
     },
@@ -49,8 +49,8 @@ export default function Home() {
       value: stats?.maintenanceAssets || 0,
       icon: Wrench,
       description: "Currently being serviced",
-      color: "text-orange-700",
-      bgColor: "bg-orange-50",
+      color: "text-foreground",
+      bgColor: "bg-background",
       iconBg: "bg-gradient-to-br from-orange-500 to-orange-600",
       roles: ["admin", "manager", "technician"],
     },
@@ -59,8 +59,8 @@ export default function Home() {
       value: stats?.pendingWorkOrders || 0,
       icon: AlertTriangle,
       description: `${stats?.inProgressWorkOrders || 0} in progress`,
-      color: "text-red-700",
-      bgColor: "bg-red-50",
+      color: "text-foreground",
+      bgColor: "bg-background",
       iconBg: "bg-gradient-to-br from-red-600 to-red-700",
       roles: ["admin", "manager", "technician"],
     },
@@ -69,8 +69,8 @@ export default function Home() {
       value: stats?.lowStockItems || 0,
       icon: TrendingUp,
       description: "Need reordering",
-      color: "text-purple-700",
-      bgColor: "bg-purple-50",
+      color: "text-foreground",
+      bgColor: "bg-background",
       iconBg: "bg-gradient-to-br from-purple-500 to-purple-600",
       roles: ["admin", "manager"],
     },
@@ -95,7 +95,7 @@ export default function Home() {
         {metrics.map((metric) => {
           const Icon = metric.icon;
           return (
-            <Card key={metric.title} className="border-l-4 border-l-primary/20 hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-white to-gray-50">
+            <Card key={metric.title} className="border-t-4 border-t-red-600 hover:shadow-lg transition-all duration-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-foreground">
                   {metric.title}
@@ -118,7 +118,7 @@ export default function Home() {
       {/* Two Column Layout */}
       <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
         {/* Upcoming Maintenance */}
-        <Card className="border-t-4 border-t-blue-500 shadow-md hover:shadow-lg transition-shadow">
+        <Card className="border-t-4 border-t-red-600 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -156,7 +156,7 @@ export default function Home() {
         </Card>
 
         {/* Low Stock Alerts */}
-        <Card className="border-t-4 border-t-orange-500 shadow-md hover:shadow-lg transition-shadow">
+        <Card className="border-t-4 border-t-red-600 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -200,7 +200,7 @@ export default function Home() {
       {/* Analytics Widgets */}
       <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {/* Assets by Status */}
-        <Card className="border-t-4 border-t-blue-500">
+        <Card className="border-t-4 border-t-red-600">
           <CardHeader>
             <CardTitle className="text-base">Assets by Status</CardTitle>
           </CardHeader>
@@ -253,7 +253,7 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <div className="text-center py-4">
-              <div className="text-4xl font-bold text-red-600">{(stats as any)?.overdueMaintenance || 0}</div>
+              <div className="text-4xl font-bold tabular-nums">{(stats as any)?.overdueMaintenance || 0}</div>
               <p className="text-sm text-muted-foreground mt-2">Tasks past due date</p>
               {((stats as any)?.overdueMaintenance || 0) > 0 && (
                 <Link href="/maintenance">
@@ -267,13 +267,13 @@ export default function Home() {
         </Card>
 
         {/* Work Order Completion Rate */}
-        <Card className="border-t-4 border-t-purple-500">
+        <Card className="border-t-4 border-t-red-600">
           <CardHeader>
             <CardTitle className="text-base">Work Order Completion</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center py-4">
-              <div className="text-4xl font-bold text-purple-600">
+              <div className="text-4xl font-bold tabular-nums">
                 {(stats as any)?.totalWorkOrders ? Math.round(((stats as any).completedWorkOrders / (stats as any).totalWorkOrders) * 100) : 0}%
               </div>
               <p className="text-sm text-muted-foreground mt-2">
@@ -291,7 +291,7 @@ export default function Home() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="border-t-4 border-t-green-500 shadow-md">       <CardHeader>
+      <Card className="border-t-4 border-t-red-600 shadow-md">       <CardHeader>
           <CardTitle className="text-lg font-bold">Quick Actions</CardTitle>
           <CardDescription>Common tasks and shortcuts</CardDescription>
         </CardHeader>
