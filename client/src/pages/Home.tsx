@@ -10,6 +10,32 @@ import { useIsMobile } from "@/hooks/useMobile";
 import { useRipple } from "@/hooks/useRipple";
 import { Ripple } from "@/components/Ripple";
 
+function MetricCard({ metric, Icon }: { metric: any; Icon: any }) {
+  const { ripples, addRipple } = useRipple();
+  return (
+    <Card 
+      className="relative overflow-hidden border-2 border-[#DC2626] glass dark:glass-dark transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:-translate-y-1 cursor-pointer"
+      onClick={addRipple}
+    >
+      <Ripple ripples={ripples} />
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium text-foreground">
+          {metric.title}
+        </CardTitle>
+        <div className={`p-2.5 rounded-xl ${metric.iconBg} shadow-lg`}>
+          <Icon className="h-5 w-5 text-white" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold tabular-nums">{metric.value}</div>
+        <p className="text-xs text-muted-foreground mt-1">
+          {metric.description}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Home() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -96,29 +122,8 @@ export default function Home() {
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {metrics.map((metric) => {
           const Icon = metric.icon;
-          const { ripples, addRipple } = useRipple();
           return (
-            <Card 
-              key={metric.title} 
-              className="relative overflow-hidden border-2 border-[#DC2626] glass dark:glass-dark transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:-translate-y-1 cursor-pointer"
-              onClick={addRipple}
-            >
-              <Ripple ripples={ripples} />
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-foreground">
-                  {metric.title}
-                </CardTitle>
-                <div className={`p-2.5 rounded-xl ${metric.iconBg} shadow-lg`}>
-                  <Icon className="h-5 w-5 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold tabular-nums">{metric.value}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {metric.description}
-                </p>
-              </CardContent>
-            </Card>
+            <MetricCard key={metric.title} metric={metric} Icon={Icon} />
           );
         })}
       </div>
