@@ -1158,3 +1158,10 @@
 - [x] Replace with solid color backgrounds (gradient backgrounds remain)
 - [x] Keep glassmorphism on widget cards
 - [x] Test icon appearance in both themes
+
+## Phase 110: Soft Shadow Hover Effects
+- [x] Update metric card hover shadows to use soft, diffused shadows
+- [x] Set shadow opacity to max 40% (12% light, 40% dark)
+- [x] Use blur radius of 8-10px (30px spread for diffusion)
+- [x] Add smooth transition animation (300ms)
+- [x] Test hover effects in both themes

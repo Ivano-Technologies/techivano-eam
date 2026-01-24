@@ -95,7 +95,7 @@ export default function Home() {
         {metrics.map((metric) => {
           const Icon = metric.icon;
           return (
-            <Card key={metric.title} className="border-2 border-[#DC2626] glass dark:glass-dark hover:shadow-2xl transition-all duration-200">
+            <Card key={metric.title} className="border-2 border-[#DC2626] glass dark:glass-dark transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:-translate-y-1">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-foreground">
                   {metric.title}
