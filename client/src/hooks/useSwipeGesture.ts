@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { triggerHaptic } from './useHaptic';
 
 interface SwipeGestureOptions {
   onSwipeLeft?: () => void;
@@ -37,11 +38,13 @@ export function useSwipeGesture({
       
       // Swipe right (open sidebar)
       if (deltaX > threshold && onSwipeRight) {
+        triggerHaptic('light');
         onSwipeRight();
       }
       
       // Swipe left (close sidebar)
       if (deltaX < -threshold && onSwipeLeft) {
+        triggerHaptic('light');
         onSwipeLeft();
       }
       

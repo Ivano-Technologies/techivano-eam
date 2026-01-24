@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { triggerHaptic } from '@/hooks/useHaptic';
 
 interface PullToRefreshProps {
   onRefresh: () => Promise<void>;
@@ -47,6 +48,7 @@ export function PullToRefresh({ onRefresh, children, enabled = true }: PullToRef
 
     const handleTouchEnd = async () => {
       if (pullDistance >= PULL_THRESHOLD && !refreshing) {
+        triggerHaptic('medium');
         setRefreshing(true);
         setPullDistance(PULL_THRESHOLD);
         
