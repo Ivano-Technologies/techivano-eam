@@ -9,7 +9,7 @@ import { Plus, Search, Wrench, Calendar } from "lucide-react";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { TextareaWithVoice } from "@/components/TextareaWithVoice";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
@@ -162,11 +162,11 @@ export default function WorkOrders() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
-                <Textarea
+                <TextareaWithVoice
                   id="description"
                   value={newWorkOrder.description}
                   onChange={(e) => setNewWorkOrder({ ...newWorkOrder, description: e.target.value })}
-                  placeholder="Detailed work order description..."
+                  placeholder="Detailed work order description... (Tap mic for voice input)"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">

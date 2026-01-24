@@ -16,6 +16,7 @@ import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
 import { QuickActions } from "@/components/QuickActions";
 import { useImageCompression } from "@/hooks/useImageCompression";
+import { PhotoQueueStatus } from "@/components/PhotoQueueStatus";
 
 export default function AssetDetail() {
   const [, params] = useRoute("/assets/:id");
@@ -446,6 +447,9 @@ export default function AssetDetail() {
           </Card>
         )}
       </div>
+
+      {/* Photo Upload Queue Status */}
+      <PhotoQueueStatus />
 
       {/* Photo Gallery */}
       <Card>

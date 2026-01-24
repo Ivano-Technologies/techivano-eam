@@ -898,3 +898,13 @@
 - [ ] Add lazy loading with infinite scroll on Inventory page
 - [x] Reduce sidebar font size by 15%
 - [ ] Test all Phase 2 features on mobile devices
+
+## Phase 87: Mobile Optimization - Phase 3 (Advanced Features)
+- [x] Implement swipe-to-refresh gesture on asset cards
+- [x] Add swipe-to-refresh as alternative to pull-to-refresh
+- [x] Implement voice-to-text for description fields
+- [x] Add voice input button to text areas (Work Orders)
+- [x] Create offline photo upload queue with localStorage
+- [x] Implement automatic photo sync when online
+- [x] Add photo queue status indicator on AssetDetail page
+- [ ] Test all Phase 3 features on mobile devices

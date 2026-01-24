@@ -17,6 +17,7 @@ import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
 import { MobileCard, MobileCardList } from "@/components/MobileCard";
 import { useIsMobile } from "@/hooks/useMobile";
 import { usePaginatedData, useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { SwipeableCard } from "@/components/SwipeableCard";
 
 export default function Assets() {
   const { user } = useAuth();
@@ -446,8 +447,12 @@ export default function Assets() {
         isMobile ? (
           <MobileCardList>
             {displayedItems.map((asset) => (
-              <Link key={asset.id} href={`/assets/${asset.id}`}>
-                <MobileCard
+              <SwipeableCard
+                key={asset.id}
+                onRefresh={async () => { await refetch(); }}
+              >
+                <Link href={`/assets/${asset.id}`}>
+                  <MobileCard
                   title={asset.name}
                   subtitle={asset.assetTag}
                   badge={{
@@ -486,6 +491,7 @@ export default function Assets() {
                   }
                 />
               </Link>
+              </SwipeableCard>
             ))}
           </MobileCardList>
         ) : (
