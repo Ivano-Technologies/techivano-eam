@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Wrench, Calendar } from "lucide-react";
+import { Plus, Search, Wrench, Calendar, ChevronDown } from "lucide-react";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -120,7 +120,7 @@ export default function WorkOrders() {
       <CheckAnimation show={showSuccess} message="Work Order Created!" onComplete={() => setShowSuccess(false)} />
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4 mb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Work Orders</h1>
           <p className="text-muted-foreground mt-2">
@@ -264,10 +264,18 @@ export default function WorkOrders() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
+        <CardHeader className="cursor-pointer md:cursor-default" onClick={() => {
+          const content = document.getElementById('workorders-filters-content');
+          if (window.innerWidth < 768 && content) {
+            content.classList.toggle('hidden');
+          }
+        }}>
+          <CardTitle className="flex items-center justify-between">
+            <span>Filters</span>
+            <ChevronDown className="h-5 w-5 md:hidden" />
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent id="workorders-filters-content" className="hidden md:block">
           <div className="grid gap-4 md:grid-cols-2">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger>

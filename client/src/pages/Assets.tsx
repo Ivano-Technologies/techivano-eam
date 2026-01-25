@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Package, MapPin, Download, Upload, Edit2, CheckSquare, Square } from "lucide-react";
+import { Plus, Search, Package, MapPin, Download, Upload, Edit2, CheckSquare, Square, ChevronDown } from "lucide-react";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -258,7 +258,7 @@ export default function Assets() {
       <CheckAnimation show={showSuccess} message={successMessage} onComplete={() => setShowSuccess(false)} />
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4 mb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Assets</h1>
           <p className="text-muted-foreground mt-2">
@@ -359,10 +359,18 @@ export default function Assets() {
       )}
 
       <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
+        <CardHeader className="cursor-pointer md:cursor-default" onClick={() => {
+          const content = document.getElementById('assets-filters-content');
+          if (window.innerWidth < 768 && content) {
+            content.classList.toggle('hidden');
+          }
+        }}>
+          <CardTitle className="flex items-center justify-between">
+            <span>Filters</span>
+            <ChevronDown className="h-5 w-5 md:hidden" />
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent id="assets-filters-content" className="hidden md:block">
           <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />

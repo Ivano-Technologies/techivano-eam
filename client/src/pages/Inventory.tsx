@@ -107,7 +107,7 @@ export default function Inventory() {
       <CheckAnimation show={showSuccess} message="Inventory Item Created!" onComplete={() => setShowSuccess(false)} />
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4 mb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold">Inventory Management</h1>
           <p className="text-muted-foreground mt-2">Track spare parts and supplies</p>

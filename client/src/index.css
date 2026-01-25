@@ -366,7 +366,7 @@
   a[role="button"],
   [type="button"],
   [type="submit"] {
-    @apply min-h-[44px] min-w-[44px] text-base;
+    @apply min-h-[48px] min-w-[48px] text-base px-4 py-3;
   }
   
   input[type="text"],
