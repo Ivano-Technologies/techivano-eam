@@ -15,6 +15,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
 import { MaintenanceHistory } from "@/components/MaintenanceHistory";
+import { ComprehensiveAssetEditDialog } from "@/components/ComprehensiveAssetEditDialog";
 import { QuickActionsSheet } from "@/components/QuickActionsSheet";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -152,7 +153,31 @@ export default function AssetDetail() {
     serialNumber: "",
     location: "",
     notes: "",
+    // NRCS Fields
+    itemType: "",
+    branchCode: "",
+    itemCategoryCode: "",
+    subCategoryId: "",
+    methodOfAcquisition: "",
+    projectReference: "",
+    yearAcquired: null as number | null,
+    acquiredCondition: "",
+    department: "",
+    physicalCheckDate: null as Date | null,
+    physicalCheckConductedBy: "",
+    // Financial Fields
+    acquisitionCost: "",
+    currentDepreciatedValue: "",
+    residualValue: "",
+    usefulLifeYears: null as number | null,
+    depreciationMethod: "",
+    depreciationStartDate: null as Date | null,
+    warrantyExpiry: null as Date | null,
+    // Technical Fields
+    specifications: "",
   });
+  
+  const [editTab, setEditTab] = useState("basic");
 
   const handleEdit = () => {
     if (asset) {
@@ -165,7 +190,30 @@ export default function AssetDetail() {
         serialNumber: asset.serialNumber || "",
         location: asset.location || "",
         notes: asset.notes || "",
+        // NRCS Fields
+        itemType: asset.itemType || "",
+        branchCode: asset.branchCode || "",
+        itemCategoryCode: asset.itemCategoryCode || "",
+        subCategoryId: asset.subCategory || "",
+        methodOfAcquisition: asset.methodOfAcquisition || "",
+        projectReference: asset.projectReference || "",
+        yearAcquired: asset.yearAcquired || null,
+        acquiredCondition: asset.acquiredCondition || "",
+        department: asset.department || "",
+        physicalCheckDate: asset.lastPhysicalCheckDate ? new Date(asset.lastPhysicalCheckDate) : null,
+        physicalCheckConductedBy: asset.checkConductedBy || "",
+        // Financial Fields
+        acquisitionCost: asset.acquisitionCost || "",
+        currentDepreciatedValue: asset.currentDepreciatedValue || "",
+        residualValue: asset.residualValue || "",
+        usefulLifeYears: asset.usefulLifeYears || null,
+        depreciationMethod: asset.depreciationMethod || "",
+        depreciationStartDate: asset.depreciationStartDate ? new Date(asset.depreciationStartDate) : null,
+        warrantyExpiry: asset.warrantyExpiry ? new Date(asset.warrantyExpiry) : null,
+        // Technical Fields
+        specifications: "",
       });
+      setEditTab("basic");
       setIsEditDialogOpen(true);
     }
   };
@@ -181,6 +229,22 @@ export default function AssetDetail() {
       serialNumber: editForm.serialNumber || undefined,
       location: editForm.location || undefined,
       notes: editForm.notes || undefined,
+      // NRCS Fields
+      itemType: editForm.itemType as any,
+      branchCode: editForm.branchCode || undefined,
+      itemCategoryCode: editForm.itemCategoryCode || undefined,
+      subCategory: editForm.subCategoryId || undefined,
+      methodOfAcquisition: editForm.methodOfAcquisition || undefined,
+      projectReference: editForm.projectReference || undefined,
+      yearAcquired: editForm.yearAcquired || undefined,
+      acquiredCondition: editForm.acquiredCondition as any,
+      department: editForm.department || undefined,
+      lastPhysicalCheckDate: editForm.physicalCheckDate || undefined,
+      checkConductedBy: editForm.physicalCheckConductedBy || undefined,
+      // Financial Fields
+      acquisitionCost: editForm.acquisitionCost || undefined,
+      currentDepreciatedValue: editForm.currentDepreciatedValue || undefined,
+      warrantyExpiry: editForm.warrantyExpiry || undefined,
     });
   };
 
@@ -582,99 +646,13 @@ export default function AssetDetail() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Asset</DialogTitle>
-            <DialogDescription>Update asset information</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Asset Name</Label>
-              <Input
-                id="edit-name"
-                value={editForm.name}
-                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={editForm.description}
-                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-status">Status</Label>
-              <Select value={editForm.status} onValueChange={(value) => setEditForm({ ...editForm, status: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="operational">Operational</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="repair">Repair</SelectItem>
-                  <SelectItem value="retired">Retired</SelectItem>
-                  <SelectItem value="disposed">Disposed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-manufacturer">Manufacturer</Label>
-                <Input
-                  id="edit-manufacturer"
-                  value={editForm.manufacturer}
-                  onChange={(e) => setEditForm({ ...editForm, manufacturer: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-model">Model</Label>
-                <Input
-                  id="edit-model"
-                  value={editForm.model}
-                  onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-serialNumber">Serial Number</Label>
-                <Input
-                  id="edit-serialNumber"
-                  value={editForm.serialNumber}
-                  onChange={(e) => setEditForm({ ...editForm, serialNumber: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-location">Location</Label>
-                <Input
-                  id="edit-location"
-                  value={editForm.location}
-                  onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-notes">Notes</Label>
-              <Textarea
-                id="edit-notes"
-                value={editForm.notes}
-                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdate} disabled={updateAssetMutation.isPending}>
-              {updateAssetMutation.isPending ? "Updating..." : "Update Asset"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ComprehensiveAssetEditDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        asset={asset}
+        onUpdate={handleUpdate}
+        isUpdating={updateAssetMutation.isPending}
+      />
 
       {/* Floating Action Button - Mobile Only */}
       {isMobile && (
