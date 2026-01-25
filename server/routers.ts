@@ -637,6 +637,28 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const { id, ...data } = input;
+        
+        // Get current asset values before update
+        const currentAsset = await db.getAssetById(id);
+        if (currentAsset) {
+          // Log each changed field
+          for (const [field, newValue] of Object.entries(data)) {
+            const oldValue = currentAsset[field as keyof typeof currentAsset];
+            const oldStr = oldValue != null ? String(oldValue) : null;
+            const newStr = newValue != null ? String(newValue) : null;
+            
+            if (oldStr !== newStr) {
+              await db.logAssetEdit({
+                assetId: id,
+                userId: ctx.user.id,
+                fieldName: field,
+                oldValue: oldStr,
+                newValue: newStr,
+              });
+            }
+          }
+        }
+        
         await db.logAuditEntry({
           userId: ctx.user.id,
           action: 'update',
@@ -721,6 +743,35 @@ export const appRouter = router({
         return { updated, total: input.ids.length };
       }),
 
+    bulkUpdate: managerOrAdminProcedure
+      .input(z.object({
+        assetIds: z.array(z.number()),
+        updates: z.object({
+          status: z.string().optional(),
+          location: z.string().optional(),
+          department: z.string().optional(),
+        }),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        let updated = 0;
+        for (const id of input.assetIds) {
+          try {
+            await db.updateAsset(id, input.updates);
+            await db.createAuditLog({
+              userId: ctx.user.id,
+              action: "bulk_update_asset",
+              entityType: "asset",
+              entityId: id,
+              changes: JSON.stringify(input.updates),
+            });
+            updated++;
+          } catch (error) {
+            console.error(`Failed to update asset ${id}:`, error);
+          }
+        }
+        return { updated, total: input.assetIds.length };
+      }),
+
     bulkImport: adminProcedure
       .input(z.object({
         fileContent: z.string(),
@@ -746,6 +797,12 @@ export const appRouter = router({
         const formatted = formatAssetsForExport(assets);
         const data = input.format === 'csv' ? exportToCSV(formatted) : exportToExcel(formatted, 'Assets');
         return { data, format: input.format, filename: `assets_export.${input.format === 'csv' ? 'csv' : 'xlsx'}` };
+      }),
+
+    getEditHistory: protectedProcedure
+      .input(z.object({ assetId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getAssetEditHistory(input.assetId);
       }),
   }),
 

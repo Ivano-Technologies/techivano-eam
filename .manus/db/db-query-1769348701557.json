@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS asset_edit_history (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  asset_id INT NOT NULL,\n  user_id INT NOT NULL,\n  field_name VARCHAR(100) NOT NULL,\n  old_value TEXT,\n  new_value TEXT,\n  changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  INDEX idx_asset_id (asset_id),\n  INDEX idx_user_id (user_id),\n  INDEX idx_changed_at (changed_at)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user TomGb9tuntH4B4d.7e6b3ba34d8a --database YNihSyDPBSASM93ZxstDRD --execute CREATE TABLE IF NOT EXISTS asset_edit_history (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  asset_id INT NOT NULL,\n  user_id INT NOT NULL,\n  field_name VARCHAR(100) NOT NULL,\n  old_value TEXT,\n  new_value TEXT,\n  changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  INDEX idx_asset_id (asset_id),\n  INDEX idx_user_id (user_id),\n  INDEX idx_changed_at (changed_at)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 182
+}

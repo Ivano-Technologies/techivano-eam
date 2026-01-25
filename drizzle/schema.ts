@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, bigint } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, bigint, index } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow with extended roles for EAM system
@@ -140,6 +140,23 @@ export const assets = mysqlTable("assets", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
+
+/**
+ * Asset Edit History - Tracks all changes to assets for audit trail
+ */
+export const assetEditHistory = mysqlTable("asset_edit_history", {
+  id: int("id").autoincrement().primaryKey(),
+  assetId: int("asset_id").notNull(),
+  userId: int("user_id").notNull(),
+  fieldName: varchar("field_name", { length: 100 }).notNull(),
+  oldValue: text("old_value"),
+  newValue: text("new_value"),
+  changedAt: timestamp("changed_at").defaultNow().notNull(),
+}, (table) => ({
+  assetIdIdx: index("idx_asset_id").on(table.assetId),
+  userIdIdx: index("idx_user_id").on(table.userId),
+  changedAtIdx: index("idx_changed_at").on(table.changedAt),
+}));
 
 /**
  * Work Orders

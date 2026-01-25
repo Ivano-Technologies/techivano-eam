@@ -15,6 +15,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
 import { MaintenanceHistory } from "@/components/MaintenanceHistory";
+import { AssetEditHistoryTimeline } from "@/components/AssetEditHistoryTimeline";
 import { ComprehensiveAssetEditDialog } from "@/components/ComprehensiveAssetEditDialog";
 import { QuickActionsSheet } from "@/components/QuickActionsSheet";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
@@ -598,6 +599,11 @@ export default function AssetDetail() {
       {/* Maintenance History */}
       <div id="maintenance-history">
         <MaintenanceHistory assetId={assetId} />
+      </div>
+
+      {/* Edit History */}
+      <div id="edit-history">
+        <AssetEditHistoryTimeline assetId={assetId} />
       </div>
 
       {/* Photo Upload Dialog with Caption */}

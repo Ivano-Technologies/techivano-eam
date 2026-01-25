@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 interface ComprehensiveAssetEditDialogProps {
   open: boolean;
@@ -49,6 +50,10 @@ export function ComprehensiveAssetEditDialog({
     currentDepreciatedValue: asset?.currentDepreciatedValue || "",
     warrantyExpiry: asset?.warrantyExpiry || "",
   }));
+
+  const { user } = useAuth();
+  const canEditFinancial = user?.role === "admin" || user?.role === "manager";
+  const canEditNRCS = user?.role === "admin" || user?.role === "manager";
 
   const { data: branchCodes } = trpc.nrcs.getBranchCodes.useQuery();
   const { data: categoryCodes } = trpc.nrcs.getCategoryCodes.useQuery();
@@ -97,8 +102,8 @@ export function ComprehensiveAssetEditDialog({
         <Tabs defaultValue="basic" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
-            <TabsTrigger value="nrcs">NRCS Details</TabsTrigger>
-            <TabsTrigger value="financial">Financial</TabsTrigger>
+            <TabsTrigger value="nrcs" disabled={!canEditNRCS}>NRCS Details {!canEditNRCS && "🔒"}</TabsTrigger>
+            <TabsTrigger value="financial" disabled={!canEditFinancial}>Financial {!canEditFinancial && "🔒"}</TabsTrigger>
             <TabsTrigger value="technical">Technical</TabsTrigger>
           </TabsList>
 

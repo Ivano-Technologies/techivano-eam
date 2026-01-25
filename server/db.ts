@@ -8,7 +8,8 @@ import {
   notifications, notificationPreferences, assetPhotos, InsertAssetPhoto,
   scheduledReports, InsertScheduledReport, assetTransfers, quickbooksConfig, InsertQuickBooksConfig,
   userPreferences, InsertUserPreferences, emailNotifications, InsertEmailNotification,
-  workOrderTemplates, InsertWorkOrderTemplate, branchCodes, categoryCodes, subCategories
+  workOrderTemplates, InsertWorkOrderTemplate, branchCodes, categoryCodes, subCategories,
+  assetEditHistory
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1305,4 +1306,44 @@ export async function getBranchCodeByState(state: string) {
     .limit(1);
   
   return result.length > 0 ? result[0] : null;
+}
+
+// ============= ASSET EDIT HISTORY =============
+
+export async function logAssetEdit(params: {
+  assetId: number;
+  userId: number;
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  await db.insert(assetEditHistory).values({
+    assetId: params.assetId,
+    userId: params.userId,
+    fieldName: params.fieldName,
+    oldValue: params.oldValue,
+    newValue: params.newValue,
+  });
+}
+
+export async function getAssetEditHistory(assetId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select({
+    id: assetEditHistory.id,
+    fieldName: assetEditHistory.fieldName,
+    oldValue: assetEditHistory.oldValue,
+    newValue: assetEditHistory.newValue,
+    changedAt: assetEditHistory.changedAt,
+    userId: assetEditHistory.userId,
+    userName: users.name,
+  })
+    .from(assetEditHistory)
+    .leftJoin(users, eq(assetEditHistory.userId, users.id))
+    .where(eq(assetEditHistory.assetId, assetId))
+    .orderBy(desc(assetEditHistory.changedAt));
 }

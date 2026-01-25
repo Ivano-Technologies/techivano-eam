@@ -155,6 +155,13 @@
       "when": 1769340149436,
       "tag": "0021_sudden_strong_guy",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "5",
+      "when": 1769349147639,
+      "tag": "0022_round_shooting_star",
+      "breakpoints": true
     }
   ]
 }

@@ -1245,3 +1245,25 @@
 - [x] Add technical specifications editing (manufacturer, model, serial number, specs)
 - [x] Organize fields into tabs (Basic Info, NRCS Details, Financial, Technical)
 - [x] Test comprehensive asset editing functionality
+
+## Phase 65: Bulk Edit Feature
+- [x] Add multi-select mode to Assets page
+- [x] Create bulk edit dialog for common fields (status, location, department)
+- [x] Implement backend API for batch updates
+- [x] Add select all/deselect all functionality
+- [x] Show selection count and clear selection button
+
+## Phase 66: Edit History Log
+- [ ] Create asset_edit_history table in database
+- [ ] Add audit trail tracking for all asset updates
+- [ ] Create backend API to fetch edit history by asset
+- [ ] Build timeline component to display edit history
+- [ ] Show field changes, timestamps, and user attribution
+- [ ] Integrate into AssetDetail page
+
+## Phase 67: Field-Level Permissions
+- [ ] Define permission rules by role (admin, manager, technician, user)
+- [ ] Implement backend validation for field-level access
+- [ ] Update ComprehensiveAssetEditDialog to disable fields based on role
+- [ ] Add visual indicators for read-only fields
+- [ ] Create permission helper functions

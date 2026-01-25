@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Package, MapPin, Download, Upload, Edit2 } from "lucide-react";
+import { Plus, Search, Package, MapPin, Download, Upload, Edit2, CheckSquare, Square } from "lucide-react";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
 import { ShimmerLoader } from "@/components/ShimmerLoader";
 import { CheckAnimation } from "@/components/CheckAnimation";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
+import { BulkEditDialog } from "@/components/BulkEditDialog";
 import { NRCSAssetForm } from "@/components/NRCSAssetForm";
 
 export default function Assets() {
@@ -48,6 +49,9 @@ export default function Assets() {
   const { data: categories } = trpc.assetCategories.list.useQuery();
   
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<number[]>([]);
+  const [isBulkEditMode, setIsBulkEditMode] = useState(false);
+  const [isBulkEditDialogOpen, setIsBulkEditDialogOpen] = useState(false);
 
   const utils = trpc.useUtils();
 
@@ -222,6 +226,33 @@ export default function Assets() {
 
   const canCreateAsset = user?.role === "admin" || user?.role === "manager";
 
+  const handleToggleBulkEditMode = () => {
+    setIsBulkEditMode(!isBulkEditMode);
+    setSelectedAssetIds([]);
+  };
+
+  const handleToggleAssetSelection = (assetId: number) => {
+    setSelectedAssetIds(prev => 
+      prev.includes(assetId) 
+        ? prev.filter(id => id !== assetId)
+        : [...prev, assetId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedAssetIds.length === filteredAssets?.length) {
+      setSelectedAssetIds([]);
+    } else {
+      setSelectedAssetIds(filteredAssets?.map(a => a.id) || []);
+    }
+  };
+
+  const handleBulkEditSuccess = () => {
+    refetch();
+    setSelectedAssetIds([]);
+    setIsBulkEditMode(false);
+  };
+
   return (
     <>
       <CheckAnimation show={showSuccess} message={successMessage} onComplete={() => setShowSuccess(false)} />
@@ -236,6 +267,31 @@ export default function Assets() {
         </div>
         {canCreateAsset && (
           <div className="flex gap-2">
+            {isBulkEditMode && selectedAssetIds.length > 0 && (
+              <Button 
+                variant="default"
+                onClick={() => setIsBulkEditDialogOpen(true)}
+              >
+                <Edit2 className="mr-2 h-4 w-4" />
+                Edit {selectedAssetIds.length} Selected
+              </Button>
+            )}
+            <Button 
+              variant={isBulkEditMode ? "secondary" : "outline"}
+              onClick={handleToggleBulkEditMode}
+            >
+              {isBulkEditMode ? (
+                <>
+                  <Square className="mr-2 h-4 w-4" />
+                  Cancel Selection
+                </>
+              ) : (
+                <>
+                  <CheckSquare className="mr-2 h-4 w-4" />
+                  Bulk Edit
+                </>
+              )}
+            </Button>
             <Button 
               variant="outline" 
               onClick={() => setIsImportDialogOpen(true)}
@@ -278,6 +334,29 @@ export default function Assets() {
           </div>
         )}
       </div>
+
+      {isBulkEditMode && filteredAssets && filteredAssets.length > 0 && (
+        <div className="flex items-center justify-between bg-muted p-4 rounded-lg">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="sm" onClick={handleSelectAll}>
+              {selectedAssetIds.length === filteredAssets.length ? (
+                <CheckSquare className="h-4 w-4 mr-2" />
+              ) : (
+                <Square className="h-4 w-4 mr-2" />
+              )}
+              {selectedAssetIds.length === filteredAssets.length ? "Deselect All" : "Select All"}
+            </Button>
+            <span className="text-sm font-medium">
+              {selectedAssetIds.length} of {filteredAssets.length} selected
+            </span>
+          </div>
+          {selectedAssetIds.length > 0 && (
+            <Button variant="outline" size="sm" onClick={() => setSelectedAssetIds([])}>
+              Clear Selection
+            </Button>
+          )}
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -330,8 +409,32 @@ export default function Assets() {
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {filteredAssets.map((asset) => (
             <div key={asset.id} className="relative">
-              <Link href={`/assets/${asset.id}`}>
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              {isBulkEditMode && (
+                <div 
+                  className="absolute top-2 left-2 z-10 cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleToggleAssetSelection(asset.id);
+                  }}
+                >
+                  {selectedAssetIds.includes(asset.id) ? (
+                    <CheckSquare className="h-6 w-6 text-primary" />
+                  ) : (
+                    <Square className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </div>
+              )}
+              <Link href={isBulkEditMode ? "#" : `/assets/${asset.id}`}>
+                <Card 
+                  className={`hover:shadow-lg transition-shadow cursor-pointer ${isBulkEditMode ? 'pointer-events-none' : ''} ${selectedAssetIds.includes(asset.id) ? 'ring-2 ring-primary' : ''}`}
+                  onClick={(e) => {
+                    if (isBulkEditMode) {
+                      e.preventDefault();
+                      handleToggleAssetSelection(asset.id);
+                    }
+                  }}
+                >
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
@@ -533,6 +636,14 @@ export default function Assets() {
         onOpenChange={setIsImportDialogOpen}
         entityType="assets"
         onSuccess={() => refetch()}
+      />
+
+      {/* Bulk Edit Dialog */}
+      <BulkEditDialog
+        open={isBulkEditDialogOpen}
+        onOpenChange={setIsBulkEditDialogOpen}
+        selectedAssetIds={selectedAssetIds}
+        onSuccess={handleBulkEditSuccess}
       />
       </div>
     </>
