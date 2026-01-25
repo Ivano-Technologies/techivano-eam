@@ -120,16 +120,16 @@ export default function WorkOrders() {
       <CheckAnimation show={showSuccess} message="Work Order Created!" onComplete={() => setShowSuccess(false)} />
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Work Orders</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Work Orders</h1>
           <p className="text-muted-foreground mt-2">
             Manage maintenance and repair work orders
           </p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto flex-shrink-0">
               <Plus className="mr-2 h-4 w-4" />
               Create Work Order
             </Button>

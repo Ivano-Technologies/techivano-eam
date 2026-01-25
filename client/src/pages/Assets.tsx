@@ -258,15 +258,15 @@ export default function Assets() {
       <CheckAnimation show={showSuccess} message={successMessage} onComplete={() => setShowSuccess(false)} />
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Assets</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Assets</h1>
           <p className="text-muted-foreground mt-2">
             Manage your organization's physical assets
           </p>
         </div>
         {canCreateAsset && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 flex-shrink-0">
             {isBulkEditMode && selectedAssetIds.length > 0 && (
               <Button 
                 variant="default"

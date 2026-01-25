@@ -1267,3 +1267,12 @@
 - [ ] Update ComprehensiveAssetEditDialog to disable fields based on role
 - [ ] Add visual indicators for read-only fields
 - [ ] Create permission helper functions
+
+## Phase 66: Mobile/Desktop Alignment Audit
+- [x] Fix "Add Schedule" button overflow on Preventive Maintenance mobile page
+- [x] Fix "Import" button alignment on Assets mobile page
+- [x] Fix "Create Work Order" button overflow on Work Orders mobile page
+- [x] Ensure proper spacing between page title and action buttons on mobile
+- [x] Fix button text truncation on narrow screens
+- [x] Test all pages on mobile viewport (375px, 414px widths)
+- [x] Verify desktop layout consistency
