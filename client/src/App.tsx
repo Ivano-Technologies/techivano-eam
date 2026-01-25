@@ -46,6 +46,7 @@ import ThemeSettings from "./pages/ThemeSettings";
 import Profile from "./pages/Profile";
 import SmartScanner from "./pages/SmartScanner";
 import BiometricSetup from "./pages/BiometricSetup";
+import DepreciationDashboard from "./pages/DepreciationDashboard";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
 function Router() {
@@ -80,6 +81,7 @@ function Router() {
       <Route path="/inventory" component={Inventory} />
       <Route path="/vendors" component={Vendors} />
       <Route path="/financial" component={Financial} />
+      <Route path="/depreciation" component={DepreciationDashboard} />
       <Route path="/compliance" component={Compliance} />
       <Route path="/sites" component={Sites} />
       <Route path="/users" component={Users} />

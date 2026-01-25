@@ -17,6 +17,7 @@ import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
 import { ShimmerLoader } from "@/components/ShimmerLoader";
 import { CheckAnimation } from "@/components/CheckAnimation";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
+import { NRCSAssetForm } from "@/components/NRCSAssetForm";
 
 export default function Assets() {
   const { user } = useAuth();
@@ -88,7 +89,7 @@ export default function Assets() {
     },
   });
 
-  const [newAsset, setNewAsset] = useState({
+  const [newAsset, setNewAsset] = useState<any>({
     assetTag: "",
     name: "",
     description: "",
@@ -98,6 +99,25 @@ export default function Assets() {
     model: "",
     serialNumber: "",
     location: "",
+    // NRCS fields
+    itemType: "Asset",
+    branchCode: "",
+    itemCategoryCode: "",
+    subCategory: "",
+    productNumber: "",
+    methodOfAcquisition: "",
+    projectReference: "",
+    yearAcquired: new Date().getFullYear(),
+    acquiredCondition: "",
+    acquisitionCost: "",
+    currentDepreciatedValue: "",
+    status: "In Use",
+    assignedToName: "",
+    department: "",
+    condition: "",
+    lastPhysicalCheckDate: "",
+    checkConductedBy: "",
+    remarks: "",
   });
 
   const handleCreateAsset = () => {
@@ -116,7 +136,30 @@ export default function Assets() {
       model: newAsset.model || undefined,
       serialNumber: newAsset.serialNumber || undefined,
       location: newAsset.location || undefined,
+      // NRCS fields
+      itemType: newAsset.itemType,
+      branchCode: newAsset.branchCode || undefined,
+      itemCategoryCode: newAsset.itemCategoryCode || undefined,
+      subCategory: newAsset.subCategory || undefined,
+      productNumber: newAsset.productNumber || undefined,
+      methodOfAcquisition: newAsset.methodOfAcquisition || undefined,
+      projectReference: newAsset.projectReference || undefined,
+      yearAcquired: newAsset.yearAcquired || undefined,
+      acquiredCondition: newAsset.acquiredCondition || undefined,
+      acquisitionCost: newAsset.acquisitionCost || undefined,
+      currentDepreciatedValue: newAsset.currentDepreciatedValue || undefined,
+      status: newAsset.status,
+      assignedToName: newAsset.assignedToName || undefined,
+      department: newAsset.department || undefined,
+      condition: newAsset.condition || undefined,
+      lastPhysicalCheckDate: newAsset.lastPhysicalCheckDate || undefined,
+      checkConductedBy: newAsset.checkConductedBy || undefined,
+      remarks: newAsset.remarks || undefined,
     });
+  };
+
+  const handleAssetFieldChange = (field: string, value: any) => {
+    setNewAsset({ ...newAsset, [field]: value });
   };
 
   const handleStartEdit = (asset: any, e: React.MouseEvent) => {
@@ -207,112 +250,20 @@ export default function Assets() {
                   Add Asset
                 </Button>
               </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Asset</DialogTitle>
                 <DialogDescription>
-                  Create a new asset record in the system
+                  Create a new NRCS-compliant asset record
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="assetTag">Asset Tag *</Label>
-                    <Input
-                      id="assetTag"
-                      value={newAsset.assetTag}
-                      onChange={(e) => setNewAsset({ ...newAsset, assetTag: e.target.value })}
-                      placeholder="e.g., AST-001"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Asset Name *</Label>
-                    <Input
-                      id="name"
-                      value={newAsset.name}
-                      onChange={(e) => setNewAsset({ ...newAsset, name: e.target.value })}
-                      placeholder="e.g., Generator Unit"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={newAsset.description}
-                    onChange={(e) => setNewAsset({ ...newAsset, description: e.target.value })}
-                    placeholder="Asset description..."
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Category *</Label>
-                    <Select value={newAsset.categoryId} onValueChange={(value) => setNewAsset({ ...newAsset, categoryId: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories?.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id.toString()}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="site">Site *</Label>
-                    <Select value={newAsset.siteId} onValueChange={(value) => setNewAsset({ ...newAsset, siteId: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select site" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sites?.map((site) => (
-                          <SelectItem key={site.id} value={site.id.toString()}>
-                            {site.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="manufacturer">Manufacturer</Label>
-                    <Input
-                      id="manufacturer"
-                      value={newAsset.manufacturer}
-                      onChange={(e) => setNewAsset({ ...newAsset, manufacturer: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="model">Model</Label>
-                    <Input
-                      id="model"
-                      value={newAsset.model}
-                      onChange={(e) => setNewAsset({ ...newAsset, model: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="serialNumber">Serial Number</Label>
-                    <Input
-                      id="serialNumber"
-                      value={newAsset.serialNumber}
-                      onChange={(e) => setNewAsset({ ...newAsset, serialNumber: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="location">Location</Label>
-                    <Input
-                      id="location"
-                      value={newAsset.location}
-                      onChange={(e) => setNewAsset({ ...newAsset, location: e.target.value })}
-                      placeholder="e.g., Building A, Floor 2"
-                    />
-                  </div>
-                </div>
+              <div className="py-4">
+                <NRCSAssetForm
+                  asset={newAsset}
+                  onChange={handleAssetFieldChange}
+                  sites={sites || []}
+                  categories={categories || []}
+                />
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
