@@ -124,29 +124,36 @@
     {
       "idx": 17,
       "version": "5",
-      "when": 1768912958956,
-      "tag": "0017_right_squadron_sinister",
-      "breakpoints": true
-    },
-    {
-      "idx": 18,
-      "version": "5",
       "when": 1769239894667,
       "tag": "0018_amazing_starfox",
       "breakpoints": true
     },
     {
-      "idx": 19,
+      "idx": 18,
       "version": "5",
       "when": 1769248824164,
       "tag": "0019_nasty_purple_man",
       "breakpoints": true
     },
     {
-      "idx": 20,
+      "idx": 19,
       "version": "5",
       "when": 1769249813751,
       "tag": "0020_typical_prism",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1769335987499,
+      "tag": "0021_busy_alex_wilder",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "5",
+      "when": 1769340149436,
+      "tag": "0021_sudden_strong_guy",
       "breakpoints": true
     }
   ]

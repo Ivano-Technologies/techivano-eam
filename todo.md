@@ -1177,3 +1177,43 @@
 - [x] Fix Settings button overflow on mobile
 - [x] Optimize profile layout for mobile screens
 - [x] Adjust spacing and alignment in Account Information card
+
+## Phase 61: NRCS Asset Register Integration
+- [x] Analyze official NRCS Asset Register Excel structure
+- [x] Update database schema to match NRCS fields (item type, sub-category, branch codes, etc.)
+- [ ] Add depreciation tracking fields and logic
+- [ ] Update asset categories and inventory categories
+- [ ] Add method of acquisition field with NRCS options
+- [ ] Add serial/product number field
+- [ ] Add current depreciated value tracking
+- [ ] Update condition options to match NRCS standards
+- [ ] Add physical check date and conducted by fields
+- [ ] Update backend APIs for new fields
+- [ ] Update frontend forms and UI
+- [ ] Create Excel import template matching NRCS format
+- [ ] Create Excel export template matching NRCS format
+- [ ] Test import/export functionality
+
+## Phase 62: Backend API Updates for NRCS Fields
+- [x] Add helper functions to fetch branch codes, category codes, sub-categories
+- [x] Implement asset code generation logic (NRCS_[BRANCH][CATEGORY][NUMBER])
+- [ ] Update asset creation API to handle new NRCS fields
+- [ ] Add depreciation calculation based on category defaults
+- [ ] Update asset listing/filtering to include new fields
+- [x] Add API endpoints for NRCS reference data
+
+## Phase 61: NRCS Asset Register Integration - COMPLETED
+- [x] Analyze official NRCS Asset Register Excel structure
+- [x] Update database schema to match NRCS fields (18 new fields)
+- [x] Add branch codes reference table (37 Nigerian states + HQ)
+- [x] Add category codes with depreciation rates (8 categories)
+- [x] Add sub-categories table (68 sub-categories)
+- [x] Add helper functions to fetch branch codes, category codes, sub-categories
+- [x] Implement asset code generation logic (NRCS_[BRANCH][CATEGORY][NUMBER])
+- [x] Update asset creation API to handle new NRCS fields
+- [x] Add depreciation calculation based on category defaults
+- [x] Add API endpoints for NRCS reference data
+- [x] Create comprehensive NRCS asset form component with tabs
+- [x] Create Excel import/export templates matching NRCS format
+- [x] Add download template and export endpoints
+- [x] Test complete integration

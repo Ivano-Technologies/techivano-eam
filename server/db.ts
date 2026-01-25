@@ -8,7 +8,7 @@ import {
   notifications, notificationPreferences, assetPhotos, InsertAssetPhoto,
   scheduledReports, InsertScheduledReport, assetTransfers, quickbooksConfig, InsertQuickBooksConfig,
   userPreferences, InsertUserPreferences, emailNotifications, InsertEmailNotification,
-  workOrderTemplates, InsertWorkOrderTemplate
+  workOrderTemplates, InsertWorkOrderTemplate, branchCodes, categoryCodes, subCategories
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1183,4 +1183,122 @@ export async function getVendorById(id: number) {
   
   const result = await db.select().from(vendors).where(eq(vendors.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+
+// ============= NRCS ASSET REGISTER HELPERS =============
+
+/**
+ * Get all branch codes for dropdowns
+ */
+export async function getAllBranchCodes() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(branchCodes).orderBy(asc(branchCodes.name));
+}
+
+/**
+ * Get all category codes with depreciation info
+ */
+export async function getAllCategoryCodes() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(categoryCodes).orderBy(asc(categoryCodes.name));
+}
+
+/**
+ * Get all sub-categories
+ */
+export async function getAllSubCategories() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(subCategories).orderBy(asc(subCategories.name));
+}
+
+/**
+ * Get sub-categories filtered by type (Asset or Inventory)
+ */
+export async function getSubCategoriesByType(type: 'Asset' | 'Inventory') {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(subCategories)
+    .where(or(
+      eq(subCategories.categoryType, type),
+      eq(subCategories.categoryType, 'Both')
+    ))
+    .orderBy(asc(subCategories.name));
+}
+
+/**
+ * Generate next NRCS asset code
+ * Format: NRCS_[BRANCH][CATEGORY][NUMBER]
+ * Example: NRCS_NHQCO0001
+ */
+export async function generateAssetCode(branchCode: string, categoryCode: string): Promise<string> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  
+  // Find the highest asset number for this branch+category combination
+  const result = await db.select({ maxNum: sql<number>`MAX(${assets.assetNumber})` })
+    .from(assets)
+    .where(and(
+      eq(assets.branchCode, branchCode),
+      eq(assets.itemCategoryCode, categoryCode)
+    ))
+    .limit(1);
+  
+  const nextNumber = (result[0]?.maxNum || 0) + 1;
+  const paddedNumber = String(nextNumber).padStart(4, '0');
+  
+  return `NRCS_${branchCode}${categoryCode}${paddedNumber}`;
+}
+
+/**
+ * Calculate depreciated value based on NRCS standards
+ * Uses straight-line depreciation method
+ */
+export function calculateDepreciatedValue(
+  acquisitionCost: number,
+  yearAcquired: number,
+  depreciationRate: number
+): number {
+  const currentYear = new Date().getFullYear();
+  const yearsElapsed = currentYear - yearAcquired;
+  
+  if (yearsElapsed <= 0) return acquisitionCost;
+  
+  const annualDepreciation = acquisitionCost * depreciationRate;
+  const totalDepreciation = annualDepreciation * yearsElapsed;
+  const depreciatedValue = acquisitionCost - totalDepreciation;
+  
+  // Value cannot go below zero
+  return Math.max(0, depreciatedValue);
+}
+
+/**
+ * Get category code by name (for lookups)
+ */
+export async function getCategoryCodeByName(name: string) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(categoryCodes)
+    .where(eq(categoryCodes.name, name))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : null;
+}
+
+/**
+ * Get branch code by state name
+ */
+export async function getBranchCodeByState(state: string) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(branchCodes)
+    .where(eq(branchCodes.state, state))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : null;
 }

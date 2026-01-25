@@ -1,0 +1,60 @@
+{
+  "query": "SELECT * FROM __drizzle_migrations ORDER BY created_at DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user TomGb9tuntH4B4d.7e6b3ba34d8a --database YNihSyDPBSASM93ZxstDRD --execute SELECT * FROM __drizzle_migrations ORDER BY created_at DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "630608",
+      "hash": "c6578e318bcd849a782e15cd0d62bb7f27cd73a88ac5928ebbae378f237e5e4b",
+      "created_at": "1768860419150"
+    },
+    {
+      "id": "630607",
+      "hash": "a52c1c872b57b0961752de98f8e7e600d0b2172443c0a5675aafbea4eb1518a5",
+      "created_at": "1768859590009"
+    },
+    {
+      "id": "630606",
+      "hash": "63a8f168d8e5458e626e7a3221cedc4dc633b7b350df450378d71355a55979ec",
+      "created_at": "1768858832295"
+    },
+    {
+      "id": "630605",
+      "hash": "80669c3c73a7d937b047aa968263fb3970089892551bc581965ea9769bd7b1a9",
+      "created_at": "1768858625157"
+    },
+    {
+      "id": "630604",
+      "hash": "14ff23e4516e7ee1beb6679ec72970dc6df6ecd25e73b0e316abdbbf7049afd1",
+      "created_at": "1768855208246"
+    },
+    {
+      "id": "630603",
+      "hash": "31b00523421189f8d13475b365282a2fa46797a444009bfd8b32f3b0dfbafae0",
+      "created_at": "1768854604737"
+    },
+    {
+      "id": "630602",
+      "hash": "d867e44914b0ea9a4518df89c77d056fd9cb3c4dc6c4b0954c5a5da7b8851c6d",
+      "created_at": "1768854302742"
+    },
+    {
+      "id": "630601",
+      "hash": "819199a410e3fab9e5483ead969630cc2f5db564c0c3f02e218f1b5969205f09",
+      "created_at": "1768853771850"
+    },
+    {
+      "id": "630600",
+      "hash": "a40d5ef1019c4cd31a043bae894197b046f780ae242ba61f12abf095f308a272",
+      "created_at": "1768851958694"
+    },
+    {
+      "id": "600600",
+      "hash": "bef487798016cc122509c7ead53b5e453fc7c6b4819a64cf68bd833f19cb6807",
+      "created_at": "1768834521183"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\thash\tcreated_at\n630608\tc6578e318bcd849a782e15cd0d62bb7f27cd73a88ac5928ebbae378f237e5e4b\t1768860419150\n630607\ta52c1c872b57b0961752de98f8e7e600d0b2172443c0a5675aafbea4eb1518a5\t1768859590009\n630606\t63a8f168d8e5458e626e7a3221cedc4dc633b7b350df450378d71355a55979ec\t1768858832295\n630605\t80669c3c73a7d937b047aa968263fb3970089892551bc581965ea9769bd7b1a9\t1768858625157\n630604\t14ff23e4516e7ee1beb6679ec72970dc6df6ecd25e73b0e316abdbbf7049afd1\t1768855208246\n630603\t31b00523421189f8d13475b365282a2fa46797a444009bfd8b32f3b0dfbafae0\t1768854604737\n630602\td867e44914b0ea9a4518df89c77d056fd9cb3c4dc6c4b0954c5a5da7b8851c6d\t1768854302742\n630601\t819199a410e3fab9e5483ead969630cc2f5db564c0c3f02e218f1b5969205f09\t1768853771850\n630600\ta40d5ef1019c4cd31a043bae894197b046f780ae242ba61f12abf095f308a272\t1768851958694\n600600\tbef487798016cc122509c7ead53b5e453fc7c6b4819a64cf68bd833f19cb6807\t1768834521183\n",
+  "stderr": "",
+  "execution_time_ms": 71
+}

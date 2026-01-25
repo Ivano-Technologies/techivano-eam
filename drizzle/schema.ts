@@ -49,6 +49,40 @@ export const assetCategories = mysqlTable("assetCategories", {
 });
 
 /**
+ * NRCS Branch Codes - All Nigerian states and HQ
+ */
+export const branchCodes = mysqlTable("branchCodes", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 10 }).notNull().unique(),
+  name: varchar("name", { length: 100 }).notNull(),
+  state: varchar("state", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/**
+ * NRCS Category Codes - Asset categories with depreciation rates
+ */
+export const categoryCodes = mysqlTable("categoryCodes", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 10 }).notNull().unique(),
+  name: varchar("name", { length: 100 }).notNull(),
+  usefulLifeYears: int("usefulLifeYears"),
+  depreciationRate: decimal("depreciationRate", { precision: 5, scale: 2 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/**
+ * NRCS Sub-Categories - Specific item types (Laptop, Generator, etc.)
+ */
+export const subCategories = mysqlTable("subCategories", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  categoryType: varchar("categoryType", { length: 20 }), // Asset or Inventory
+  parentCategory: varchar("parentCategory", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/**
  * Assets - Core asset inventory
  */
 export const assets = mysqlTable("assets", {
@@ -58,7 +92,7 @@ export const assets = mysqlTable("assets", {
   description: text("description"),
   categoryId: int("categoryId").notNull(),
   siteId: int("siteId").notNull(),
-  status: mysqlEnum("status", ["operational", "maintenance", "repair", "retired", "disposed"]).default("operational").notNull(),
+  status: varchar("status", { length: 100 }).default("In Use").notNull(),
   manufacturer: varchar("manufacturer", { length: 255 }),
   model: varchar("model", { length: 255 }),
   serialNumber: varchar("serialNumber", { length: 255 }),
@@ -82,6 +116,26 @@ export const assets = mysqlTable("assets", {
   usefulLifeYears: int("usefulLifeYears"), // Expected useful life in years
   residualValue: decimal("residualValue", { precision: 12, scale: 2 }), // Salvage value at end of life
   depreciationStartDate: timestamp("depreciationStartDate"), // When depreciation starts
+  
+  // NRCS Asset Register fields
+  itemType: varchar("itemType", { length: 20 }).default("Asset"), // Asset or Inventory
+  subCategory: varchar("subCategory", { length: 100 }), // Laptop, Generator, Vehicle, etc.
+  branchCode: varchar("branchCode", { length: 10 }), // _NHQ, ABI, ADA, etc.
+  itemCategoryCode: varchar("itemCategoryCode", { length: 10 }), // CO, FF, GE, LA, etc.
+  assetNumber: int("assetNumber"), // Sequential number for asset code
+  productNumber: varchar("productNumber", { length: 255 }), // Serial/Product number from manufacturer
+  methodOfAcquisition: varchar("methodOfAcquisition", { length: 100 }), // Donated, Purchased, etc.
+  acquisitionDetails: text("acquisitionDetails"), // Details if method is Other
+  projectReference: varchar("projectReference", { length: 255 }), // Project name if applicable
+  yearAcquired: int("yearAcquired"), // Year of acquisition
+  acquiredCondition: varchar("acquiredCondition", { length: 20 }), // New or Used
+  currentDepreciatedValue: decimal("currentDepreciatedValue", { precision: 15, scale: 2 }), // Current value after depreciation
+  assignedToName: varchar("assignedToName", { length: 255 }), // Full name of assigned person
+  department: varchar("department", { length: 255 }), // Department of assigned person
+  condition: varchar("condition", { length: 100 }), // Good, Fair, Damaged, etc.
+  lastPhysicalCheckDate: timestamp("lastPhysicalCheckDate"), // Date of last verification
+  checkConductedBy: varchar("checkConductedBy", { length: 255 }), // Name and designation
+  remarks: text("remarks"), // Additional notes
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

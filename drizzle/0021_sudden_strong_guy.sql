@@ -1,0 +1,1 @@
+ALTER TABLE `assets` MODIFY COLUMN `status` varchar(100) NOT NULL DEFAULT 'In Use';

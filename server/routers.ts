@@ -257,6 +257,35 @@ export const appRouter = router({
       }),
   }),
 
+  // ============= NRCS REFERENCE DATA =============
+  nrcs: router({
+    getBranchCodes: protectedProcedure.query(async () => {
+      return await db.getAllBranchCodes();
+    }),
+    
+    getCategoryCodes: protectedProcedure.query(async () => {
+      return await db.getAllCategoryCodes();
+    }),
+    
+    getSubCategories: protectedProcedure
+      .input(z.object({ type: z.enum(['Asset', 'Inventory']).optional() }).optional())
+      .query(async ({ input }) => {
+        if (input?.type) {
+          return await db.getSubCategoriesByType(input.type);
+        }
+        return await db.getAllSubCategories();
+      }),
+    
+    generateAssetCode: protectedProcedure
+      .input(z.object({
+        branchCode: z.string(),
+        categoryCode: z.string(),
+      }))
+      .query(async ({ input }) => {
+        return await db.generateAssetCode(input.branchCode, input.categoryCode);
+      }),
+  }),
+
   // ============= ASSETS MANAGEMENT =============
   assets: router({
     list: protectedProcedure
@@ -294,7 +323,7 @@ export const appRouter = router({
         description: z.string().optional(),
         categoryId: z.number(),
         siteId: z.number(),
-        status: z.enum(["operational", "maintenance", "repair", "retired", "disposed"]).default("operational"),
+        status: z.string().default("In Use"),
         manufacturer: z.string().optional(),
         model: z.string().optional(),
         serialNumber: z.string().optional(),
@@ -309,6 +338,25 @@ export const appRouter = router({
         notes: z.string().optional(),
         latitude: z.string().optional(),
         longitude: z.string().optional(),
+        // NRCS fields
+        itemType: z.enum(['Asset', 'Inventory']).default('Asset'),
+        subCategory: z.string().optional(),
+        branchCode: z.string().optional(),
+        itemCategoryCode: z.string().optional(),
+        assetNumber: z.number().optional(),
+        productNumber: z.string().optional(),
+        methodOfAcquisition: z.string().optional(),
+        acquisitionDetails: z.string().optional(),
+        projectReference: z.string().optional(),
+        yearAcquired: z.number().optional(),
+        acquiredCondition: z.enum(['New', 'Used']).optional(),
+        currentDepreciatedValue: z.string().optional(),
+        assignedToName: z.string().optional(),
+        department: z.string().optional(),
+        condition: z.string().optional(),
+        lastPhysicalCheckDate: z.date().optional(),
+        checkConductedBy: z.string().optional(),
+        remarks: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
         return await db.createAsset(input);
@@ -408,7 +456,7 @@ export const appRouter = router({
         description: z.string().optional(),
         categoryId: z.number().optional(),
         siteId: z.number().optional(),
-        status: z.enum(["operational", "maintenance", "repair", "retired", "disposed"]).optional(),
+        status: z.string().optional(),
         manufacturer: z.string().optional(),
         model: z.string().optional(),
         serialNumber: z.string().optional(),
@@ -423,6 +471,25 @@ export const appRouter = router({
         notes: z.string().optional(),
         latitude: z.string().optional(),
         longitude: z.string().optional(),
+        // NRCS fields
+        itemType: z.enum(['Asset', 'Inventory']).optional(),
+        subCategory: z.string().optional(),
+        branchCode: z.string().optional(),
+        itemCategoryCode: z.string().optional(),
+        assetNumber: z.number().optional(),
+        productNumber: z.string().optional(),
+        methodOfAcquisition: z.string().optional(),
+        acquisitionDetails: z.string().optional(),
+        projectReference: z.string().optional(),
+        yearAcquired: z.number().optional(),
+        acquiredCondition: z.enum(['New', 'Used']).optional(),
+        currentDepreciatedValue: z.string().optional(),
+        assignedToName: z.string().optional(),
+        department: z.string().optional(),
+        condition: z.string().optional(),
+        lastPhysicalCheckDate: z.date().optional(),
+        checkConductedBy: z.string().optional(),
+        remarks: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const { id, ...data } = input;
@@ -2035,6 +2102,32 @@ export const appRouter = router({
       }).optional())
       .query(async ({ input }) => {
         return await db.getAuditLogs(input || {});
+      }),
+  }),
+
+  // ============= NRCS EXCEL TEMPLATES =============
+  nrcsTemplates: router({
+    downloadTemplate: protectedProcedure
+      .query(async () => {
+        const { generateNRCSAssetTemplate } = await import('./nrcsExcelTemplate');
+        const buffer = await generateNRCSAssetTemplate();
+        return {
+          data: buffer.toString('base64'),
+          filename: 'NRCS_Asset_Register_Template.xlsx',
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        };
+      }),
+    
+    exportAssets: protectedProcedure
+      .query(async () => {
+        const assets = await db.getAllAssets();
+        const { exportAssetsToNRCSFormat } = await import('./nrcsExcelTemplate');
+        const buffer = await exportAssetsToNRCSFormat(assets);
+        return {
+          data: buffer.toString('base64'),
+          filename: `NRCS_Asset_Register_${new Date().toISOString().split('T')[0]}.xlsx`,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        };
       }),
   }),
 });
