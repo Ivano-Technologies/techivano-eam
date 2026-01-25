@@ -767,6 +767,12 @@ export const appRouter = router({
         return await db.getWorkOrderById(input.id);
       }),
     
+    getByAssetId: protectedProcedure
+      .input(z.object({ assetId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getWorkOrdersByAssetId(input.assetId);
+      }),
+    
     create: protectedProcedure
       .input(z.object({
         workOrderNumber: z.string().min(1),

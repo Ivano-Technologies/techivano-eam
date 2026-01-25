@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
+import { MaintenanceHistory } from "@/components/MaintenanceHistory";
 import { QuickActionsSheet } from "@/components/QuickActionsSheet";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -528,6 +529,11 @@ export default function AssetDetail() {
       {/* Maintenance Timeline */}
       <div id="maintenance-timeline">
         <AssetMaintenanceTimeline assetId={assetId} />
+      </div>
+
+      {/* Maintenance History */}
+      <div id="maintenance-history">
+        <MaintenanceHistory assetId={assetId} />
       </div>
 
       {/* Photo Upload Dialog with Caption */}

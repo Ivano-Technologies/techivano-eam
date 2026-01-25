@@ -751,7 +751,11 @@ export async function getAssetWorkOrders(assetId: number) {
   const db = await getDb();
   if (!db) return [];
   
-  return await db.select().from(workOrders).where(eq(workOrders.assetId, assetId));
+  return await db.select().from(workOrders).where(eq(workOrders.assetId, assetId)).orderBy(desc(workOrders.createdAt));
+}
+
+export async function getWorkOrdersByAssetId(assetId: number) {
+  return await getAssetWorkOrders(assetId);
 }
 
 
