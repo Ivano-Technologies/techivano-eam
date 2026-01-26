@@ -37,6 +37,7 @@ import { VoiceCommandButton } from "./VoiceCommandButton";
 import { PWAInstallButton } from "./PWAInstallButton";
 import { MobileBottomTabBar } from "./MobileBottomTabBar";
 import { MobileDrawer } from "./MobileDrawer";
+import { OnboardingTour } from "./OnboardingTour";
 
 const allMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: false, sortOrder: 0 },
@@ -492,6 +493,9 @@ function DashboardLayoutContent({
       {/* Mobile Navigation - Prototype A */}
       <MobileBottomTabBar onMoreClick={() => setIsDrawerOpen(true)} />
       <MobileDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+      
+      {/* Onboarding Tour for first-time users */}
+      <OnboardingTour />
     </>
   );
 }

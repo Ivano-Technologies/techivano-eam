@@ -47,6 +47,8 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
   const [location, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [isPortrait, setIsPortrait] = useState(true);
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
 
   // Detect orientation
   useEffect(() => {
@@ -72,6 +74,22 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
   const handleFeatureClick = (path: string) => {
     setLocation(path);
     onClose();
+  };
+
+  // Swipe-down gesture to close drawer
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientY);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStart - touchEnd < -100) {
+      // Swiped down more than 100px
+      onClose();
+    }
   };
 
   // Close on escape key
@@ -123,6 +141,9 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
         style={{
           maxHeight: isPortrait ? "75vh" : "90vh",
         }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {/* Handle bar for swipe gesture indication */}
         <div className="flex justify-center pt-3 pb-2">
