@@ -443,3 +443,83 @@
     @apply space-y-2 text-sm;
   }
 }
+
+/* ===== Page Transition Animations for Mobile ===== */
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes page-exit {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Apply page transitions on mobile */
+@media (max-width: 768px) {
+  main {
+    animation: page-enter 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Smooth card entrance */
+  .card-mobile,
+  [role="article"],
+  section {
+    animation: fade-in 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Stagger animation for lists */
+  .grid > *,
+  .space-y-4 > * {
+    animation: fade-in 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .grid > *:nth-child(1) { animation-delay: 0ms; }
+  .grid > *:nth-child(2) { animation-delay: 50ms; }
+  .grid > *:nth-child(3) { animation-delay: 100ms; }
+  .grid > *:nth-child(4) { animation-delay: 150ms; }
+  .grid > *:nth-child(5) { animation-delay: 200ms; }
+  .grid > *:nth-child(6) { animation-delay: 250ms; }
+}
+
+/* Smooth modal/dialog animations */
+[role="dialog"],
+[data-state="open"] {
+  animation: fade-in 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Button press animation for mobile */
+@media (max-width: 768px) {
+  button:active,
+  [role="button"]:active {
+    transform: scale(0.97);
+    transition: transform 100ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* Safe area insets for iOS devices */
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}

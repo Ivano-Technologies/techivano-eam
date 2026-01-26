@@ -35,6 +35,8 @@ import { MobileBottomNav } from "./MobileBottomNav";
 import { OfflineBanner } from "./OfflineBanner";
 import { VoiceCommandButton } from "./VoiceCommandButton";
 import { PWAInstallButton } from "./PWAInstallButton";
+import { MobileBottomTabBar } from "./MobileBottomTabBar";
+import { MobileDrawer } from "./MobileDrawer";
 
 const allMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: false, sortOrder: 0 },
@@ -121,7 +123,10 @@ export default function DashboardLayout({
             <img 
               src="/nrcs-logo.png" 
               alt="Nigerian Red Cross Society" 
-              className="h-24 w-24"
+              className="h-24 w-24 object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
             />
             <div className="text-center">
               <h1 className="text-2xl font-bold tracking-tight mb-2">
@@ -183,6 +188,7 @@ function DashboardLayoutContent({
   const [location, setLocation] = useLocation();
   const { setOpen, open } = useSidebar();
   const isMobile = useIsMobile();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
   // Swipe gestures for mobile sidebar
   useSwipeGesture({
@@ -316,7 +322,11 @@ function DashboardLayoutContent({
                 <img 
                   src="/nrcs-logo.png" 
                   alt="Nigerian Red Cross Society" 
-                  className="h-12 w-12 shrink-0"
+                  className="h-12 w-12 shrink-0 object-contain"
+                  onError={(e) => {
+                    // Fallback to placeholder if logo fails to load
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
                 {sidebarWidth > PRESET_WIDTHS.narrow && (
                   <div className="flex flex-col min-w-0">
@@ -478,7 +488,10 @@ function DashboardLayoutContent({
         <main className="flex-1 p-4 pb-20 md:pb-4">{children}</main>
         <Footer />
       </SidebarInset>
-      <MobileBottomNav />
+      
+      {/* Mobile Navigation - Prototype A */}
+      <MobileBottomTabBar onMoreClick={() => setIsDrawerOpen(true)} />
+      <MobileDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
     </>
   );
 }

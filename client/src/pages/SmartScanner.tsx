@@ -66,6 +66,11 @@ export default function SmartScanner() {
 
   const startScanning = async () => {
     try {
+      // Request camera permissions explicitly
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      // Stop the test stream immediately
+      stream.getTracks().forEach(track => track.stop());
+      
       const html5QrCode = new Html5Qrcode("qr-reader");
       setScanner(html5QrCode);
       
@@ -74,16 +79,27 @@ export default function SmartScanner() {
         {
           fps: 10,
           qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
         },
         handleScan,
-        () => {} // ignore errors
+        () => {} // ignore scan errors
       );
       
       setIsScanning(true);
-    } catch (err) {
+      toast.success("Camera started successfully");
+    } catch (err: any) {
       vibrateError();
-      toast.error("Failed to start camera");
-      console.error(err);
+      console.error("Camera error:", err);
+      
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        toast.error("Camera permission denied. Please allow camera access in your browser settings.");
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        toast.error("No camera found on this device.");
+      } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+        toast.error("Camera is already in use by another application.");
+      } else {
+        toast.error("Failed to start camera. Please check your browser permissions.");
+      }
     }
   };
 
