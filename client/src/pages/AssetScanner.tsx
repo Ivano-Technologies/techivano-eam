@@ -185,16 +185,18 @@ ${updateForm.notes}`
                 onClick={() => setScanMode("manual")}
                 className="flex-1"
               >
-                <Search className="h-4 w-4 mr-2" />
-                Manual Entry
+                <Search className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Manual Entry</span>
+                <span className="sm:hidden">Manual</span>
               </Button>
               <Button
                 variant={scanMode === "camera" ? "default" : "outline"}
                 onClick={() => setScanMode("camera")}
                 className="flex-1"
               >
-                <Camera className="h-4 w-4 mr-2" />
-                Camera Scan
+                <Camera className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Camera Scan</span>
+                <span className="sm:hidden">Camera</span>
               </Button>
             </div>
 

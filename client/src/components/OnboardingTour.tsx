@@ -132,27 +132,27 @@ export function OnboardingTour() {
         </div>
 
         {/* Navigation */}
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
+        <div className="space-y-3">
+          <div className="text-sm text-muted-foreground text-center">
             Step {currentStep + 1} of {tourSteps.length}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 justify-end">
             {currentStep > 0 && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handlePrevious}
-                className="gap-1"
+                className="gap-1 flex-shrink-0"
               >
                 <ChevronLeft className="h-4 w-4" />
-                Back
+                <span className="hidden xs:inline">Back</span>
               </Button>
             )}
             <Button
               size="sm"
               onClick={handleNext}
-              className="gap-1"
+              className="gap-1 flex-shrink-0 min-w-[120px]"
             >
               {currentStep === tourSteps.length - 1 ? "Get Started" : "Next"}
               {currentStep < tourSteps.length - 1 && <ChevronRight className="h-4 w-4" />}

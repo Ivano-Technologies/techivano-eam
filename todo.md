@@ -1300,7 +1300,7 @@
 - [x] Add smooth page transition animations for mobile
 - [ ] Ensure responsive design for portrait/landscape orientations
 - [ ] Optimize for one-hand navigation
-- [ ] Test all fixes on mobile viewport
+- [x] Test all fixes on mobile viewport
 
 ## Phase 69: Prototype A Mobile Sidebar Implementation
 - [x] Create MobileBottomTabBar component with 5 primary features
@@ -1315,3 +1315,17 @@
 - [x] Create onboarding tour component for first-time users
 - [x] Test all features
 - [x] Save checkpoint for publishing
+
+## Phase 70: Email Functionality Setup
+- [ ] Create comprehensive email setup guide
+- [ ] Implement SMTP email service integration
+- [ ] Create email templates (password reset, work order notifications, maintenance reminders)
+- [ ] Add email configuration UI in settings
+- [ ] Test email sending functionality
+- [ ] Document email feature usage
+
+## Phase 71: Mobile Alignment Fixes
+- [x] Fix Asset Scanner "Manual Entry" button text truncation
+- [x] Fix onboarding tour button overlap issue
+- [x] Verify mobile drawer spacing
+- [x] Test all fixes on mobile viewport
