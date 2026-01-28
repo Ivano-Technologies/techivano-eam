@@ -1474,6 +1474,21 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return await db.rejectUser(input.userId, input.reason);
       }),
+    
+    bulkApproveUsers: adminProcedure
+      .input(z.object({ userIds: z.array(z.number()) }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.bulkApproveUsers(input.userIds, ctx.user.id);
+      }),
+    
+    bulkRejectUsers: adminProcedure
+      .input(z.object({ 
+        userIds: z.array(z.number()),
+        reason: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.bulkRejectUsers(input.userIds, input.reason);
+      }),
   }),
 
   // ============= NOTIFICATIONS =============

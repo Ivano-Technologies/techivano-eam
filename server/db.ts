@@ -1387,3 +1387,36 @@ export async function rejectUser(userId: number, reason?: string) {
   
   return { success: true };
 }
+
+export async function bulkApproveUsers(userIds: number[], approvedBy: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  for (const userId of userIds) {
+    await db.update(users)
+      .set({
+        status: 'approved',
+        approvedBy,
+        approvedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  }
+  
+  return { success: true, count: userIds.length };
+}
+
+export async function bulkRejectUsers(userIds: number[], reason?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  for (const userId of userIds) {
+    await db.update(users)
+      .set({
+        status: 'rejected',
+        rejectionReason: reason || 'Registration not approved',
+      })
+      .where(eq(users.id, userId));
+  }
+  
+  return { success: true, count: userIds.length };
+}

@@ -6,16 +6,17 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { trpc } from "@/lib/trpc";
-import { CheckCircle, XCircle, Clock, Loader2, User, Mail, Phone, Briefcase, MapPin, Target, Building2, Users, Eye } from "lucide-react";
-
+import { CheckCircle, XCircle, Clock, Loader2, User, Mail, Phone, Briefcase, MapPin, Target, Building2, Users, Download } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
 export default function PendingUsers() {
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showBulkRejectDialog, setShowBulkRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
-
+  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   
   const { data: users, isLoading, refetch } = trpc.users.getPendingUsers.useQuery();
   
@@ -42,6 +43,30 @@ export default function PendingUsers() {
     },
   });
 
+  const bulkApproveMutation = trpc.users.bulkApproveUsers.useMutation({
+    onSuccess: (data) => {
+      alert(`Successfully approved ${data.count} user(s)!`);
+      setSelectedUserIds([]);
+      refetch();
+    },
+    onError: (error: any) => {
+      alert(`Bulk approval failed: ${error.message}`);
+    },
+  });
+
+  const bulkRejectMutation = trpc.users.bulkRejectUsers.useMutation({
+    onSuccess: (data) => {
+      alert(`Successfully rejected ${data.count} user(s).`);
+      setShowBulkRejectDialog(false);
+      setSelectedUserIds([]);
+      setRejectionReason("");
+      refetch();
+    },
+    onError: (error: any) => {
+      alert(`Bulk rejection failed: ${error.message}`);
+    },
+  });
+
   const handleApprove = (user: any) => {
     approveMutation.mutate({ userId: user.id });
   };
@@ -54,9 +79,90 @@ export default function PendingUsers() {
     });
   };
 
+  const handleBulkApprove = () => {
+    if (selectedUserIds.length === 0) {
+      alert("Please select users to approve");
+      return;
+    }
+    if (confirm(`Approve ${selectedUserIds.length} selected user(s)?`)) {
+      bulkApproveMutation.mutate({ userIds: selectedUserIds });
+    }
+  };
+
+  const handleBulkReject = () => {
+    if (selectedUserIds.length === 0) {
+      alert("Please select users to reject");
+      return;
+    }
+    setShowBulkRejectDialog(true);
+  };
+
+  const confirmBulkReject = () => {
+    bulkRejectMutation.mutate({ 
+      userIds: selectedUserIds,
+      reason: rejectionReason || "Registration not approved"
+    });
+  };
+
   const openRejectDialog = (user: any) => {
     setSelectedUser(user);
     setShowRejectDialog(true);
+  };
+
+  const toggleUserSelection = (userId: number) => {
+    setSelectedUserIds(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedUserIds.length === pending.length) {
+      setSelectedUserIds([]);
+    } else {
+      setSelectedUserIds(pending.map(u => u.id));
+    }
+  };
+
+  const exportToCSV = () => {
+    if (!pending || pending.length === 0) {
+      alert("No pending users to export");
+      return;
+    }
+
+    const headers = [
+      "Name", "Email", "Job Title", "Phone", "Agency", 
+      "Location", "Purpose", "Employee ID", "Department", 
+      "Supervisor", "Registered Date"
+    ];
+
+    const rows = pending.map(user => [
+      user.name || "",
+      user.email || "",
+      user.jobTitle || "",
+      `${user.phoneCountryCode || ""} ${user.phoneNumber || ""}`.trim(),
+      user.agency || "",
+      user.geographicalArea || "",
+      user.registrationPurpose || "",
+      user.employeeId || "",
+      user.department || "",
+      user.supervisorName || "",
+      new Date(user.createdAt).toLocaleString()
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `pending-users-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
   };
 
   if (isLoading) {
@@ -76,9 +182,20 @@ export default function PendingUsers() {
   return (
     <DashboardLayout>
       <div className="container mx-auto py-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">User Access Management</h1>
-          <p className="text-gray-600 mt-2">Review and manage user registration requests</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">User Access Management</h1>
+            <p className="text-gray-600 mt-2">Review and manage user registration requests</p>
+          </div>
+          <Button
+            onClick={exportToCSV}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={pending.length === 0}
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
         </div>
 
         {/* Statistics */}
@@ -117,6 +234,55 @@ export default function PendingUsers() {
           </Card>
         </div>
 
+        {/* Bulk Actions Bar */}
+        {selectedUserIds.length > 0 && (
+          <Card className="bg-blue-50 border-blue-200">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <span className="font-medium text-blue-900">
+                    {selectedUserIds.length} user(s) selected
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedUserIds([])}
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleBulkApprove}
+                    disabled={bulkApproveMutation.isPending}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {bulkApproveMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Approving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Approve Selected
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleBulkReject}
+                    disabled={bulkRejectMutation.isPending}
+                    variant="destructive"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Reject Selected
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Pending Requests */}
         {pending.length === 0 && (
           <Alert>
@@ -126,17 +292,33 @@ export default function PendingUsers() {
 
         {pending.length > 0 && (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-900">Pending Requests ({pending.length})</h2>
-            {pending.map((user) => (
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Pending Requests ({pending.length})</h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleSelectAll}
+              >
+                {selectedUserIds.length === pending.length ? "Deselect All" : "Select All"}
+              </Button>
+            </div>
+            {pending.map((user: any) => (
               <Card key={user.id} className="border-l-4 border-l-yellow-500">
                 <CardHeader>
                   <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{user.name}</CardTitle>
-                      <CardDescription className="flex items-center gap-1 mt-1">
-                        <Mail className="h-3 w-3" />
-                        {user.email}
-                      </CardDescription>
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        checked={selectedUserIds.includes(user.id)}
+                        onCheckedChange={() => toggleUserSelection(user.id)}
+                        className="mt-1"
+                      />
+                      <div>
+                        <CardTitle className="text-lg">{user.name}</CardTitle>
+                        <CardDescription className="flex items-center gap-1 mt-1">
+                          <Mail className="h-3 w-3" />
+                          {user.email}
+                        </CardDescription>
+                      </div>
                     </div>
                     <Badge variant="outline" className="flex items-center gap-1 bg-yellow-50 text-yellow-700 border-yellow-300">
                       <Clock className="h-3 w-3" />
@@ -276,7 +458,7 @@ export default function PendingUsers() {
           <div className="space-y-4 pt-6">
             <h2 className="text-xl font-semibold text-gray-900">Recently Processed</h2>
             
-            {approved.slice(0, 5).map((user) => (
+            {approved.slice(0, 5).map((user: any) => (
               <Card key={user.id} className="border-l-4 border-l-green-500">
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -298,7 +480,7 @@ export default function PendingUsers() {
               </Card>
             ))}
             
-            {rejected.slice(0, 3).map((user) => (
+            {rejected.slice(0, 3).map((user: any) => (
               <Card key={user.id} className="border-l-4 border-l-red-500">
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -328,7 +510,7 @@ export default function PendingUsers() {
         )}
       </div>
 
-      {/* Reject Dialog */}
+      {/* Single User Reject Dialog */}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent>
           <DialogHeader>
@@ -374,6 +556,58 @@ export default function PendingUsers() {
                 </>
               ) : (
                 "Reject User"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Reject Dialog */}
+      <Dialog open={showBulkRejectDialog} onOpenChange={setShowBulkRejectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Multiple Users</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to reject {selectedUserIds.length} selected user(s)?
+              You can optionally provide a reason that will be sent to all rejected users.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="bulkReason">Rejection Reason (Optional)</Label>
+              <Textarea
+                id="bulkReason"
+                placeholder="e.g., Incomplete information, unauthorized access request..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowBulkRejectDialog(false);
+                setRejectionReason("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmBulkReject}
+              disabled={bulkRejectMutation.isPending}
+            >
+              {bulkRejectMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Rejecting...
+                </>
+              ) : (
+                `Reject ${selectedUserIds.length} User(s)`
               )}
             </Button>
           </DialogFooter>
