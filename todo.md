@@ -1329,3 +1329,8 @@
 - [x] Fix onboarding tour button overlap issue
 - [x] Verify mobile drawer spacing
 - [x] Test all fixes on mobile viewport
+
+## Phase 72: QuickBooks Save Button
+- [x] Add save/connect button to QuickBooks configuration page
+- [x] Implement credential validation and connection test
+- [x] Add success/error feedback messages

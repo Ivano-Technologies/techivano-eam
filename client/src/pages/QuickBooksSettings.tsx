@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, CheckCircle, XCircle, RefreshCw } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, RefreshCw, Save } from "lucide-react";
 
 export default function QuickBooksSettings() {
   const [clientId, setClientId] = useState("");
@@ -41,8 +41,9 @@ export default function QuickBooksSettings() {
         redirectUri: `${window.location.origin}/quickbooks/callback`,
         realmId,
       });
-      toast.success("QuickBooks configuration saved");
+      toast.success("QuickBooks configuration saved successfully");
       refetchConfig();
+      refetchConnection();
     } catch (error: any) {
       toast.error(error.message || "Failed to save configuration");
     } finally {
@@ -80,12 +81,13 @@ export default function QuickBooksSettings() {
 
   const isConnected = connectionStatus?.connected;
   const lastSync = config?.lastSyncAt ? new Date(config.lastSyncAt).toLocaleString() : "Never";
+  const isFormValid = clientId.trim() !== "" && clientSecret.trim() !== "" && realmId.trim() !== "";
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
+    <div className="container mx-auto p-4 sm:p-6 max-w-4xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-navy-900">QuickBooks Integration</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">QuickBooks Integration</h1>
+        <p className="text-gray-600 mt-2 text-sm sm:text-base">
           Connect your NRCS EAM system to QuickBooks for automatic financial transaction sync
         </p>
       </div>
@@ -126,7 +128,7 @@ export default function QuickBooksSettings() {
           </div>
 
           {isConnected && (
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 flex flex-col sm:flex-row gap-2">
               <Button onClick={handleSync} disabled={isSyncing} className="bg-navy-900 hover:bg-navy-800">
                 {isSyncing ? (
                   <>
@@ -167,57 +169,82 @@ export default function QuickBooksSettings() {
         <CardContent>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="clientId">Client ID</Label>
+              <Label htmlFor="clientId">Client ID *</Label>
               <Input
                 id="clientId"
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
                 placeholder="Enter your QuickBooks Client ID"
+                className="border-gray-300 focus:border-red-600 focus:ring-red-600"
               />
             </div>
 
             <div>
-              <Label htmlFor="clientSecret">Client Secret</Label>
+              <Label htmlFor="clientSecret">Client Secret *</Label>
               <Input
                 id="clientSecret"
                 type="password"
                 value={clientSecret}
                 onChange={(e) => setClientSecret(e.target.value)}
                 placeholder="Enter your QuickBooks Client Secret"
+                className="border-gray-300 focus:border-red-600 focus:ring-red-600"
               />
             </div>
 
             <div>
-              <Label htmlFor="realmId">Company ID (Realm ID)</Label>
+              <Label htmlFor="realmId">Company ID (Realm ID) *</Label>
               <Input
                 id="realmId"
                 value={realmId}
                 onChange={(e) => setRealmId(e.target.value)}
                 placeholder="Enter your QuickBooks Company ID"
+                className="border-gray-300 focus:border-red-600 focus:ring-red-600"
               />
               <p className="text-sm text-gray-500 mt-1">
                 This is your QuickBooks company identifier
               </p>
             </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button onClick={handleSaveConfig} disabled={isSaving} className="bg-navy-900 hover:bg-navy-800">
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Configuration"
-                )}
-              </Button>
-
-              {config && !isConnected && (
-                <Button onClick={handleConnect} variant="outline" className="border-red-600 text-red-600 hover:bg-red-50">
-                  Connect to QuickBooks
-                </Button>
+          </div>
+        </CardContent>
+        
+        {/* Action Buttons Section - Separated for visibility */}
+        <CardContent className="border-t bg-gray-50/50 pt-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button 
+              onClick={handleSaveConfig} 
+              disabled={isSaving || !isFormValid} 
+              className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
+              size="lg"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving Configuration...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Configuration
+                </>
               )}
-            </div>
+            </Button>
+
+            {config && !isConnected && (
+              <Button 
+                onClick={handleConnect} 
+                variant="outline" 
+                className="border-navy-900 text-navy-900 hover:bg-navy-50 w-full sm:w-auto"
+                size="lg"
+              >
+                Connect to QuickBooks
+              </Button>
+            )}
+
+            {!config && (
+              <p className="text-sm text-gray-600 flex items-center mt-2 sm:mt-0">
+                💡 Save your configuration first, then connect to QuickBooks
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -231,8 +258,8 @@ export default function QuickBooksSettings() {
           <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
             <li>Create a QuickBooks app at the Intuit Developer Portal</li>
             <li>Copy your Client ID and Client Secret from the app settings</li>
-            <li>Add the redirect URI: <code className="bg-gray-100 px-2 py-1 rounded">{window.location.origin}/quickbooks/callback</code></li>
-            <li>Enter your credentials above and save the configuration</li>
+            <li>Add the redirect URI: <code className="bg-gray-100 px-2 py-1 rounded text-xs">{window.location.origin}/quickbooks/callback</code></li>
+            <li>Enter your credentials above and click <strong>"Save Configuration"</strong></li>
             <li>Click "Connect to QuickBooks" to authorize the integration</li>
             <li>Once connected, transactions will automatically sync to QuickBooks</li>
           </ol>
