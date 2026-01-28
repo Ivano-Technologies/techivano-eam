@@ -30,6 +30,7 @@ import Users from "./pages/Users";
 import NotificationPreferences from "./pages/NotificationPreferences";
 import Reports from "./pages/Reports";
 import QuickBooksSettings from "./pages/QuickBooksSettings";
+import QuickBooksCallback from "./pages/QuickBooksCallback";
 import EmailNotifications from "./pages/EmailNotifications";
 import DashboardSettings from "./pages/DashboardSettings";
 import WorkOrderTemplates from "./pages/WorkOrderTemplates";
@@ -90,6 +91,7 @@ function Router() {
       <Route path="/reports" component={Reports} />
       <Route path="/report-scheduling" component={ReportScheduling} />
       <Route path="/quickbooks" component={QuickBooksSettings} />
+      <Route path="/quickbooks/callback" component={QuickBooksCallback} />
         <Route path="/email-notifications" component={EmailNotifications} />
         <Route path="/dashboard-settings" component={DashboardSettings} />
       <Route path="/legal/terms" component={TermsOfService} />
