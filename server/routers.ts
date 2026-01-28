@@ -73,6 +73,16 @@ export const appRouter = router({
         email: z.string().email(),
         name: z.string().min(1),
         password: z.string().min(6, "Password must be at least 6 characters"),
+        jobTitle: z.string().optional(),
+        phoneNumber: z.string().optional(),
+        phoneCountryCode: z.string().optional(),
+        agency: z.string().optional(),
+        geographicalArea: z.string().optional(),
+        registrationPurpose: z.string().optional(),
+        employeeId: z.string().optional(),
+        department: z.string().optional(),
+        supervisorName: z.string().optional(),
+        supervisorEmail: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
         // Check if user already exists
@@ -84,8 +94,24 @@ export const appRouter = router({
           });
         }
         const { createUserWithPassword } = await import("./passwordAuth");
-        const user = await createUserWithPassword(input.email, input.name, input.password);
-        return { success: true, message: "Account created successfully. You can now log in.", user };
+        const user = await createUserWithPassword(
+          input.email, 
+          input.name, 
+          input.password,
+          {
+            jobTitle: input.jobTitle,
+            phoneNumber: input.phoneNumber,
+            phoneCountryCode: input.phoneCountryCode,
+            agency: input.agency,
+            geographicalArea: input.geographicalArea,
+            registrationPurpose: input.registrationPurpose,
+            employeeId: input.employeeId,
+            department: input.department,
+            supervisorName: input.supervisorName,
+            supervisorEmail: input.supervisorEmail,
+          }
+        );
+        return { success: true, message: "Registration submitted successfully. An administrator will review your request.", user };
       }),
     loginWithPassword: publicProcedure
       .input(z.object({
@@ -101,6 +127,29 @@ export const appRouter = router({
             message: 'Invalid email or password',
           });
         }
+        
+        // Check user status
+        if (user.status === 'pending') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Your account is pending admin approval. You will receive an email once approved.',
+          });
+        }
+        
+        if (user.status === 'rejected') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Your account registration was not approved. Please contact the administrator for more information.',
+          });
+        }
+        
+        if (user.status === 'inactive') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Your account has been deactivated. Please contact the administrator.',
+          });
+        }
+        
         // Create session by setting JWT cookie
         const { sdk } = await import("./_core/sdk");
         const token = await sdk.createSessionToken(user.openId, { name: user.name || "" });
@@ -1404,6 +1453,26 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         return await db.deleteUser(input.id);
+      }),
+    
+    getPendingUsers: adminProcedure
+      .query(async () => {
+        return await db.getPendingUsers();
+      }),
+    
+    approveUser: adminProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.approveUser(input.userId, ctx.user.id);
+      }),
+    
+    rejectUser: adminProcedure
+      .input(z.object({ 
+        userId: z.number(),
+        reason: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.rejectUser(input.userId, input.reason);
       }),
   }),
 

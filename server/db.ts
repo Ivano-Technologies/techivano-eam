@@ -1347,3 +1347,43 @@ export async function getAssetEditHistory(assetId: number) {
     .where(eq(assetEditHistory.assetId, assetId))
     .orderBy(desc(assetEditHistory.changedAt));
 }
+
+// ============= USER VERIFICATION =============
+
+export async function getPendingUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(users)
+    .where(sql`status IN ('pending', 'approved', 'rejected')`)
+    .orderBy(desc(users.createdAt));
+}
+
+export async function approveUser(userId: number, approvedBy: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(users)
+    .set({
+      status: 'approved',
+      approvedBy,
+      approvedAt: new Date(),
+    })
+    .where(eq(users.id, userId));
+  
+  return { success: true };
+}
+
+export async function rejectUser(userId: number, reason?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(users)
+    .set({
+      status: 'rejected',
+      rejectionReason: reason || 'Registration not approved',
+    })
+    .where(eq(users.id, userId));
+  
+  return { success: true };
+}

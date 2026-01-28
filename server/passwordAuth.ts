@@ -13,7 +13,23 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-export async function createUserWithPassword(email: string, name: string, password: string) {
+export async function createUserWithPassword(
+  email: string, 
+  name: string, 
+  password: string,
+  verificationData?: {
+    jobTitle?: string;
+    phoneNumber?: string;
+    phoneCountryCode?: string;
+    agency?: string;
+    geographicalArea?: string;
+    registrationPurpose?: string;
+    employeeId?: string;
+    department?: string;
+    supervisorName?: string;
+    supervisorEmail?: string;
+  }
+) {
   const passwordHash = await hashPassword(password);
   
   // Generate a unique openId for password-based users
@@ -29,6 +45,17 @@ export async function createUserWithPassword(email: string, name: string, passwo
     passwordHash,
     loginMethod: 'password',
     role: 'user',
+    status: 'pending', // New users start as pending
+    jobTitle: verificationData?.jobTitle,
+    phoneNumber: verificationData?.phoneNumber,
+    phoneCountryCode: verificationData?.phoneCountryCode || '+234',
+    agency: verificationData?.agency,
+    geographicalArea: verificationData?.geographicalArea,
+    registrationPurpose: verificationData?.registrationPurpose,
+    employeeId: verificationData?.employeeId,
+    department: verificationData?.department,
+    supervisorName: verificationData?.supervisorName,
+    supervisorEmail: verificationData?.supervisorEmail,
   });
   
   // Fetch the newly created user

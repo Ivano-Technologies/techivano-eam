@@ -162,6 +162,13 @@
       "when": 1769349147639,
       "tag": "0022_round_shooting_star",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "5",
+      "when": 1769612092590,
+      "tag": "0023_wise_eternals",
+      "breakpoints": true
     }
   ]
 }
