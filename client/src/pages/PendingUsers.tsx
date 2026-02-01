@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { trpc } from "@/lib/trpc";
-import { CheckCircle, XCircle, Clock, Loader2, User, Mail, Phone, Briefcase, MapPin, Target, Building2, Users, Download } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Loader2, User, Mail, Phone, Briefcase, MapPin, Target, Building2, Users, Download, Search, Filter, X } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
 export default function PendingUsers() {
@@ -17,6 +17,12 @@ export default function PendingUsers() {
   const [showBulkRejectDialog, setShowBulkRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   
   const { data: users, isLoading, refetch } = trpc.users.getPendingUsers.useQuery();
   
@@ -175,9 +181,58 @@ export default function PendingUsers() {
     );
   }
 
-  const pending = users?.filter((u: any) => u.status === "pending") || [];
-  const approved = users?.filter((u: any) => u.status === "approved") || [];
-  const rejected = users?.filter((u: any) => u.status === "rejected") || [];
+  // Apply filters and search
+  const filteredUsers = users?.filter((u: any) => {
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = 
+        u.name?.toLowerCase().includes(query) ||
+        u.email?.toLowerCase().includes(query) ||
+        u.agency?.toLowerCase().includes(query);
+      if (!matchesSearch) return false;
+    }
+    
+    // Status filter
+    if (statusFilter !== "all" && u.status !== statusFilter) {
+      return false;
+    }
+    
+    // Date range filter
+    if (dateFrom) {
+      const userDate = new Date(u.createdAt);
+      const fromDate = new Date(dateFrom);
+      if (userDate < fromDate) return false;
+    }
+    
+    if (dateTo) {
+      const userDate = new Date(u.createdAt);
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999); // Include entire day
+      if (userDate > toDate) return false;
+    }
+    
+    return true;
+  }) || [];
+  
+  const pending = filteredUsers.filter((u: any) => u.status === "pending");
+  const approved = filteredUsers.filter((u: any) => u.status === "approved");
+  const rejected = filteredUsers.filter((u: any) => u.status === "rejected");
+  
+  // Count active filters
+  const activeFilterCount = [
+    searchQuery ? 1 : 0,
+    statusFilter !== "all" ? 1 : 0,
+    dateFrom ? 1 : 0,
+    dateTo ? 1 : 0
+  ].reduce((a, b) => a + b, 0);
+  
+  const clearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setDateFrom("");
+    setDateTo("");
+  };
 
   return (
     <DashboardLayout>
@@ -197,6 +252,85 @@ export default function PendingUsers() {
             Export CSV
           </Button>
         </div>
+
+        {/* Search and Filters */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                {/* Search Input */}
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, email, or agency..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                
+                {/* Status Filter */}
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as any)}
+                  className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+                
+                {/* Date From */}
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm text-gray-600 whitespace-nowrap">From:</Label>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                
+                {/* Date To */}
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm text-gray-600 whitespace-nowrap">To:</Label>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              
+              {/* Active Filters Display */}
+              {activeFilterCount > 0 && (
+                <div className="flex items-center justify-between bg-blue-50 p-3 rounded-md">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm text-blue-900 font-medium">
+                      {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active
+                    </span>
+                    <span className="text-sm text-blue-700">
+                      • Showing {filteredUsers.length} of {users?.length || 0} users
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Clear Filters
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
