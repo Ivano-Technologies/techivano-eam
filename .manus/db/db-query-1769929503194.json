@@ -1,0 +1,9 @@
+{
+  "query": "DELETE FROM users WHERE email IN (\n  'john.doe@nrcs.org',\n  'jane.smith@nrcs.org',\n  'bob.wilson@nrcs.org',\n  'alice.brown@nrcs.org',\n  'charlie.davis@nrcs.org',\n  'olaitanbusayo31@gmail.com',\n  'gbubemiuba070@gmail.com'\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user TomGb9tuntH4B4d.7e6b3ba34d8a --database YNihSyDPBSASM93ZxstDRD --execute DELETE FROM users WHERE email IN (\n  'john.doe@nrcs.org',\n  'jane.smith@nrcs.org',\n  'bob.wilson@nrcs.org',\n  'alice.brown@nrcs.org',\n  'charlie.davis@nrcs.org',\n  'olaitanbusayo31@gmail.com',\n  'gbubemiuba070@gmail.com'\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 413
+}

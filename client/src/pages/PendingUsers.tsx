@@ -75,7 +75,7 @@ export default function PendingUsers() {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">User Access Management</h1>
           <p className="text-gray-600 mt-2">Review and manage user registration requests</p>
@@ -128,8 +128,9 @@ export default function PendingUsers() {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold text-gray-900">Pending Requests</h2>
             
-            <div className="bg-white rounded-lg border">
-              <table className="w-full">
+            <div className="bg-white rounded-lg border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
@@ -214,6 +215,7 @@ export default function PendingUsers() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         )}

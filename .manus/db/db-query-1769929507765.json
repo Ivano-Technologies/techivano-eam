@@ -1,0 +1,28 @@
+{
+  "query": "SELECT id, name, email, status FROM users ORDER BY createdAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user TomGb9tuntH4B4d.7e6b3ba34d8a --database YNihSyDPBSASM93ZxstDRD --execute SELECT id, name, email, status FROM users ORDER BY createdAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "870001",
+      "name": "Uche",
+      "email": "xyuche@gmail.com",
+      "status": "approved"
+    },
+    {
+      "id": "540049",
+      "name": "Billy",
+      "email": "bilkisu.mohammed@redcrossnigeria.org",
+      "status": "approved"
+    },
+    {
+      "id": "1",
+      "name": "Kezie Okpala",
+      "email": "kezieokpala@gmail.com",
+      "status": "approved"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\tstatus\n870001\tUche\txyuche@gmail.com\tapproved\n540049\tBilly\tbilkisu.mohammed@redcrossnigeria.org\tapproved\n1\tKezie Okpala\tkezieokpala@gmail.com\tapproved\n",
+  "stderr": "",
+  "execution_time_ms": 348
+}
