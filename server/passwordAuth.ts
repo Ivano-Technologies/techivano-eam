@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import { getDb } from './db';
 import { users } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import { logger } from './_core/logger';
 
 const SALT_ROUNDS = 10;
 
@@ -36,7 +37,12 @@ export async function createUserWithPassword(
   const openId = `pwd_${Date.now()}_${Math.random().toString(36).substring(7)}`;
   
   const db = await getDb();
-  if (!db) throw new Error('Database not available');
+  if (!db) {
+    logger.warn("createUserWithPassword aborted: database not available", {
+      nodeEnv: process.env.NODE_ENV || null,
+    });
+    throw new Error('Database not available');
+  }
   
   await db.insert(users).values({
     openId,

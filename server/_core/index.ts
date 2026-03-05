@@ -7,10 +7,14 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import { createBullBoard } from "@bull-board/api";
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
+import { ExpressAdapter } from "@bull-board/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { getBackgroundQueue } from "../jobs/queue";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -53,6 +57,16 @@ async function startServer() {
       createContext,
     })
   );
+
+  // Queue monitoring dashboard
+  const bullBoardAdapter = new ExpressAdapter();
+  bullBoardAdapter.setBasePath("/admin/queues");
+  createBullBoard({
+    queues: [new BullMQAdapter(getBackgroundQueue())],
+    serverAdapter: bullBoardAdapter,
+  });
+  app.use("/admin/queues", bullBoardAdapter.getRouter());
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);

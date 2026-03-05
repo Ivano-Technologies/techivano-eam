@@ -9,6 +9,13 @@ import * as notificationHelper from "./notificationHelper";
 import { generatePDFReport, generateExcelReport } from "./reportGenerator";
 import { parseFileData, bulkImportAssets, bulkImportSites, bulkImportVendors, generateAssetsTemplate, generateSitesTemplate, generateVendorsTemplate } from "./bulkImport";
 import { exportToCSV, exportToExcel, formatAssetsForExport, formatSitesForExport, formatVendorsForExport } from "./bulkExport";
+import {
+  enqueuePmEvaluationJob,
+  enqueuePredictiveScoringJob,
+  enqueueReportGenerationJob,
+  enqueueTelemetryAggregationJob,
+} from "./jobs/queue";
+import { getJobRunById, listRecentJobRuns } from "./jobs/jobRunStore";
 
 // Role-based middleware
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -24,6 +31,16 @@ const managerOrAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
   }
   return next({ ctx });
 });
+
+function resolveTenantIdFromContext(ctx: { tenantId?: number | null }) {
+  if (typeof ctx.tenantId === "number" && ctx.tenantId > 0) {
+    return ctx.tenantId;
+  }
+  throw new TRPCError({
+    code: "BAD_REQUEST",
+    message: "Tenant ID is required",
+  });
+}
 
 export const appRouter = router({
   system: systemRouter,
@@ -1061,9 +1078,33 @@ export const appRouter = router({
 
     autoCreateWorkOrders: managerOrAdminProcedure
       .mutation(async ({ ctx }) => {
-        const { autoCreatePreventiveWorkOrders } = await import('./predictiveMaintenance');
-        const workOrderIds = await autoCreatePreventiveWorkOrders(ctx.user.id);
-        return { created: workOrderIds.length, workOrderIds };
+        const tenantId = resolveTenantIdFromContext(ctx);
+        const queued = await enqueuePmEvaluationJob({
+          tenantId,
+          requestedBy: ctx.user.id,
+          actorUserId: ctx.user.id,
+        });
+        return {
+          queued: true,
+          ...queued,
+        };
+      }),
+
+    enqueuePredictiveScoring: managerOrAdminProcedure
+      .input(z.object({
+        assetId: z.number().optional(),
+      }).optional())
+      .mutation(async ({ ctx, input }) => {
+        const tenantId = resolveTenantIdFromContext(ctx);
+        const queued = await enqueuePredictiveScoringJob({
+          tenantId,
+          requestedBy: ctx.user.id,
+          assetId: input?.assetId,
+        });
+        return {
+          queued: true,
+          ...queued,
+        };
       }),
   }),
 
@@ -1538,6 +1579,86 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         return await db.upsertNotificationPreferences(ctx.user.id, input);
+      }),
+  }),
+
+  // ============= BACKGROUND JOBS =============
+  backgroundJobs: router({
+    enqueuePmEvaluation: managerOrAdminProcedure
+      .input(z.object({
+        actorUserId: z.number().optional(),
+      }).optional())
+      .mutation(async ({ ctx, input }) => {
+        const queued = await enqueuePmEvaluationJob({
+          tenantId: resolveTenantIdFromContext(ctx),
+          requestedBy: ctx.user.id,
+          actorUserId: input?.actorUserId ?? ctx.user.id,
+        });
+        return { queued: true, ...queued };
+      }),
+
+    enqueuePredictiveScoring: managerOrAdminProcedure
+      .input(z.object({
+        assetId: z.number().optional(),
+      }).optional())
+      .mutation(async ({ ctx, input }) => {
+        const queued = await enqueuePredictiveScoringJob({
+          tenantId: resolveTenantIdFromContext(ctx),
+          requestedBy: ctx.user.id,
+          assetId: input?.assetId,
+        });
+        return { queued: true, ...queued };
+      }),
+
+    enqueueReportGeneration: managerOrAdminProcedure
+      .input(z.object({
+        reportType: z.enum([
+          "lifecycle-cost",
+          "maintenance-backlog",
+          "downtime-analytics",
+          "asset-utilization",
+        ]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const queued = await enqueueReportGenerationJob({
+          tenantId: resolveTenantIdFromContext(ctx),
+          requestedBy: ctx.user.id,
+          reportType: input.reportType,
+        });
+        return { queued: true, ...queued };
+      }),
+
+    enqueueTelemetryAggregation: managerOrAdminProcedure
+      .input(z.object({
+        assetId: z.number().optional(),
+        hour: z.string().optional(),
+      }).optional())
+      .mutation(async ({ ctx, input }) => {
+        const queued = await enqueueTelemetryAggregationJob({
+          tenantId: resolveTenantIdFromContext(ctx),
+          requestedBy: ctx.user.id,
+          assetId: input?.assetId,
+          hour: input?.hour,
+        });
+        return { queued: true, ...queued };
+      }),
+
+    getRunById: protectedProcedure
+      .input(z.object({
+        runId: z.number().int().positive(),
+      }))
+      .query(async ({ ctx, input }) => {
+        const tenantId = resolveTenantIdFromContext(ctx);
+        return getJobRunById(input.runId, tenantId);
+      }),
+
+    listRecent: protectedProcedure
+      .input(z.object({
+        limit: z.number().int().min(1).max(100).optional(),
+      }).optional())
+      .query(async ({ ctx, input }) => {
+        const tenantId = resolveTenantIdFromContext(ctx);
+        return listRecentJobRuns(tenantId, input?.limit ?? 20);
       }),
   }),
 

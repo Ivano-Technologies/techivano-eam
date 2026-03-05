@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, bigint, index } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, bigint, index, uniqueIndex } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow with extended roles for EAM system
@@ -645,3 +645,143 @@ export const importHistory = mysqlTable("importHistory", {
 
 export type ImportHistory = typeof importHistory.$inferSelect;
 export type InsertImportHistory = typeof importHistory.$inferInsert;
+
+/**
+ * Raw telemetry ingestion points
+ */
+export const telemetryPoints = mysqlTable(
+  "telemetry_points",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    assetId: int("assetId").notNull(),
+    timestamp: timestamp("timestamp").notNull(),
+    metric: varchar("metric", { length: 64 }).notNull(),
+    value: decimal("value", { precision: 15, scale: 4 }).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    tenantAssetMetricTsIdx: index("idx_telemetry_points_tenant_asset_metric_ts").on(
+      table.tenantId,
+      table.assetId,
+      table.metric,
+      table.timestamp
+    ),
+  })
+);
+
+/**
+ * Hourly telemetry aggregates
+ */
+export const telemetryAggregates = mysqlTable(
+  "telemetry_aggregates",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    assetId: int("assetId").notNull(),
+    metric: varchar("metric", { length: 64 }).notNull(),
+    hourBucket: timestamp("hour_bucket").notNull(),
+    avgValue: decimal("avg_value", { precision: 15, scale: 4 }).notNull(),
+    maxValue: decimal("max_value", { precision: 15, scale: 4 }).notNull(),
+    minValue: decimal("min_value", { precision: 15, scale: 4 }).notNull(),
+    count: int("count").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    uniqueBucketIdx: uniqueIndex("uq_telemetry_aggregates_bucket").on(
+      table.tenantId,
+      table.assetId,
+      table.metric,
+      table.hourBucket
+    ),
+    tenantMetricHourIdx: index("idx_telemetry_aggregates_tenant_metric_hour").on(
+      table.tenantId,
+      table.metric,
+      table.hourBucket
+    ),
+  })
+);
+
+/**
+ * Cached analytics report snapshots
+ */
+export const reportSnapshots = mysqlTable(
+  "report_snapshots",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    reportType: varchar("report_type", { length: 100 }).notNull(),
+    generatedAt: timestamp("generated_at").defaultNow().notNull(),
+    payloadJson: text("payload_json").notNull(),
+  },
+  table => ({
+    tenantReportGeneratedIdx: index("idx_report_snapshots_tenant_type_generated").on(
+      table.tenantId,
+      table.reportType,
+      table.generatedAt
+    ),
+  })
+);
+
+/**
+ * Predictive risk scores per asset
+ */
+export const predictiveScores = mysqlTable(
+  "predictive_scores",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    assetId: int("assetId").notNull(),
+    riskScore: int("riskScore").notNull(),
+    factorsJson: text("factors_json"),
+    scoredAt: timestamp("scored_at").defaultNow().notNull(),
+  },
+  table => ({
+    tenantAssetScoredIdx: index("idx_predictive_scores_tenant_asset_scored").on(
+      table.tenantId,
+      table.assetId,
+      table.scoredAt
+    ),
+  })
+);
+
+export type TelemetryPoint = typeof telemetryPoints.$inferSelect;
+export type InsertTelemetryPoint = typeof telemetryPoints.$inferInsert;
+export type TelemetryAggregate = typeof telemetryAggregates.$inferSelect;
+export type InsertTelemetryAggregate = typeof telemetryAggregates.$inferInsert;
+export type ReportSnapshot = typeof reportSnapshots.$inferSelect;
+export type InsertReportSnapshot = typeof reportSnapshots.$inferInsert;
+export type PredictiveScore = typeof predictiveScores.$inferSelect;
+export type InsertPredictiveScore = typeof predictiveScores.$inferInsert;
+
+/**
+ * Background Job Runs - Queue tracking and observability
+ */
+export const backgroundJobRuns = mysqlTable(
+  "backgroundJobRuns",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull().default(1),
+    jobName: varchar("jobName", { length: 100 }).notNull(),
+    queueJobId: varchar("queueJobId", { length: 100 }),
+    status: mysqlEnum("status", ["queued", "running", "completed", "failed", "dead"]).notNull().default("queued"),
+    attempts: int("attempts").notNull().default(0),
+    maxAttempts: int("maxAttempts").notNull().default(3),
+    requestedBy: int("requestedBy"),
+    payload: text("payload"),
+    result: text("result"),
+    error: text("error"),
+    queuedAt: timestamp("queuedAt").defaultNow().notNull(),
+    startedAt: timestamp("startedAt"),
+    completedAt: timestamp("completedAt"),
+  },
+  table => ({
+    tenantIdx: index("idx_background_job_runs_tenant").on(table.tenantId),
+    statusIdx: index("idx_background_job_runs_status").on(table.status),
+    jobNameIdx: index("idx_background_job_runs_job_name").on(table.jobName),
+  })
+);
+
+export type BackgroundJobRun = typeof backgroundJobRuns.$inferSelect;
+export type InsertBackgroundJobRun = typeof backgroundJobRuns.$inferInsert;
