@@ -6,7 +6,16 @@ export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
   user: User | null;
+  tenantId?: number | null;
 };
+
+function parseTenantId(raw: unknown): number | null {
+  const parsed = typeof raw === "string" ? Number(raw) : NaN;
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
+  return null;
+}
 
 export async function createContext(
   opts: CreateExpressContextOptions
@@ -24,5 +33,6 @@ export async function createContext(
     req: opts.req,
     res: opts.res,
     user,
+    tenantId: parseTenantId(opts.req.headers["x-tenant-id"]),
   };
 }

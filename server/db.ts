@@ -9,9 +9,10 @@ import {
   scheduledReports, InsertScheduledReport, assetTransfers, quickbooksConfig, InsertQuickBooksConfig,
   userPreferences, InsertUserPreferences, emailNotifications, InsertEmailNotification,
   workOrderTemplates, InsertWorkOrderTemplate, branchCodes, categoryCodes, subCategories,
-  assetEditHistory
+  assetEditHistory, telemetryPoints, telemetryAggregates, reportSnapshots, predictiveScores
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { logger } from "./_core/logger";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -20,7 +21,10 @@ export async function getDb() {
     try {
       _db = drizzle(process.env.DATABASE_URL);
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      logger.warn("Database connection initialization failed", {
+        errorType: error instanceof Error ? error.name : typeof error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       _db = null;
     }
   }
@@ -36,7 +40,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
+    logger.warn("Cannot upsert user: database not available");
     return;
   }
 
@@ -87,7 +91,10 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       set: updateSet,
     });
   } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
+    logger.error("Failed to upsert user", {
+      errorType: error instanceof Error ? error.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
     throw error;
   }
 }
@@ -1419,4 +1426,225 @@ export async function bulkRejectUsers(userIds: number[], reason?: string) {
   }
   
   return { success: true, count: userIds.length };
+}
+
+// ============= TELEMETRY & ANALYTICS =============
+
+function hourStart(date: Date): Date {
+  const d = new Date(date);
+  d.setMinutes(0, 0, 0);
+  return d;
+}
+
+function addHours(date: Date, hours: number): Date {
+  return new Date(date.getTime() + hours * 60 * 60 * 1000);
+}
+
+export async function createTelemetryPoint(params: {
+  tenantId: number;
+  assetId: number;
+  metric: string;
+  value: number;
+  timestamp?: Date;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+  const ts = params.timestamp ?? new Date();
+  const result = await db.insert(telemetryPoints).values({
+    tenantId: params.tenantId,
+    assetId: params.assetId,
+    metric: params.metric,
+    value: params.value.toString(),
+    timestamp: ts,
+  });
+  return Number((result as any)[0]?.insertId || (result as any).insertId || 0) || null;
+}
+
+export async function aggregateTelemetryHourly(params: {
+  tenantId: number;
+  assetId?: number;
+  hour?: Date;
+}) {
+  const db = await getDb();
+  if (!db) {
+    return { processedPoints: 0, aggregateRowsUpserted: 0 };
+  }
+
+  const hour = params.hour ? hourStart(params.hour) : null;
+  const start = hour ?? addHours(hourStart(new Date()), -24);
+  const end = hour ? addHours(hour, 1) : new Date();
+
+  const conditions = [
+    eq(telemetryPoints.tenantId, params.tenantId),
+    gte(telemetryPoints.timestamp, start),
+    lte(telemetryPoints.timestamp, end),
+  ];
+  if (params.assetId) {
+    conditions.push(eq(telemetryPoints.assetId, params.assetId));
+  }
+
+  const points = await db
+    .select()
+    .from(telemetryPoints)
+    .where(and(...conditions))
+    .orderBy(asc(telemetryPoints.timestamp));
+
+  const grouped = new Map<
+    string,
+    { tenantId: number; assetId: number; metric: string; hourBucket: Date; sum: number; min: number; max: number; count: number }
+  >();
+
+  for (const point of points) {
+    const bucket = hourStart(new Date(point.timestamp));
+    const key = `${point.tenantId}:${point.assetId}:${point.metric}:${bucket.toISOString()}`;
+    const numeric = Number(point.value);
+    const existing = grouped.get(key);
+    if (!existing) {
+      grouped.set(key, {
+        tenantId: point.tenantId,
+        assetId: point.assetId,
+        metric: point.metric,
+        hourBucket: bucket,
+        sum: numeric,
+        min: numeric,
+        max: numeric,
+        count: 1,
+      });
+      continue;
+    }
+    existing.sum += numeric;
+    existing.count += 1;
+    if (numeric < existing.min) existing.min = numeric;
+    if (numeric > existing.max) existing.max = numeric;
+  }
+
+  let upserts = 0;
+  for (const group of Array.from(grouped.values())) {
+    await db
+      .insert(telemetryAggregates)
+      .values({
+        tenantId: group.tenantId,
+        assetId: group.assetId,
+        metric: group.metric,
+        hourBucket: group.hourBucket,
+        avgValue: (group.sum / group.count).toString(),
+        maxValue: group.max.toString(),
+        minValue: group.min.toString(),
+        count: group.count,
+      })
+      .onDuplicateKeyUpdate({
+        set: {
+          avgValue: (group.sum / group.count).toString(),
+          maxValue: group.max.toString(),
+          minValue: group.min.toString(),
+          count: group.count,
+          updatedAt: new Date(),
+        },
+      });
+    upserts += 1;
+  }
+
+  return {
+    processedPoints: points.length,
+    aggregateRowsUpserted: upserts,
+    windowStart: start,
+    windowEnd: end,
+  };
+}
+
+export async function getTelemetryAnomalyStats(tenantId: number, assetId: number) {
+  const db = await getDb();
+  if (!db) {
+    return { anomalyCount: 0, anomalyRatio: 0 };
+  }
+  const now = new Date();
+  const last24h = addHours(now, -24);
+  const last7d = addHours(now, -24 * 7);
+
+  const recent = await db
+    .select()
+    .from(telemetryPoints)
+    .where(
+      and(
+        eq(telemetryPoints.tenantId, tenantId),
+        eq(telemetryPoints.assetId, assetId),
+        gte(telemetryPoints.timestamp, last24h)
+      )
+    );
+
+  const baseline = await db
+    .select()
+    .from(telemetryPoints)
+    .where(
+      and(
+        eq(telemetryPoints.tenantId, tenantId),
+        eq(telemetryPoints.assetId, assetId),
+        gte(telemetryPoints.timestamp, last7d),
+        lte(telemetryPoints.timestamp, last24h)
+      )
+    );
+
+  if (recent.length === 0 || baseline.length === 0) {
+    return { anomalyCount: 0, anomalyRatio: 0 };
+  }
+
+  const baselineByMetric = new Map<string, number>();
+  const baselineCountByMetric = new Map<string, number>();
+  for (const p of baseline) {
+    const current = baselineByMetric.get(p.metric) ?? 0;
+    const count = baselineCountByMetric.get(p.metric) ?? 0;
+    baselineByMetric.set(p.metric, current + Number(p.value));
+    baselineCountByMetric.set(p.metric, count + 1);
+  }
+
+  let anomalies = 0;
+  for (const p of recent) {
+    const sum = baselineByMetric.get(p.metric);
+    const count = baselineCountByMetric.get(p.metric);
+    if (!sum || !count) continue;
+    const baselineAvg = sum / count;
+    const value = Number(p.value);
+    if (value > baselineAvg * 1.2 || value < baselineAvg * 0.8) {
+      anomalies += 1;
+    }
+  }
+
+  return {
+    anomalyCount: anomalies,
+    anomalyRatio: recent.length > 0 ? anomalies / recent.length : 0,
+  };
+}
+
+export async function createReportSnapshot(params: {
+  tenantId: number;
+  reportType: string;
+  payload: unknown;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.insert(reportSnapshots).values({
+    tenantId: params.tenantId,
+    reportType: params.reportType,
+    payloadJson: JSON.stringify(params.payload ?? {}),
+    generatedAt: new Date(),
+  });
+  return Number((result as any)[0]?.insertId || (result as any).insertId || 0) || null;
+}
+
+export async function createPredictiveScore(params: {
+  tenantId: number;
+  assetId: number;
+  riskScore: number;
+  factors: unknown;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.insert(predictiveScores).values({
+    tenantId: params.tenantId,
+    assetId: params.assetId,
+    riskScore: params.riskScore,
+    factorsJson: JSON.stringify(params.factors ?? {}),
+    scoredAt: new Date(),
+  });
+  return Number((result as any)[0]?.insertId || (result as any).insertId || 0) || null;
 }
