@@ -9,6 +9,12 @@ import type {
   PredictiveScoringJobPayload,
   ReportGenerationJobPayload,
   TelemetryAggregationJobPayload,
+  WarehouseRebalanceJobPayload,
+  VendorRiskScoringJobPayload,
+  ProcurementRecommendationJobPayload,
+  SupplyChainRiskEvaluationJobPayload,
+  DispatchOptimizationJobPayload,
+  ExecutiveMetricsJobPayload,
 } from "./types";
 
 const QUEUE_NAME = "eam-background-jobs";
@@ -116,6 +122,102 @@ export async function enqueueTelemetryAggregationJob(
       ...payload,
       runId: null,
       requestedAt: new Date().toISOString(),
+    },
+  });
+}
+
+export async function enqueueWarehouseRebalanceJob(
+  payload: Omit<WarehouseRebalanceJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "warehouse.rebalanceStock",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+    options: {
+      jobId: `warehouse:rebalance:${payload.tenantId}:${payload.stockItemId}`,
+    },
+  });
+}
+
+export async function enqueueVendorRiskScoringJob(
+  payload: Omit<VendorRiskScoringJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "vendor.computeRiskScores",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+    options: payload.vendorId
+      ? { jobId: `vendor:risk:${payload.tenantId}:${payload.vendorId}` }
+      : { jobId: `vendor:risk:${payload.tenantId}:all` },
+  });
+}
+
+export async function enqueueProcurementRecommendationJob(
+  payload: Omit<ProcurementRecommendationJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "procurement.generateRecommendations",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+    options: payload.stockItemId
+      ? { jobId: `procurement:recommend:${payload.tenantId}:${payload.stockItemId}` }
+      : { jobId: `procurement:recommend:${payload.tenantId}:all` },
+  });
+}
+
+export async function enqueueSupplyChainRiskEvaluationJob(
+  payload: Omit<SupplyChainRiskEvaluationJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "supplychain.evaluateRisk",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+    options: payload.stockItemId
+      ? { jobId: `supplychain:risk:${payload.tenantId}:${payload.stockItemId}:${payload.vendorId ?? "all"}` }
+      : { jobId: `supplychain:risk:${payload.tenantId}:all` },
+  });
+}
+
+export async function enqueueDispatchOptimizationJob(
+  payload: Omit<DispatchOptimizationJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "dispatch.optimizeAssignments",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+    options: payload.workOrderId
+      ? { jobId: `dispatch:optimize:${payload.tenantId}:${payload.workOrderId}:${payload.facilityId ?? "all"}` }
+      : { jobId: `dispatch:optimize:${payload.tenantId}:all` },
+  });
+}
+
+export async function enqueueExecutiveMetricsJob(
+  payload: Omit<ExecutiveMetricsJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "executive.computeMetrics",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+    options: {
+      jobId: `executive:metrics:${payload.tenantId}:${payload.snapshotDate ?? "latest"}`,
     },
   });
 }

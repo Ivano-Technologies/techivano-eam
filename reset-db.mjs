@@ -4,21 +4,20 @@
  * Clears all sample data from tables while preserving schema
  */
 
-import { drizzle } from 'drizzle-orm/mysql2';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import { sql } from 'drizzle-orm';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-const db = drizzle(process.env.DATABASE_URL);
+const client = postgres(process.env.DATABASE_URL, { prepare: false });
+const db = drizzle(client);
 
 async function resetDatabase() {
   console.log('🔄 Starting database reset...');
   
   try {
-    // Disable foreign key checks temporarily
-    await db.execute(sql`SET FOREIGN_KEY_CHECKS = 0`);
-    
     // Clear all tables (except users table to preserve admin access)
     const tables = [
       'assetPhotos',
@@ -41,16 +40,8 @@ async function resetDatabase() {
     
     for (const table of tables) {
       console.log(`  Clearing ${table}...`);
-      await db.execute(sql.raw(`TRUNCATE TABLE ${table}`));
+      await db.execute(sql.raw(`TRUNCATE TABLE "${table}" RESTART IDENTITY CASCADE`));
     }
-    
-    // Reset auto-increment counters
-    for (const table of tables) {
-      await db.execute(sql.raw(`ALTER TABLE ${table} AUTO_INCREMENT = 1`));
-    }
-    
-    // Re-enable foreign key checks
-    await db.execute(sql`SET FOREIGN_KEY_CHECKS = 1`);
     
     console.log('✅ Database reset complete!');
     console.log('📝 All sample data has been removed.');

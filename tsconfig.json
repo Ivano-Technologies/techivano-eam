@@ -11,12 +11,14 @@
     "jsx": "preserve",
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
     "allowImportingTsExtensions": true,
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "types": ["node", "vite/client"],
     "paths": {
-      "@/*": ["./client/src/*"],
+      "@/*": ["client/src/*"],
+      "@server/*": ["server/*"],
       "@shared/*": ["./shared/*"]
     }
   }

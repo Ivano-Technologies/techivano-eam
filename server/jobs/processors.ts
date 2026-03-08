@@ -9,7 +9,26 @@ import type {
   PredictiveScoringJobPayload,
   ReportGenerationJobPayload,
   TelemetryAggregationJobPayload,
+  WarehouseRebalanceJobPayload,
+  VendorRiskScoringJobPayload,
+  ProcurementRecommendationJobPayload,
+  SupplyChainRiskEvaluationJobPayload,
+  DispatchOptimizationJobPayload,
+  ExecutiveMetricsJobPayload,
 } from "./types";
+import {
+  analyticsService,
+  complianceService,
+  dispatchOptimizationService,
+  executiveIntelligenceService,
+  inspectionService,
+  procurementService,
+  slaService,
+  supplyChainRiskService,
+  stockIntelligenceService,
+  vendorIntelligenceService,
+  warehouseIntelligenceService
+} from "../modules";
 
 export async function processJob(jobName: BackgroundJobName, payload: BackgroundJobPayload) {
   switch (jobName) {
@@ -21,12 +40,29 @@ export async function processJob(jobName: BackgroundJobName, payload: Background
       return processReportGeneration(payload as ReportGenerationJobPayload);
     case "telemetry.aggregateHourly":
       return processTelemetryAggregation(payload as TelemetryAggregationJobPayload);
+    case "warehouse.rebalanceStock":
+      return processWarehouseRebalance(payload as WarehouseRebalanceJobPayload);
+    case "vendor.computeRiskScores":
+      return processVendorRiskScoring(payload as VendorRiskScoringJobPayload);
+    case "procurement.generateRecommendations":
+      return processProcurementRecommendations(payload as ProcurementRecommendationJobPayload);
+    case "supplychain.evaluateRisk":
+      return processSupplyChainRiskEvaluation(payload as SupplyChainRiskEvaluationJobPayload);
+    case "dispatch.optimizeAssignments":
+      return processDispatchOptimization(payload as DispatchOptimizationJobPayload);
+    case "executive.computeMetrics":
+      return processExecutiveMetrics(payload as ExecutiveMetricsJobPayload);
     default:
       return { success: false, message: "Unknown background job" };
   }
 }
 
 async function processPmEvaluation(payload: PmEvaluationJobPayload) {
+  void analyticsService;
+  void complianceService;
+  void inspectionService;
+  void slaService;
+  void stockIntelligenceService;
   const actorUserId = payload.actorUserId ?? payload.requestedBy ?? 1;
   const workOrderIds = await autoCreatePreventiveWorkOrders(actorUserId);
   return {
@@ -170,5 +206,203 @@ async function processTelemetryAggregation(payload: TelemetryAggregationJobPaylo
     assetId: payload.assetId ?? null,
     hour: aggregationHour?.toISOString() ?? null,
     ...aggregated,
+  };
+}
+
+async function processWarehouseRebalance(payload: WarehouseRebalanceJobPayload) {
+  const metrics = await db.getInventoryWarehouseMetrics(payload.tenantId, payload.stockItemId);
+  const plan = await warehouseIntelligenceService.computeTransferPlan({
+    tenantId: payload.tenantId,
+    stockItemId: payload.stockItemId,
+    metrics,
+  });
+
+  const agentExecutionId = `run-${payload.runId ?? "manual"}`;
+  const persisted = await db.upsertWarehouseTransferRecommendations({
+    tenantId: payload.tenantId,
+    recommendations: plan.recommendations.map((reco) => ({
+      stockItemId: reco.stockItemId,
+      sourceWarehouseId: reco.sourceWarehouseId,
+      targetWarehouseId: reco.targetWarehouseId,
+      transferQuantity: reco.transferQuantity,
+      transferPriority: reco.transferPriority,
+      pressureScore: reco.pressureScore,
+      agentExecutionId,
+    })),
+  });
+
+  return {
+    success: true,
+    tenantId: payload.tenantId,
+    stockItemId: payload.stockItemId,
+    warehousesEvaluated: metrics.length,
+    recommendationsGenerated: plan.recommendations.length,
+    recommendationsPersisted: persisted,
+    adjustment: plan.adjustment,
+  };
+}
+
+async function processVendorRiskScoring(payload: VendorRiskScoringJobPayload) {
+  const allSignals = await db.getVendorScoringInputs(payload.tenantId);
+  const scopedSignals = payload.vendorId
+    ? allSignals.filter((signal) => signal.vendorId === payload.vendorId)
+    : allSignals;
+
+  const evaluated = await vendorIntelligenceService.evaluateVendorIntelligence(scopedSignals);
+  const agentExecutionId = `run-${payload.runId ?? "manual"}`;
+  const persisted = await db.upsertVendorIntelligenceSnapshots({
+    tenantId: payload.tenantId,
+    performance: evaluated.performance.map((row) => ({
+      vendorId: row.vendorId,
+      deliveryReliability: row.deliveryReliability,
+      costVariance: row.costVariance,
+      leadTimeStability: row.leadTimeStability,
+      defectRate: row.defectRate,
+      vendorScore: row.vendorScore,
+      agentExecutionId,
+    })),
+    risks: evaluated.risks.map((row) => ({
+      vendorId: row.vendorId,
+      vendorScore: row.vendorScore,
+      riskScore: row.riskScore,
+      riskBand: row.riskBand,
+      agentExecutionId,
+    })),
+  });
+
+  return {
+    success: true,
+    tenantId: payload.tenantId,
+    vendorsEvaluated: scopedSignals.length,
+    performanceRowsPersisted: persisted.performanceRows,
+    riskRowsPersisted: persisted.riskRows,
+  };
+}
+
+async function processProcurementRecommendations(payload: ProcurementRecommendationJobPayload) {
+  const signals = await db.getProcurementInputSignals({
+    tenantId: payload.tenantId,
+    stockItemId: payload.stockItemId,
+  });
+  const recommendations = procurementService.generateProcurementRecommendations(signals);
+  const agentExecutionId = `run-${payload.runId ?? "manual"}`;
+  const persisted = await db.upsertProcurementRecommendations({
+    tenantId: payload.tenantId,
+    recommendations: recommendations.map((row) => ({
+      stockItemId: row.stockItemId,
+      recommendedVendorId: row.recommendedVendorId,
+      recommendedQuantity: row.recommendedQuantity,
+      demandScore: row.demandScore,
+      vendorRiskScore: row.vendorRiskScore,
+      procurementPriority: row.procurementPriority,
+      agentExecutionId,
+    })),
+  });
+
+  return {
+    success: true,
+    tenantId: payload.tenantId,
+    stockItemId: payload.stockItemId ?? null,
+    recommendationsGenerated: recommendations.length,
+    recommendationsPersisted: persisted,
+  };
+}
+
+async function processSupplyChainRiskEvaluation(payload: SupplyChainRiskEvaluationJobPayload) {
+  const inputs = await db.getSupplyChainRiskInputs({
+    tenantId: payload.tenantId,
+    stockItemId: payload.stockItemId,
+    vendorId: payload.vendorId,
+  });
+  const scores = supplyChainRiskService.evaluateRiskBatch(inputs);
+  const agentExecutionId = `run-${payload.runId ?? "manual"}`;
+  const persisted = await db.upsertSupplyChainRiskSnapshots({
+    tenantId: payload.tenantId,
+    scores: scores.map((row) => ({
+      stockItemId: row.stockItemId,
+      vendorId: row.vendorId,
+      demandVolatility: row.demandVolatility,
+      leadTimeRisk: row.leadTimeRisk,
+      vendorRisk: row.vendorRisk,
+      transportRisk: row.transportRisk,
+      inventoryPressure: row.inventoryPressure,
+      riskIndex: row.riskIndex,
+      riskBand: row.riskBand,
+      agentExecutionId,
+    })),
+  });
+
+  return {
+    success: true,
+    tenantId: payload.tenantId,
+    stockItemId: payload.stockItemId ?? null,
+    vendorId: payload.vendorId ?? null,
+    riskScoresGenerated: scores.length,
+    riskScoresPersisted: persisted.scoreRows,
+    riskEventsPersisted: persisted.eventRows,
+  };
+}
+
+async function processDispatchOptimization(payload: DispatchOptimizationJobPayload) {
+  const options = await db.getDispatchOptimizationInputs({
+    tenantId: payload.tenantId,
+    workOrderId: payload.workOrderId,
+    facilityId: payload.facilityId,
+  });
+  const assignments = dispatchOptimizationService.evaluateDispatchOptions(options);
+  const agentExecutionId = `run-${payload.runId ?? "manual"}`;
+  const persisted = await db.upsertDispatchAssignments({
+    tenantId: payload.tenantId,
+    assignments: assignments.map((row) => ({
+      workOrderId: row.workOrderId,
+      technicianId: row.technicianId,
+      fleetUnitId: row.fleetUnitId,
+      dispatchPriority: row.dispatchPriority,
+      estimatedTravelTime: row.estimatedTravelTime,
+      routeDistance: row.routeDistance,
+      dispatchScore: row.dispatchScore,
+      agentExecutionId,
+    })),
+  });
+
+  return {
+    success: true,
+    tenantId: payload.tenantId,
+    workOrderId: payload.workOrderId ?? null,
+    facilityId: payload.facilityId ?? null,
+    assignmentsGenerated: assignments.length,
+    assignmentsPersisted: persisted,
+  };
+}
+
+async function processExecutiveMetrics(payload: ExecutiveMetricsJobPayload) {
+  const inputs = await db.getExecutiveMetricsInputs(payload.tenantId);
+  const snapshot = executiveIntelligenceService.buildExecutiveMetricsSnapshot(inputs);
+  const snapshotDate = payload.snapshotDate ? new Date(payload.snapshotDate) : new Date();
+  const agentExecutionId = `run-${payload.runId ?? "manual"}`;
+  const persisted = await db.upsertExecutiveMetricsSnapshot({
+    tenantId: payload.tenantId,
+    snapshotDate,
+    agentExecutionId,
+    snapshot: {
+      assetHealthIndex: snapshot.assetHealthIndex,
+      maintenanceCostProjection: snapshot.maintenanceCostProjection,
+      inventoryPressureIndex: snapshot.inventoryPressureIndex,
+      vendorRiskIndex: snapshot.vendorRiskIndex,
+      supplyChainRiskIndex: snapshot.supplyChainRiskIndex,
+      fleetUtilizationRate: snapshot.fleetUtilizationRate,
+      technicianProductivityScore: snapshot.technicianProductivityScore,
+      overallOperationsIndex: snapshot.overallOperationsIndex,
+    },
+  });
+
+  return {
+    success: true,
+    tenantId: payload.tenantId,
+    snapshotDate: snapshotDate.toISOString(),
+    operationsStatus: snapshot.operationsStatus,
+    overallOperationsIndex: snapshot.overallOperationsIndex,
+    snapshotsPersisted: persisted.snapshotRows,
+    trendsPersisted: persisted.trendRows,
   };
 }

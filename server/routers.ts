@@ -14,8 +14,27 @@ import {
   enqueuePredictiveScoringJob,
   enqueueReportGenerationJob,
   enqueueTelemetryAggregationJob,
+  enqueueWarehouseRebalanceJob,
+  enqueueVendorRiskScoringJob,
+  enqueueProcurementRecommendationJob,
+  enqueueSupplyChainRiskEvaluationJob,
+  enqueueDispatchOptimizationJob,
+  enqueueExecutiveMetricsJob,
 } from "./jobs/queue";
 import { getJobRunById, listRecentJobRuns } from "./jobs/jobRunStore";
+import {
+  analyticsService,
+  complianceService,
+  dispatchOptimizationService,
+  executiveIntelligenceService,
+  inspectionService,
+  procurementService,
+  slaService,
+  supplyChainRiskService,
+  stockIntelligenceService,
+  vendorIntelligenceService,
+  warehouseIntelligenceService
+} from "./modules";
 
 // Role-based middleware
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -33,6 +52,17 @@ const managerOrAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 function resolveTenantIdFromContext(ctx: { tenantId?: number | null }) {
+  void analyticsService;
+  void complianceService;
+  void dispatchOptimizationService;
+  void executiveIntelligenceService;
+  void inspectionService;
+  void procurementService;
+  void slaService;
+  void supplyChainRiskService;
+  void stockIntelligenceService;
+  void vendorIntelligenceService;
+  void warehouseIntelligenceService;
   if (typeof ctx.tenantId === "number" && ctx.tenantId > 0) {
     return ctx.tenantId;
   }
@@ -1222,6 +1252,206 @@ export const appRouter = router({
       }),
   }),
 
+  warehouseV1: router({
+    rebalance: managerOrAdminProcedure
+      .input(
+        z.object({
+          stockItemId: z.number().int().positive(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const queued = await enqueueWarehouseRebalanceJob({
+          tenantId: resolveTenantIdFromContext(ctx),
+          requestedBy: ctx.user.id,
+          stockItemId: input.stockItemId,
+        });
+        return { queued: true, ...queued };
+      }),
+
+    recommendations: protectedProcedure
+      .input(
+        z.object({
+          stockItemId: z.number().int().positive().optional(),
+          limit: z.number().int().min(1).max(200).optional(),
+        }).optional(),
+      )
+      .query(async ({ ctx, input }) => {
+        return db.listWarehouseTransferRecommendations({
+          tenantId: resolveTenantIdFromContext(ctx),
+          stockItemId: input?.stockItemId,
+          limit: input?.limit ?? 50,
+        });
+      }),
+  }),
+
+  procurementV1: router({
+    recommend: managerOrAdminProcedure
+      .input(
+        z.object({
+          stockItemId: z.number().int().positive().optional(),
+        }).optional(),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const queued = await enqueueProcurementRecommendationJob({
+          tenantId: resolveTenantIdFromContext(ctx),
+          requestedBy: ctx.user.id,
+          stockItemId: input?.stockItemId,
+        });
+        return { queued: true, ...queued };
+      }),
+
+    recommendations: protectedProcedure
+      .input(
+        z.object({
+          stockItemId: z.number().int().positive().optional(),
+          limit: z.number().int().min(1).max(200).optional(),
+        }).optional(),
+      )
+      .query(async ({ ctx, input }) => {
+        return db.listProcurementRecommendations({
+          tenantId: resolveTenantIdFromContext(ctx),
+          stockItemId: input?.stockItemId,
+          limit: input?.limit ?? 50,
+        });
+      }),
+
+    createPurchaseOrder: managerOrAdminProcedure
+      .input(
+        z.object({
+          recommendationId: z.number().int().positive(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const purchaseOrder = await db.createPurchaseOrderFromRecommendation({
+          tenantId: resolveTenantIdFromContext(ctx),
+          recommendationId: input.recommendationId,
+        });
+        if (!purchaseOrder) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Recommendation not found for tenant",
+          });
+        }
+        return purchaseOrder;
+      }),
+  }),
+
+  supplyChainV1: router({
+    evaluate: managerOrAdminProcedure
+      .input(
+        z.object({
+          stockItemId: z.number().int().positive().optional(),
+          vendorId: z.number().int().positive().optional(),
+        }).optional(),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const queued = await enqueueSupplyChainRiskEvaluationJob({
+          tenantId: resolveTenantIdFromContext(ctx),
+          requestedBy: ctx.user.id,
+          stockItemId: input?.stockItemId,
+          vendorId: input?.vendorId,
+        });
+        return { queued: true, ...queued };
+      }),
+
+    risk: protectedProcedure
+      .input(
+        z.object({
+          stockItemId: z.number().int().positive().optional(),
+          vendorId: z.number().int().positive().optional(),
+          riskBand: z.enum(["low", "moderate", "elevated", "high", "critical"]).optional(),
+          limit: z.number().int().min(1).max(200).optional(),
+        }).optional(),
+      )
+      .query(async ({ ctx, input }) => {
+        return db.listSupplyChainRiskScores({
+          tenantId: resolveTenantIdFromContext(ctx),
+          stockItemId: input?.stockItemId,
+          vendorId: input?.vendorId,
+          riskBand: input?.riskBand,
+          limit: input?.limit ?? 50,
+        });
+      }),
+  }),
+
+  dispatchV1: router({
+    optimize: managerOrAdminProcedure
+      .input(
+        z.object({
+          workOrderId: z.number().int().positive().optional(),
+          facilityId: z.number().int().positive().optional(),
+        }).optional(),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const queued = await enqueueDispatchOptimizationJob({
+          tenantId: resolveTenantIdFromContext(ctx),
+          requestedBy: ctx.user.id,
+          workOrderId: input?.workOrderId,
+          facilityId: input?.facilityId,
+        });
+        return { queued: true, ...queued };
+      }),
+
+    assignments: protectedProcedure
+      .input(
+        z.object({
+          facilityId: z.number().int().positive().optional(),
+          technicianId: z.number().int().positive().optional(),
+          status: z.enum(["created", "completed", "delayed"]).optional(),
+          limit: z.number().int().min(1).max(200).optional(),
+        }).optional(),
+      )
+      .query(async ({ ctx, input }) => {
+        return db.listDispatchAssignments({
+          tenantId: resolveTenantIdFromContext(ctx),
+          facilityId: input?.facilityId,
+          technicianId: input?.technicianId,
+          status: input?.status,
+          limit: input?.limit ?? 50,
+        });
+      }),
+  }),
+
+  executiveV1: router({
+    compute: managerOrAdminProcedure
+      .input(
+        z.object({
+          snapshotDate: z.string().optional(),
+        }).optional(),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const queued = await enqueueExecutiveMetricsJob({
+          tenantId: resolveTenantIdFromContext(ctx),
+          requestedBy: ctx.user.id,
+          snapshotDate: input?.snapshotDate,
+        });
+        return { queued: true, ...queued };
+      }),
+
+    metrics: protectedProcedure.query(async ({ ctx }) => {
+      return db.getLatestExecutiveMetricsSnapshot(resolveTenantIdFromContext(ctx));
+    }),
+
+    kpiTrends: protectedProcedure
+      .input(
+        z.object({
+          metricName: z.string().optional(),
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+          limit: z.number().int().min(1).max(200).optional(),
+        }).optional(),
+      )
+      .query(async ({ ctx, input }) => {
+        return db.listOperationalKpiTrends({
+          tenantId: resolveTenantIdFromContext(ctx),
+          metricName: input?.metricName,
+          startDate: input?.startDate ? new Date(input.startDate) : undefined,
+          endDate: input?.endDate ? new Date(input.endDate) : undefined,
+          limit: input?.limit ?? 100,
+        });
+      }),
+  }),
+
   // ============= VENDORS =============
   vendors: router({
     list: protectedProcedure.query(async () => {
@@ -1291,6 +1521,36 @@ export const appRouter = router({
         const formatted = formatVendorsForExport(vendors);
         const data = input.format === 'csv' ? exportToCSV(formatted) : exportToExcel(formatted, 'Vendors');
         return { data, format: input.format, filename: `vendors_export.${input.format === 'csv' ? 'csv' : 'xlsx'}` };
+      }),
+  }),
+
+  vendorIntelligence: router({
+    compute: managerOrAdminProcedure
+      .input(
+        z.object({
+          vendorId: z.number().int().positive().optional(),
+        }).optional(),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const queued = await enqueueVendorRiskScoringJob({
+          tenantId: resolveTenantIdFromContext(ctx),
+          requestedBy: ctx.user.id,
+          vendorId: input?.vendorId,
+        });
+        return { queued: true, ...queued };
+      }),
+
+    riskScores: protectedProcedure
+      .input(
+        z.object({
+          limit: z.number().int().min(1).max(200).optional(),
+        }).optional(),
+      )
+      .query(async ({ ctx, input }) => {
+        return db.listVendorRiskScores({
+          tenantId: resolveTenantIdFromContext(ctx),
+          limit: input?.limit ?? 50,
+        });
       }),
   }),
 

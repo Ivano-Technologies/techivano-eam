@@ -1,2 +1,2 @@
-import "dotenv/config";
+import "./loadEnv";
 import "../jobs/worker";

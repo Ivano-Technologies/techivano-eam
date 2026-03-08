@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { backgroundJobRuns } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { logger } from "../_core/logger";
+import { ENV } from "../_core/env";
 import type { BackgroundJobName } from "./types";
 
 type Status = "queued" | "running" | "completed" | "failed" | "dead";
@@ -22,7 +23,7 @@ export async function createJobRun(input: CreateJobRunInput): Promise<number | n
     tenantId: input.tenantId,
     jobName: input.jobName,
     requestedBy: input.requestedBy,
-    maxAttempts: input.maxAttempts ?? 3,
+    maxAttempts: input.maxAttempts ?? ENV.queueDefaultAttempts,
     payload: JSON.stringify(input.payload ?? {}),
     status: "queued",
   });
@@ -38,30 +39,32 @@ export async function markJobRunning(runId: number, attempts: number): Promise<v
   await updateJobRun(runId, { status: "running", attempts, startedAt: new Date() });
 }
 
-export async function markJobCompleted(runId: number, result: unknown, attempts: number): Promise<void> {
+export async function markJobCompleted(runId: number, result: unknown, attempts: number, durationMs?: number): Promise<void> {
   await updateJobRun(runId, {
     status: "completed",
     attempts,
     result: JSON.stringify(result ?? {}),
     completedAt: new Date(),
+    durationMs,
   });
 }
 
-export async function markJobFailed(runId: number, error: string, attempts: number): Promise<void> {
+export async function markJobFailed(runId: number, error: string, attempts: number, durationMs?: number): Promise<void> {
   await updateJobRun(runId, {
     status: "failed",
     attempts,
     error,
-    completedAt: new Date(),
+    durationMs,
   });
 }
 
-export async function markJobDead(runId: number, error: string, attempts: number): Promise<void> {
+export async function markJobDead(runId: number, error: string, attempts: number, durationMs?: number): Promise<void> {
   await updateJobRun(runId, {
     status: "dead",
     attempts,
     error,
     completedAt: new Date(),
+    durationMs,
   });
 }
 
@@ -73,6 +76,7 @@ async function updateJobRun(
     attempts: number;
     startedAt: Date;
     completedAt: Date;
+    durationMs: number;
     result: string;
     error: string;
   }>

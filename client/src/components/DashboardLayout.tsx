@@ -22,7 +22,7 @@ import {
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
-import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan, Search, AlertTriangle, BarChart3, History } from "lucide-react";
+import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan, Search, AlertTriangle, BarChart3, History, ArrowRightLeft, Truck, Gauge } from "lucide-react";
 import { NairaIcon } from "./icons/NairaIcon";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -50,6 +50,12 @@ const allMenuItems = [
   { icon: Mail, label: "Email Notifications", path: "/email-notifications", adminOnly: true },
   { icon: NairaIcon, label: "Financial", path: "/financial", adminOnly: false },
   { icon: TrendingUp, label: "Inventory", path: "/inventory", adminOnly: false },
+  { icon: ArrowRightLeft, label: "Warehouse Rebalance", path: "/warehouse-rebalance", adminOnly: false },
+  { icon: BarChart3, label: "Vendor Intelligence", path: "/vendor-intelligence", adminOnly: false },
+  { icon: DollarSign, label: "Procurement", path: "/procurement", adminOnly: false },
+  { icon: AlertTriangle, label: "Supply Chain Risk", path: "/supply-chain-risk", adminOnly: false },
+  { icon: Truck, label: "Fleet Operations", path: "/fleet-operations", adminOnly: false },
+  { icon: Gauge, label: "Executive Dashboard", path: "/executive", adminOnly: false },
   { icon: Calendar, label: "Maintenance", path: "/maintenance", adminOnly: false },
   { icon: DollarSign, label: "QuickBooks", path: "/quickbooks", adminOnly: true },
   { icon: FileText, label: "Reports", path: "/reports", adminOnly: false },

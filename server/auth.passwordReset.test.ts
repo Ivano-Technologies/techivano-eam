@@ -33,6 +33,10 @@ describe("Password Reset Flow", () => {
       name: "Reset Test User",
       password: testPassword,
     });
+    const db = await getDb();
+    if (db) {
+      await db.update(users).set({ status: "approved" }).where(eq(users.email, testEmail));
+    }
   });
 
   it("should generate reset token for existing email", async () => {
