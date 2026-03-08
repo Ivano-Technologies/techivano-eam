@@ -38,7 +38,7 @@ await Promise.all([
   }),
   log("H2", "scripts/debug-check-env.mjs:40", "Critical package resolution", {
     vite: resolvePkg("vite"),
-    mysql2: resolvePkg("mysql2"),
+    postgres: resolvePkg("postgres"),
     trpcServer: resolvePkg("@trpc/server"),
     typescript: resolvePkg("typescript"),
   }),

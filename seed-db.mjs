@@ -1,10 +1,12 @@
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { sites, assetCategories } from "./drizzle/schema.ts";
 import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const db = drizzle(process.env.DATABASE_URL);
+const client = postgres(process.env.DATABASE_URL, { prepare: false });
+const db = drizzle(client);
 
 async function seed() {
   console.log("Seeding database...");
@@ -40,7 +42,7 @@ async function seed() {
   ];
 
   for (const site of siteData) {
-    await db.insert(sites).values(site).onDuplicateKeyUpdate({ set: { name: site.name } });
+    await db.insert(sites).values(site).onConflictDoNothing();
   }
 
   // Seed asset categories
@@ -55,7 +57,7 @@ async function seed() {
   ];
 
   for (const category of categoryData) {
-    await db.insert(assetCategories).values(category).onDuplicateKeyUpdate({ set: { name: category.name } });
+    await db.insert(assetCategories).values(category).onConflictDoNothing();
   }
 
   console.log("Database seeded successfully!");

@@ -22,7 +22,7 @@ import {
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
-import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan, Search, AlertTriangle, BarChart3, History } from "lucide-react";
+import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan, Search, AlertTriangle, BarChart3, History, ArrowLeftRight } from "lucide-react";
 import { NairaIcon } from "./icons/NairaIcon";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -47,10 +47,12 @@ const allMenuItems = [
   { icon: Map, label: "Asset Map", path: "/asset-map", adminOnly: false },
   { icon: Scan, label: "Asset Scanner", path: "/scanner", adminOnly: false },
   { icon: FileText, label: "Compliance", path: "/compliance", adminOnly: false },
+  { icon: FileText, label: "Compliance Dashboard", path: "/compliance-dashboard", adminOnly: false },
   { icon: Mail, label: "Email Notifications", path: "/email-notifications", adminOnly: true },
   { icon: NairaIcon, label: "Financial", path: "/financial", adminOnly: false },
   { icon: TrendingUp, label: "Inventory", path: "/inventory", adminOnly: false },
   { icon: Calendar, label: "Maintenance", path: "/maintenance", adminOnly: false },
+  { icon: Calendar, label: "Inspections", path: "/inspections", adminOnly: false },
   { icon: DollarSign, label: "QuickBooks", path: "/quickbooks", adminOnly: true },
   { icon: FileText, label: "Reports", path: "/reports", adminOnly: false },
   { icon: Calendar, label: "Report Scheduling", path: "/report-scheduling", adminOnly: false },
@@ -62,7 +64,11 @@ const allMenuItems = [
   { icon: FileText, label: "Work Order Templates", path: "/work-order-templates", adminOnly: false },
   { icon: AlertTriangle, label: "Warranty Alerts", path: "/warranty-alerts", adminOnly: false },
   { icon: BarChart3, label: "Cost Analytics", path: "/cost-analytics", adminOnly: false },
+  { icon: BarChart3, label: "Analytics", path: "/asset-health", adminOnly: false },
+  { icon: TrendingUp, label: "Stock Forecasts", path: "/stock-forecasts", adminOnly: false },
+  { icon: ArrowLeftRight, label: "Warehouse Rebalance", path: "/warehouse-rebalance", adminOnly: false },
   { icon: History, label: "Audit Trail", path: "/audit-trail", adminOnly: true },
+  { icon: History, label: "Audit Logs", path: "/audit-logs", adminOnly: true },
   { icon: History, label: "Activity Log", path: "/activity-log", adminOnly: false },
 ];
 

@@ -5,10 +5,22 @@ import { createJobRun, markJobQueued } from "./jobRunStore";
 import type {
   BackgroundJobName,
   BackgroundJobPayload,
+  ComplianceEvaluateJobPayload,
+  InspectionEvaluateJobPayload,
+  InspectionScheduleJobPayload,
   PmEvaluationJobPayload,
   PredictiveScoringJobPayload,
+  ReportAnalyticsJobPayload,
   ReportGenerationJobPayload,
+  SlaCalculationJobPayload,
+  StockAllocateInventoryJobPayload,
+  StockDetectAnomaliesJobPayload,
+  StockPredictDemandJobPayload,
+  StockRecommendSubstitutionJobPayload,
   TelemetryAggregationJobPayload,
+  VendorEvaluatePerformanceJobPayload,
+  WarehouseOptimizeLayoutJobPayload,
+  WarehouseRebalanceStockJobPayload,
 } from "./types";
 
 const QUEUE_NAME = "eam-background-jobs";
@@ -52,7 +64,7 @@ async function enqueueJob<T extends BackgroundJobPayload>(params: EnqueueParams<
     jobName: params.jobName,
     requestedBy: params.payload.requestedBy,
     payload: params.payload,
-    maxAttempts: params.options?.attempts,
+    maxAttempts: params.options?.attempts ?? ENV.queueDefaultAttempts,
   });
 
   const payloadWithRunId = {
@@ -112,6 +124,162 @@ export async function enqueueTelemetryAggregationJob(
 ) {
   return enqueueJob({
     jobName: "telemetry.aggregateHourly",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+  });
+}
+
+export async function enqueueInspectionScheduleJob(
+  payload: Omit<InspectionScheduleJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "inspection.schedule",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+  });
+}
+
+export async function enqueueInspectionEvaluateJob(
+  payload: Omit<InspectionEvaluateJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "inspection.evaluate",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+  });
+}
+
+export async function enqueueComplianceEvaluateJob(
+  payload: Omit<ComplianceEvaluateJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "compliance.evaluate",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+  });
+}
+
+export async function enqueueSlaCalculationJob(
+  payload: Omit<SlaCalculationJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "sla.calculate",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+  });
+}
+
+export async function enqueueReportGenerateAnalyticsJob(
+  payload: Omit<ReportAnalyticsJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "report.generateAnalytics",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+  });
+}
+
+export async function enqueueStockPredictDemandJob(
+  payload: Omit<StockPredictDemandJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "stock.predictDemand",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+  });
+}
+
+export async function enqueueStockRecommendSubstitutionJob(
+  payload: Omit<StockRecommendSubstitutionJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "stock.recommendSubstitution",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+  });
+}
+
+export async function enqueueStockAllocateInventoryJob(
+  payload: Omit<StockAllocateInventoryJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "stock.allocateInventory",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+  });
+}
+
+export async function enqueueStockDetectAnomaliesJob(
+  payload: Omit<StockDetectAnomaliesJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "stock.detectAnomalies",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+  });
+}
+
+export async function enqueueWarehouseOptimizeLayoutJob(
+  payload: Omit<WarehouseOptimizeLayoutJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "warehouse.optimizeLayout",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+  });
+}
+
+export async function enqueueWarehouseRebalanceStockJob(
+  payload: Omit<WarehouseRebalanceStockJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "warehouse.rebalanceStock",
+    payload: {
+      ...payload,
+      runId: null,
+      requestedAt: new Date().toISOString(),
+    },
+  });
+}
+
+export async function enqueueVendorEvaluatePerformanceJob(
+  payload: Omit<VendorEvaluatePerformanceJobPayload, "runId" | "requestedAt">
+) {
+  return enqueueJob({
+    jobName: "vendor.evaluatePerformance",
     payload: {
       ...payload,
       runId: null,

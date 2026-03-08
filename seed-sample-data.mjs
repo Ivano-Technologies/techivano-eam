@@ -1,5 +1,5 @@
-import { drizzle } from 'drizzle-orm/mysql2';
-import mysql from 'mysql2/promise';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import * as schema from './drizzle/schema.ts';
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -9,8 +9,8 @@ if (!DATABASE_URL) {
   process.exit(1);
 }
 
-const connection = await mysql.createConnection(DATABASE_URL);
-const db = drizzle(connection, { schema, mode: 'default' });
+const client = postgres(DATABASE_URL, { prepare: false });
+const db = drizzle(client, { schema });
 
 console.log('🌱 Starting sample data population...\n');
 
@@ -204,5 +204,5 @@ console.log(`- Assets: ${assetCount}`);
 console.log(`- Work Orders: 25`);
 console.log(`- Financial Transactions: 30`);
 
-await connection.end();
+await client.end();
 process.exit(0);

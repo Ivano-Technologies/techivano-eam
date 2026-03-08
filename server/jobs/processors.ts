@@ -2,13 +2,37 @@ import * as db from "../db";
 import {
   autoCreatePreventiveWorkOrders,
 } from "../predictiveMaintenance";
+import { generateAnalyticsSnapshot } from "../modules/analytics/analyticsService";
+import { evaluateComplianceForAsset } from "../modules/compliance/complianceService";
+import { completeInspection, scheduleInspection } from "../modules/inspections/inspectionService";
+import { calculateSlaForAsset } from "../modules/sla/slaService";
+import {
+  allocateInventory,
+  detectStockAnomalies,
+  predictStockDemand,
+  recommendStockSubstitution,
+} from "../modules/stock/stockIntelligenceService";
+import { evaluateVendorPerformance } from "../modules/vendor/vendorIntelligenceService";
+import { optimizeWarehouseLayout, rebalanceWarehouseStock } from "../modules/warehouse/warehouseIntelligenceService";
 import type {
   BackgroundJobPayload,
   BackgroundJobName,
+  ComplianceEvaluateJobPayload,
+  InspectionEvaluateJobPayload,
+  InspectionScheduleJobPayload,
   PmEvaluationJobPayload,
   PredictiveScoringJobPayload,
+  ReportAnalyticsJobPayload,
   ReportGenerationJobPayload,
+  SlaCalculationJobPayload,
+  StockAllocateInventoryJobPayload,
+  StockDetectAnomaliesJobPayload,
+  StockPredictDemandJobPayload,
+  StockRecommendSubstitutionJobPayload,
   TelemetryAggregationJobPayload,
+  VendorEvaluatePerformanceJobPayload,
+  WarehouseOptimizeLayoutJobPayload,
+  WarehouseRebalanceStockJobPayload,
 } from "./types";
 
 export async function processJob(jobName: BackgroundJobName, payload: BackgroundJobPayload) {
@@ -21,6 +45,30 @@ export async function processJob(jobName: BackgroundJobName, payload: Background
       return processReportGeneration(payload as ReportGenerationJobPayload);
     case "telemetry.aggregateHourly":
       return processTelemetryAggregation(payload as TelemetryAggregationJobPayload);
+    case "inspection.schedule":
+      return processInspectionSchedule(payload as InspectionScheduleJobPayload);
+    case "inspection.evaluate":
+      return processInspectionEvaluate(payload as InspectionEvaluateJobPayload);
+    case "compliance.evaluate":
+      return processComplianceEvaluate(payload as ComplianceEvaluateJobPayload);
+    case "sla.calculate":
+      return processSlaCalculate(payload as SlaCalculationJobPayload);
+    case "report.generateAnalytics":
+      return processReportGenerateAnalytics(payload as ReportAnalyticsJobPayload);
+    case "stock.predictDemand":
+      return processStockPredictDemand(payload as StockPredictDemandJobPayload);
+    case "stock.recommendSubstitution":
+      return processStockRecommendSubstitution(payload as StockRecommendSubstitutionJobPayload);
+    case "stock.allocateInventory":
+      return processStockAllocateInventory(payload as StockAllocateInventoryJobPayload);
+    case "stock.detectAnomalies":
+      return processStockDetectAnomalies(payload as StockDetectAnomaliesJobPayload);
+    case "warehouse.optimizeLayout":
+      return processWarehouseOptimizeLayout(payload as WarehouseOptimizeLayoutJobPayload);
+    case "warehouse.rebalanceStock":
+      return processWarehouseRebalanceStock(payload as WarehouseRebalanceStockJobPayload);
+    case "vendor.evaluatePerformance":
+      return processVendorEvaluatePerformance(payload as VendorEvaluatePerformanceJobPayload);
     default:
       return { success: false, message: "Unknown background job" };
   }
@@ -171,4 +219,178 @@ async function processTelemetryAggregation(payload: TelemetryAggregationJobPaylo
     hour: aggregationHour?.toISOString() ?? null,
     ...aggregated,
   };
+}
+
+async function processInspectionSchedule(payload: InspectionScheduleJobPayload) {
+  const created = await scheduleInspection({
+    tenantId: payload.tenantId,
+    assetId: payload.assetId,
+    templateId: payload.templateId,
+    inspectionType: "scheduled",
+    inspectorId: payload.requestedBy ?? null,
+    scheduledAt: new Date(),
+  });
+
+  return {
+    success: true,
+    tenantId: payload.tenantId,
+    inspectionId: created?.id ?? null,
+    created: Boolean(created),
+  };
+}
+
+async function processInspectionEvaluate(payload: InspectionEvaluateJobPayload) {
+  const inspections = await db.getInspectionsByTenant(payload.tenantId);
+  const latestForAsset = inspections
+    .filter(row => row.assetId === payload.assetId)
+    .sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bTime - aTime;
+    })[0];
+
+  if (latestForAsset?.status === "completed") {
+    return {
+      success: true,
+      tenantId: payload.tenantId,
+      evaluated: true,
+      idempotent: true,
+      inspectionId: latestForAsset.id,
+      result: latestForAsset.result ?? null,
+    };
+  }
+
+  const latest = inspections
+    .filter(row => row.assetId === payload.assetId && row.status !== "completed")
+    .sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bTime - aTime;
+    })[0];
+
+  if (!latest) {
+    return {
+      success: true,
+      tenantId: payload.tenantId,
+      evaluated: false,
+      reason: "No pending inspections for asset",
+    };
+  }
+
+  const completed = await completeInspection({
+    tenantId: payload.tenantId,
+    inspectionId: latest.id,
+    result: "pass",
+  });
+
+  return {
+    success: true,
+    tenantId: payload.tenantId,
+    evaluated: Boolean(completed),
+    inspectionId: completed?.id ?? null,
+    result: completed?.result ?? null,
+  };
+}
+
+async function processComplianceEvaluate(payload: ComplianceEvaluateJobPayload) {
+  const result = await evaluateComplianceForAsset({
+    tenantId: payload.tenantId,
+    assetId: payload.assetId,
+  });
+
+  return {
+    success: true,
+    tenantId: payload.tenantId,
+    assetId: payload.assetId,
+    ...result,
+  };
+}
+
+async function processSlaCalculate(payload: SlaCalculationJobPayload) {
+  const result = await calculateSlaForAsset({
+    tenantId: payload.tenantId,
+    assetId: payload.assetId,
+  });
+
+  return {
+    success: true,
+    tenantId: payload.tenantId,
+    assetId: payload.assetId,
+    ...result,
+  };
+}
+
+async function processReportGenerateAnalytics(payload: ReportAnalyticsJobPayload) {
+  const snapshot = await generateAnalyticsSnapshot({
+    tenantId: payload.tenantId,
+    reportType: payload.reportType,
+  });
+
+  return {
+    success: true,
+    tenantId: payload.tenantId,
+    reportType: payload.reportType,
+    ...snapshot,
+  };
+}
+
+async function processStockPredictDemand(payload: StockPredictDemandJobPayload) {
+  return await predictStockDemand({
+    tenantId: payload.tenantId,
+    stockItemId: payload.stockItemId,
+    horizonDays: payload.horizonDays,
+    requestedBy: payload.requestedBy,
+  });
+}
+
+async function processStockRecommendSubstitution(payload: StockRecommendSubstitutionJobPayload) {
+  return await recommendStockSubstitution({
+    tenantId: payload.tenantId,
+    itemId: payload.itemId,
+    assetId: payload.assetId,
+    requestedBy: payload.requestedBy,
+  });
+}
+
+async function processStockAllocateInventory(payload: StockAllocateInventoryJobPayload) {
+  return await allocateInventory({
+    tenantId: payload.tenantId,
+    workOrderId: payload.workOrderId,
+    assetId: payload.assetId,
+    requestedBy: payload.requestedBy,
+  });
+}
+
+async function processStockDetectAnomalies(payload: StockDetectAnomaliesJobPayload) {
+  return await detectStockAnomalies({
+    tenantId: payload.tenantId,
+    warehouseId: payload.warehouseId,
+    requestedBy: payload.requestedBy,
+  });
+}
+
+async function processWarehouseOptimizeLayout(payload: WarehouseOptimizeLayoutJobPayload) {
+  return await optimizeWarehouseLayout({
+    tenantId: payload.tenantId,
+    warehouseId: payload.warehouseId,
+    requestedBy: payload.requestedBy,
+  });
+}
+
+async function processWarehouseRebalanceStock(payload: WarehouseRebalanceStockJobPayload) {
+  return await rebalanceWarehouseStock({
+    tenantId: payload.tenantId,
+    warehouseId: payload.warehouseId,
+    stockItemId: payload.stockItemId,
+    requestedBy: payload.requestedBy,
+    limit: payload.limit,
+  });
+}
+
+async function processVendorEvaluatePerformance(payload: VendorEvaluatePerformanceJobPayload) {
+  return await evaluateVendorPerformance({
+    tenantId: payload.tenantId,
+    vendorId: payload.vendorId,
+    requestedBy: payload.requestedBy,
+  });
 }

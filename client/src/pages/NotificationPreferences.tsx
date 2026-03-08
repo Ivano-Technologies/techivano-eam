@@ -111,7 +111,9 @@ export default function NotificationPreferences() {
           <div className="space-y-6">
             {notificationTypes.map((type) => {
               const Icon = type.icon;
-              const value = preferences?.[type.key as keyof typeof preferences];
+              const value = preferences
+                ? (preferences as Record<string, unknown>)[type.key]
+                : undefined;
               const isEnabled = typeof value === 'boolean' ? value : true;
 
               return (

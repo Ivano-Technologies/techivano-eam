@@ -10,12 +10,26 @@ import { generatePDFReport, generateExcelReport } from "./reportGenerator";
 import { parseFileData, bulkImportAssets, bulkImportSites, bulkImportVendors, generateAssetsTemplate, generateSitesTemplate, generateVendorsTemplate } from "./bulkImport";
 import { exportToCSV, exportToExcel, formatAssetsForExport, formatSitesForExport, formatVendorsForExport } from "./bulkExport";
 import {
+  enqueueComplianceEvaluateJob,
+  enqueueInspectionEvaluateJob,
+  enqueueInspectionScheduleJob,
   enqueuePmEvaluationJob,
   enqueuePredictiveScoringJob,
+  enqueueReportGenerateAnalyticsJob,
   enqueueReportGenerationJob,
+  enqueueSlaCalculationJob,
+  enqueueStockPredictDemandJob,
   enqueueTelemetryAggregationJob,
+  enqueueWarehouseRebalanceStockJob,
 } from "./jobs/queue";
 import { getJobRunById, listRecentJobRuns } from "./jobs/jobRunStore";
+import { assertTenantMatch } from "./_core/tenantGuard";
+import { ENV } from "./_core/env";
+import { completeInspection, scheduleInspection } from "./modules/inspections/inspectionService";
+import { evaluateComplianceForAsset } from "./modules/compliance/complianceService";
+import { calculateSlaForAsset } from "./modules/sla/slaService";
+import { generateAnalyticsSnapshot } from "./modules/analytics/analyticsService";
+import { listWarehouseRebalanceRecommendations } from "./modules/warehouse/warehouseIntelligenceService";
 
 // Role-based middleware
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -32,6 +46,14 @@ const managerOrAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+const permissionProcedure = (allowedRoles: Array<"admin" | "manager" | "technician" | "user">) =>
+  protectedProcedure.use(({ ctx, next }) => {
+    if (!allowedRoles.includes(ctx.user.role)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Insufficient permissions" });
+    }
+    return next({ ctx });
+  });
+
 function resolveTenantIdFromContext(ctx: { tenantId?: number | null }) {
   if (typeof ctx.tenantId === "number" && ctx.tenantId > 0) {
     return ctx.tenantId;
@@ -41,6 +63,27 @@ function resolveTenantIdFromContext(ctx: { tenantId?: number | null }) {
     message: "Tenant ID is required",
   });
 }
+
+const tenantProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const tenantId = resolveTenantIdFromContext(ctx);
+  return next({
+    ctx: {
+      ...ctx,
+      tenantId,
+    },
+  });
+});
+
+const tenantPermissionProcedure = (allowedRoles: Array<"admin" | "manager" | "technician" | "user">) =>
+  permissionProcedure(allowedRoles).use(({ ctx, next }) => {
+    const tenantId = resolveTenantIdFromContext(ctx);
+    return next({
+      ctx: {
+        ...ctx,
+        tenantId,
+      },
+    });
+  });
 
 export const appRouter = router({
   system: systemRouter,
@@ -709,7 +752,7 @@ export const appRouter = router({
         if (currentAsset) {
           // Log each changed field
           for (const [field, newValue] of Object.entries(data)) {
-            const oldValue = currentAsset[field as keyof typeof currentAsset];
+            const oldValue = (currentAsset as Record<string, unknown>)[field];
             const oldStr = oldValue != null ? String(oldValue) : null;
             const newStr = newValue != null ? String(newValue) : null;
             
@@ -1642,6 +1685,78 @@ export const appRouter = router({
         });
         return { queued: true, ...queued };
       }),
+    enqueueInspectionSchedule: managerOrAdminProcedure
+      .input(
+        z.object({
+          assetId: z.number().int().positive(),
+          templateId: z.number().int().positive(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const queued = await enqueueInspectionScheduleJob({
+          tenantId: resolveTenantIdFromContext(ctx),
+          requestedBy: ctx.user.id,
+          assetId: input.assetId,
+          templateId: input.templateId,
+        });
+        return { queued: true, ...queued };
+      }),
+    enqueueInspectionEvaluate: managerOrAdminProcedure
+      .input(
+        z.object({
+          assetId: z.number().int().positive(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const queued = await enqueueInspectionEvaluateJob({
+          tenantId: resolveTenantIdFromContext(ctx),
+          requestedBy: ctx.user.id,
+          assetId: input.assetId,
+        });
+        return { queued: true, ...queued };
+      }),
+    enqueueComplianceEvaluate: managerOrAdminProcedure
+      .input(
+        z.object({
+          assetId: z.number().int().positive(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const queued = await enqueueComplianceEvaluateJob({
+          tenantId: resolveTenantIdFromContext(ctx),
+          requestedBy: ctx.user.id,
+          assetId: input.assetId,
+        });
+        return { queued: true, ...queued };
+      }),
+    enqueueSlaCalculation: managerOrAdminProcedure
+      .input(
+        z.object({
+          assetId: z.number().int().positive(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const queued = await enqueueSlaCalculationJob({
+          tenantId: resolveTenantIdFromContext(ctx),
+          requestedBy: ctx.user.id,
+          assetId: input.assetId,
+        });
+        return { queued: true, ...queued };
+      }),
+    enqueueReportAnalytics: managerOrAdminProcedure
+      .input(
+        z.object({
+          reportType: z.string().default("enterprise-analytics"),
+        }).optional()
+      )
+      .mutation(async ({ ctx, input }) => {
+        const queued = await enqueueReportGenerateAnalyticsJob({
+          tenantId: resolveTenantIdFromContext(ctx),
+          requestedBy: ctx.user.id,
+          reportType: input?.reportType ?? "enterprise-analytics",
+        });
+        return { queued: true, ...queued };
+      }),
 
     getRunById: protectedProcedure
       .input(z.object({
@@ -2514,6 +2629,281 @@ export const appRouter = router({
       }).optional())
       .query(async ({ input }) => {
         return await db.getAuditLogs(input || {});
+      }),
+  }),
+
+  // ============= PHASE 3A - INSPECTIONS V2 =============
+  inspectionV2: router({
+    list: tenantProcedure.query(async ({ ctx }) => {
+      return await db.getInspectionsByTenant(ctx.tenantId);
+    }),
+    listTemplates: tenantProcedure.query(async ({ ctx }) => {
+      return await db.getInspectionTemplatesByTenant(ctx.tenantId);
+    }),
+    createTemplate: tenantPermissionProcedure(["admin", "manager"])
+      .input(
+        z.object({
+          name: z.string().min(1),
+          description: z.string().optional(),
+          checklistJson: z.string().min(2),
+          frequency: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const tenantId = resolveTenantIdFromContext(ctx);
+        const template = await db.createInspectionTemplate({
+          tenantId,
+          ...input,
+        });
+        if (!template) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create inspection template" });
+        }
+        assertTenantMatch(tenantId, template.tenantId);
+        return template;
+      }),
+    schedule: tenantPermissionProcedure(["admin", "manager"])
+      .input(
+        z.object({
+          assetId: z.number().int().positive(),
+          templateId: z.number().int().positive(),
+          scheduledAt: z.date().optional(),
+          inspectorId: z.number().int().positive().optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const tenantId = resolveTenantIdFromContext(ctx);
+        if (ENV.phase3WorkersEnabled) {
+          const queued = await enqueueInspectionScheduleJob({
+            tenantId,
+            requestedBy: ctx.user.id,
+            assetId: input.assetId,
+            templateId: input.templateId,
+          });
+          return { queued: true, ...queued };
+        }
+
+        const created = await scheduleInspection({
+          tenantId,
+          assetId: input.assetId,
+          templateId: input.templateId,
+          scheduledAt: input.scheduledAt,
+          inspectorId: input.inspectorId ?? null,
+          notes: input.notes,
+        });
+        if (!created) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to schedule inspection" });
+        }
+        assertTenantMatch(tenantId, created.tenantId);
+        return { queued: false, inspection: created };
+      }),
+    complete: tenantPermissionProcedure(["admin", "manager", "technician"])
+      .input(
+        z.object({
+          inspectionId: z.number().int().positive(),
+          result: z.enum(["pass", "fail", "needs_attention"]).default("pass"),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const tenantId = resolveTenantIdFromContext(ctx);
+        const inspection = await db.getInspectionById(tenantId, input.inspectionId);
+        if (!inspection) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Inspection not found" });
+        }
+        assertTenantMatch(tenantId, inspection.tenantId);
+
+        if (ENV.phase3WorkersEnabled) {
+          const queued = await enqueueInspectionEvaluateJob({
+            tenantId,
+            requestedBy: ctx.user.id,
+            assetId: inspection.assetId,
+          });
+          return { queued: true, ...queued };
+        }
+
+        const completed = await completeInspection({
+          tenantId,
+          inspectionId: input.inspectionId,
+          result: input.result,
+          notes: input.notes,
+        });
+        return { queued: false, inspection: completed };
+      }),
+  }),
+
+  // ============= PHASE 3A - COMPLIANCE V2 =============
+  complianceV2: router({
+    rules: tenantProcedure.query(async ({ ctx }) => {
+      return await db.getComplianceRulesByTenant(ctx.tenantId);
+    }),
+    events: tenantProcedure.query(async ({ ctx }) => {
+      return await db.getComplianceEventsByTenant(ctx.tenantId);
+    }),
+    status: tenantProcedure.query(async ({ ctx }) => {
+      const events = await db.getComplianceEventsByTenant(ctx.tenantId);
+      const open = events.filter(e => e.status === "open").length;
+      const resolved = events.filter(e => e.status === "resolved").length;
+      const total = events.length;
+      return {
+        total,
+        open,
+        resolved,
+        score: total > 0 ? Number((((total - open) / total) * 100).toFixed(2)) : 100,
+      };
+    }),
+    evaluateAsset: tenantPermissionProcedure(["admin", "manager"])
+      .input(z.object({ assetId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const tenantId = resolveTenantIdFromContext(ctx);
+        if (ENV.phase3WorkersEnabled) {
+          const queued = await enqueueComplianceEvaluateJob({
+            tenantId,
+            requestedBy: ctx.user.id,
+            assetId: input.assetId,
+          });
+          return { queued: true, ...queued };
+        }
+        const result = await evaluateComplianceForAsset({
+          tenantId,
+          assetId: input.assetId,
+        });
+        return { queued: false, ...result };
+      }),
+  }),
+
+  // ============= PHASE 3A - ANALYTICS V2 =============
+  analyticsV2: router({
+    assetHealth: tenantProcedure.query(async ({ ctx }) => {
+      return await db.getAssetHealthSummary(ctx.tenantId);
+    }),
+    maintenanceBacklog: tenantProcedure.query(async ({ ctx }) => {
+      return await db.getMaintenanceBacklogSummary(ctx.tenantId);
+    }),
+    calculateSla: tenantPermissionProcedure(["admin", "manager"])
+      .input(z.object({ assetId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const tenantId = resolveTenantIdFromContext(ctx);
+        if (ENV.phase3WorkersEnabled) {
+          const queued = await enqueueSlaCalculationJob({
+            tenantId,
+            requestedBy: ctx.user.id,
+            assetId: input.assetId,
+          });
+          return { queued: true, ...queued };
+        }
+        const result = await calculateSlaForAsset({
+          tenantId,
+          assetId: input.assetId,
+        });
+        return { queued: false, ...result };
+      }),
+    generateSnapshot: tenantPermissionProcedure(["admin", "manager"])
+      .input(z.object({ reportType: z.string().default("enterprise-analytics") }))
+      .mutation(async ({ ctx, input }) => {
+        const tenantId = resolveTenantIdFromContext(ctx);
+        if (ENV.phase3WorkersEnabled) {
+          const queued = await enqueueReportGenerateAnalyticsJob({
+            tenantId,
+            requestedBy: ctx.user.id,
+            reportType: input.reportType,
+          });
+          return { queued: true, ...queued };
+        }
+        const result = await generateAnalyticsSnapshot({
+          tenantId,
+          reportType: input.reportType,
+        });
+        return { queued: false, ...result };
+      }),
+  }),
+
+  // ============= PHASE 3A - AUDIT V1 =============
+  auditV1: router({
+    logs: tenantProcedure
+      .input(
+        z.object({
+          limit: z.number().int().min(1).max(500).optional(),
+        }).optional()
+      )
+      .query(async ({ ctx, input }) => {
+        return await db.getAuditLogsByTenant(ctx.tenantId, input?.limit ?? 100);
+      }),
+  }),
+
+  // ============= PHASE 4B - STOCK V1 =============
+  stockV1: router({
+    runForecast: tenantPermissionProcedure(["admin", "manager"])
+      .input(
+        z.object({
+          stockItemId: z.number().int().positive(),
+          horizonDays: z.number().int().min(1).max(180).optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const tenantId = resolveTenantIdFromContext(ctx);
+        const queued = await enqueueStockPredictDemandJob({
+          tenantId,
+          requestedBy: ctx.user.id,
+          stockItemId: input.stockItemId,
+          horizonDays: input.horizonDays,
+        });
+        return { queued: true, ...queued };
+      }),
+    forecasts: tenantProcedure
+      .input(
+        z.object({
+          stockItemId: z.number().int().positive().optional(),
+          limit: z.number().int().min(1).max(500).optional(),
+        }).optional()
+      )
+      .query(async ({ ctx, input }) => {
+        return await db.getStockForecastsByTenant({
+          tenantId: ctx.tenantId,
+          stockItemId: input?.stockItemId,
+          limit: input?.limit ?? 50,
+        });
+      }),
+  }),
+
+  // ============= PHASE 4B - WAREHOUSE V1 =============
+  warehouseV1: router({
+    runRebalance: tenantPermissionProcedure(["admin", "manager"])
+      .input(
+        z.object({
+          warehouseId: z.number().int().positive().optional(),
+          stockItemId: z.number().int().positive().optional(),
+          lookbackMinutes: z.number().int().min(1).max(30).optional(),
+          limit: z.number().int().min(1).max(100).optional(),
+        }).optional()
+      )
+      .mutation(async ({ ctx, input }) => {
+        const tenantId = resolveTenantIdFromContext(ctx);
+        const queued = await enqueueWarehouseRebalanceStockJob({
+          tenantId,
+          requestedBy: ctx.user.id,
+          warehouseId: input?.warehouseId,
+          stockItemId: input?.stockItemId,
+          lookbackMinutes: input?.lookbackMinutes,
+          limit: input?.limit,
+        });
+        return { queued: true, ...queued };
+      }),
+    recommendations: tenantProcedure
+      .input(
+        z.object({
+          warehouseId: z.number().int().positive().optional(),
+          stockItemId: z.number().int().positive().optional(),
+          limit: z.number().int().min(1).max(100).optional(),
+        }).optional()
+      )
+      .query(async ({ ctx, input }) => {
+        return await listWarehouseRebalanceRecommendations({
+          tenantId: ctx.tenantId,
+          warehouseId: input?.warehouseId,
+          stockItemId: input?.stockItemId,
+          limit: input?.limit ?? 50,
+        });
       }),
   }),
 

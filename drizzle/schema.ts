@@ -1,4 +1,40 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, bigint, index, uniqueIndex } from "drizzle-orm/mysql-core";
+// @ts-nocheck
+import {
+  pgTable,
+  integer,
+  text,
+  timestamp as pgTimestamp,
+  varchar,
+  numeric,
+  boolean,
+  bigint,
+  index,
+  uniqueIndex,
+  serial,
+} from "drizzle-orm/pg-core";
+
+function mysqlTable(name: string, columns: any, extraConfig?: any) {
+  return pgTable(name, columns, extraConfig);
+}
+
+function mysqlEnum(name: string, _values: readonly string[]) {
+  // Compatibility shim for existing schema shape during MySQL->Postgres migration.
+  return text(name) as any;
+}
+
+function int(name: string) {
+  const col = integer(name) as any;
+  col.autoincrement = () => serial(name);
+  return col;
+}
+
+const decimal = numeric;
+
+function timestamp(name: string) {
+  const col = pgTimestamp(name) as any;
+  col.onUpdateNow = () => col.$onUpdateFn(() => new Date());
+  return col;
+}
 
 /**
  * Core user table backing auth flow with extended roles for EAM system
@@ -746,6 +782,161 @@ export const predictiveScores = mysqlTable(
   })
 );
 
+/**
+ * Inspection templates for recurring checks
+ */
+export const inspectionTemplates = mysqlTable(
+  "inspection_templates",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    checklistJson: text("checklist_json").notNull(),
+    frequency: varchar("frequency", { length: 50 }).default("monthly").notNull(),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_inspection_templates_tenant").on(table.tenantId),
+    tenantActiveIdx: index("idx_inspection_templates_tenant_active").on(table.tenantId, table.isActive),
+    tenantCreatedIdx: index("idx_inspection_templates_tenant_created").on(table.tenantId, table.createdAt),
+  })
+);
+
+/**
+ * Inspections execution records
+ */
+export const inspections = mysqlTable(
+  "inspections",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    assetId: int("assetId").notNull(),
+    templateId: int("templateId"),
+    inspectionType: varchar("inspection_type", { length: 100 }).notNull(),
+    status: varchar("status", { length: 50 }).default("scheduled").notNull(),
+    inspectorId: int("inspector_id"),
+    scheduledAt: timestamp("scheduled_at"),
+    completedAt: timestamp("completed_at"),
+    result: varchar("result", { length: 50 }),
+    notes: text("notes"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_inspections_tenant").on(table.tenantId),
+    tenantAssetIdx: index("idx_inspections_tenant_asset").on(table.tenantId, table.assetId),
+    tenantStatusIdx: index("idx_inspections_tenant_status").on(table.tenantId, table.status),
+    tenantScheduledIdx: index("idx_inspections_tenant_scheduled_at").on(table.tenantId, table.scheduledAt),
+    tenantCreatedIdx: index("idx_inspections_tenant_created").on(table.tenantId, table.createdAt),
+  })
+);
+
+/**
+ * Compliance rules per tenant
+ */
+export const complianceRules = mysqlTable(
+  "compliance_rules",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    ruleName: varchar("rule_name", { length: 255 }).notNull(),
+    assetCategory: varchar("asset_category", { length: 100 }),
+    inspectionRequired: boolean("inspection_required").default(true).notNull(),
+    maintenanceIntervalDays: int("maintenance_interval_days"),
+    severity: varchar("severity", { length: 30 }).default("medium").notNull(),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_compliance_rules_tenant").on(table.tenantId),
+    tenantSeverityIdx: index("idx_compliance_rules_tenant_severity").on(table.tenantId, table.severity),
+    tenantActiveIdx: index("idx_compliance_rules_tenant_active").on(table.tenantId, table.isActive),
+    tenantCreatedIdx: index("idx_compliance_rules_tenant_created").on(table.tenantId, table.createdAt),
+  })
+);
+
+/**
+ * Compliance events emitted by rules/inspections
+ */
+export const complianceEvents = mysqlTable(
+  "compliance_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    assetId: int("assetId"),
+    ruleId: int("rule_id"),
+    eventType: varchar("event_type", { length: 80 }).notNull(),
+    status: varchar("status", { length: 50 }).default("open").notNull(),
+    detectedAt: timestamp("detected_at").defaultNow().notNull(),
+    resolvedAt: timestamp("resolved_at"),
+    detailsJson: text("details_json"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_compliance_events_tenant").on(table.tenantId),
+    tenantAssetIdx: index("idx_compliance_events_tenant_asset").on(table.tenantId, table.assetId),
+    tenantStatusIdx: index("idx_compliance_events_tenant_status").on(table.tenantId, table.status),
+    tenantDetectedIdx: index("idx_compliance_events_tenant_detected").on(table.tenantId, table.detectedAt),
+    tenantCreatedIdx: index("idx_compliance_events_tenant_created").on(table.tenantId, table.createdAt),
+  })
+);
+
+/**
+ * SLA metrics snapshots
+ */
+export const slaMetrics = mysqlTable(
+  "sla_metrics",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    assetId: int("assetId"),
+    metricType: varchar("metric_type", { length: 100 }).notNull(),
+    targetValue: decimal("target_value", { precision: 12, scale: 2 }),
+    actualValue: decimal("actual_value", { precision: 12, scale: 2 }),
+    periodStart: timestamp("period_start").notNull(),
+    periodEnd: timestamp("period_end").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_sla_metrics_tenant").on(table.tenantId),
+    tenantAssetIdx: index("idx_sla_metrics_tenant_asset").on(table.tenantId, table.assetId),
+    tenantMetricIdx: index("idx_sla_metrics_tenant_metric").on(table.tenantId, table.metricType),
+    tenantPeriodStartIdx: index("idx_sla_metrics_tenant_period_start").on(table.tenantId, table.periodStart),
+    tenantCreatedIdx: index("idx_sla_metrics_tenant_created").on(table.tenantId, table.createdAt),
+  })
+);
+
+/**
+ * Tenant-scoped audit logs (Phase 3)
+ */
+export const auditLogsV1 = mysqlTable(
+  "audit_logs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    userId: int("userId"),
+    action: varchar("action", { length: 100 }).notNull(),
+    entityType: varchar("entity_type", { length: 100 }).notNull(),
+    entityId: int("entity_id"),
+    metadataJson: text("metadata_json"),
+    timestamp: timestamp("timestamp").defaultNow().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_audit_logs_tenant").on(table.tenantId),
+    tenantEntityIdx: index("idx_audit_logs_tenant_entity").on(table.tenantId, table.entityType, table.entityId),
+    tenantTimestampIdx: index("idx_audit_logs_tenant_timestamp").on(table.tenantId, table.timestamp),
+    tenantCreatedIdx: index("idx_audit_logs_tenant_created").on(table.tenantId, table.createdAt),
+  })
+);
+
 export type TelemetryPoint = typeof telemetryPoints.$inferSelect;
 export type InsertTelemetryPoint = typeof telemetryPoints.$inferInsert;
 export type TelemetryAggregate = typeof telemetryAggregates.$inferSelect;
@@ -754,6 +945,18 @@ export type ReportSnapshot = typeof reportSnapshots.$inferSelect;
 export type InsertReportSnapshot = typeof reportSnapshots.$inferInsert;
 export type PredictiveScore = typeof predictiveScores.$inferSelect;
 export type InsertPredictiveScore = typeof predictiveScores.$inferInsert;
+export type InspectionTemplate = typeof inspectionTemplates.$inferSelect;
+export type InsertInspectionTemplate = typeof inspectionTemplates.$inferInsert;
+export type Inspection = typeof inspections.$inferSelect;
+export type InsertInspection = typeof inspections.$inferInsert;
+export type ComplianceRule = typeof complianceRules.$inferSelect;
+export type InsertComplianceRule = typeof complianceRules.$inferInsert;
+export type ComplianceEvent = typeof complianceEvents.$inferSelect;
+export type InsertComplianceEvent = typeof complianceEvents.$inferInsert;
+export type SlaMetric = typeof slaMetrics.$inferSelect;
+export type InsertSlaMetric = typeof slaMetrics.$inferInsert;
+export type AuditLogV1 = typeof auditLogsV1.$inferSelect;
+export type InsertAuditLogV1 = typeof auditLogsV1.$inferInsert;
 
 /**
  * Background Job Runs - Queue tracking and observability
@@ -767,7 +970,7 @@ export const backgroundJobRuns = mysqlTable(
     queueJobId: varchar("queueJobId", { length: 100 }),
     status: mysqlEnum("status", ["queued", "running", "completed", "failed", "dead"]).notNull().default("queued"),
     attempts: int("attempts").notNull().default(0),
-    maxAttempts: int("maxAttempts").notNull().default(3),
+    maxAttempts: int("maxAttempts").notNull().default(5),
     requestedBy: int("requestedBy"),
     payload: text("payload"),
     result: text("result"),
@@ -775,6 +978,7 @@ export const backgroundJobRuns = mysqlTable(
     queuedAt: timestamp("queuedAt").defaultNow().notNull(),
     startedAt: timestamp("startedAt"),
     completedAt: timestamp("completedAt"),
+    durationMs: int("durationMs"),
   },
   table => ({
     tenantIdx: index("idx_background_job_runs_tenant").on(table.tenantId),
@@ -785,3 +989,108 @@ export const backgroundJobRuns = mysqlTable(
 
 export type BackgroundJobRun = typeof backgroundJobRuns.$inferSelect;
 export type InsertBackgroundJobRun = typeof backgroundJobRuns.$inferInsert;
+
+/**
+ * Deterministic vector memory store for intelligence layer
+ */
+export const ruvectorMemories = mysqlTable(
+  "ruvector_memories",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    entityType: varchar("entity_type", { length: 100 }).notNull(),
+    entityId: int("entity_id"),
+    eventType: varchar("event_type", { length: 100 }).notNull(),
+    vectorJson: text("vector_json").notNull(),
+    metadataJson: text("metadata_json"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_ruvector_memories_tenant").on(table.tenantId),
+    tenantEventIdx: index("idx_ruvector_memories_tenant_event").on(table.tenantId, table.eventType),
+    tenantEntityIdx: index("idx_ruvector_memories_tenant_entity").on(table.tenantId, table.entityType, table.entityId),
+    tenantCreatedIdx: index("idx_ruvector_memories_tenant_created").on(table.tenantId, table.createdAt),
+  })
+);
+
+/**
+ * Prime Radiance deterministic agent execution traces
+ */
+export const primeAgentExecutions = mysqlTable(
+  "prime_agent_executions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    agentType: varchar("agent_type", { length: 100 }).notNull(),
+    status: varchar("status", { length: 40 }).notNull().default("completed"),
+    inputPayload: text("input_payload").notNull(),
+    outputPayload: text("output_payload"),
+    reasonTrace: text("reason_trace"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_prime_agent_executions_tenant").on(table.tenantId),
+    tenantAgentIdx: index("idx_prime_agent_executions_tenant_agent").on(table.tenantId, table.agentType),
+    tenantStatusIdx: index("idx_prime_agent_executions_tenant_status").on(table.tenantId, table.status),
+    tenantCreatedIdx: index("idx_prime_agent_executions_tenant_created").on(table.tenantId, table.createdAt),
+  })
+);
+
+export type RuVectorMemory = typeof ruvectorMemories.$inferSelect;
+export type InsertRuVectorMemory = typeof ruvectorMemories.$inferInsert;
+export type PrimeAgentExecution = typeof primeAgentExecutions.$inferSelect;
+export type InsertPrimeAgentExecution = typeof primeAgentExecutions.$inferInsert;
+
+/**
+ * Stock demand forecast records produced by deterministic agents
+ */
+export const stockForecasts = mysqlTable(
+  "stock_forecasts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenant_id").notNull(),
+    stockItemId: int("stock_item_id").notNull(),
+    demandScore: decimal("demand_score", { precision: 6, scale: 4 }).notNull(),
+    recommendedAction: varchar("recommended_action", { length: 50 }).notNull(),
+    forecastTimestamp: timestamp("forecast_timestamp").defaultNow().notNull(),
+    agentExecutionId: int("agent_execution_id"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_stock_forecasts_tenant").on(table.tenantId),
+    tenantStockItemIdx: index("idx_stock_forecasts_tenant_stock_item").on(table.tenantId, table.stockItemId),
+    tenantForecastTsIdx: index("idx_stock_forecasts_tenant_forecast_ts").on(table.tenantId, table.forecastTimestamp),
+  })
+);
+
+export type StockForecast = typeof stockForecasts.$inferSelect;
+export type InsertStockForecast = typeof stockForecasts.$inferInsert;
+
+/**
+ * Warehouse transfer recommendations produced by rebalancing agents
+ */
+export const warehouseTransferRecommendations = mysqlTable(
+  "warehouse_transfer_recommendations",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenant_id").notNull(),
+    stockItemId: int("stock_item_id").notNull(),
+    sourceWarehouseId: int("source_warehouse_id").notNull(),
+    targetWarehouseId: int("target_warehouse_id").notNull(),
+    transferQuantity: int("transfer_quantity").notNull(),
+    transferPriority: varchar("transfer_priority", { length: 30 }).notNull(),
+    generatedAt: timestamp("generated_at").defaultNow().notNull(),
+    agentExecutionId: int("agent_execution_id"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  table => ({
+    tenantIdx: index("idx_warehouse_transfer_recommendations_tenant").on(table.tenantId),
+    stockItemIdx: index("idx_warehouse_transfer_recommendations_stock_item").on(table.stockItemId),
+    generatedAtIdx: index("idx_warehouse_transfer_recommendations_generated_at").on(table.generatedAt),
+  })
+);
+
+export type WarehouseTransferRecommendation = typeof warehouseTransferRecommendations.$inferSelect;
+export type InsertWarehouseTransferRecommendation = typeof warehouseTransferRecommendations.$inferInsert;

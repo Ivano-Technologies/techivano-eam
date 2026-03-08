@@ -4,6 +4,12 @@ function numberFromEnv(name: string, fallback: number) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function booleanFromEnv(name: string, fallback: boolean) {
+  const raw = process.env[name];
+  if (raw === undefined) return fallback;
+  return raw === "1" || raw.toLowerCase() === "true";
+}
+
 export const ENV = {
   appId: process.env.VITE_APP_ID ?? "",
   cookieSecret: process.env.JWT_SECRET ?? "",
@@ -11,6 +17,7 @@ export const ENV = {
   redisUrl: process.env.REDIS_URL ?? "redis://127.0.0.1:6379",
   queueWorkerConcurrency: numberFromEnv("QUEUE_WORKER_CONCURRENCY", 4),
   queueDefaultAttempts: numberFromEnv("QUEUE_DEFAULT_ATTEMPTS", 5),
+  phase3WorkersEnabled: booleanFromEnv("PHASE3_WORKERS_ENABLED", false),
   oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",

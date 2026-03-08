@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "../_core/loadEnv";
 import { Job, Worker } from "bullmq";
 import { ENV } from "../_core/env";
 import { logger } from "../_core/logger";
@@ -8,31 +8,35 @@ import { markJobCompleted, markJobDead, markJobFailed, markJobRunning, normalize
 import type { BackgroundJobPayload, BackgroundJobName } from "./types";
 
 async function runJob(job: Job<BackgroundJobPayload>) {
+  const startedAtMs = Date.now();
   const payload = job.data;
   const runId = payload.runId ?? null;
+  const currentAttempt = job.attemptsMade + 1;
+  const maxAttempts = job.opts.attempts ?? ENV.queueDefaultAttempts;
   if (!payload.tenantId || payload.tenantId <= 0) {
     throw new Error("Tenant ID required");
   }
 
   if (runId) {
-    await markJobRunning(runId, job.attemptsStarted);
+    await markJobRunning(runId, currentAttempt);
   }
 
   try {
     const result = await processJob(job.name as BackgroundJobName, payload);
+    const durationMs = Date.now() - startedAtMs;
     if (runId) {
-      await markJobCompleted(runId, result, job.attemptsStarted);
+      await markJobCompleted(runId, result, currentAttempt, durationMs);
     }
     return result;
   } catch (error) {
     const normalizedError = normalizeJobError(error);
-    const maxAttempts = job.opts.attempts ?? ENV.queueDefaultAttempts;
-    const isDead = job.attemptsStarted >= maxAttempts;
+    const durationMs = Date.now() - startedAtMs;
+    const isDead = currentAttempt >= maxAttempts;
     if (runId) {
       if (isDead) {
-        await markJobDead(runId, normalizedError, job.attemptsStarted);
+        await markJobDead(runId, normalizedError, currentAttempt, durationMs);
       } else {
-        await markJobFailed(runId, normalizedError, job.attemptsStarted);
+        await markJobFailed(runId, normalizedError, currentAttempt, durationMs);
       }
     }
     throw error;

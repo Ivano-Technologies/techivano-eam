@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./loadEnv";
 // Initialize Sentry first for error tracking
 import { initSentry } from "./sentry";
 initSentry();
@@ -15,6 +15,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { getBackgroundQueue } from "../jobs/queue";
+import { sdk } from "./sdk";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -65,7 +66,18 @@ async function startServer() {
     queues: [new BullMQAdapter(getBackgroundQueue())],
     serverAdapter: bullBoardAdapter,
   });
-  app.use("/admin/queues", bullBoardAdapter.getRouter());
+  app.use("/admin/queues", async (req, res, next) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (user.role !== "admin") {
+        res.status(403).send("Forbidden");
+        return;
+      }
+      next();
+    } catch {
+      res.status(401).send("Unauthorized");
+    }
+  }, bullBoardAdapter.getRouter());
 
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {

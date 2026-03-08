@@ -1,6 +1,5 @@
 import * as XLSX from 'xlsx';
 import * as db from './db';
-import { mysqlTable } from 'drizzle-orm/mysql-core';
 import { getDb } from './db';
 import { importHistory } from '../drizzle/schema';
 
