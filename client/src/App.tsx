@@ -48,12 +48,12 @@ import Profile from "./pages/Profile";
 import SmartScanner from "./pages/SmartScanner";
 import BiometricSetup from "./pages/BiometricSetup";
 import DepreciationDashboard from "./pages/DepreciationDashboard";
-import ComplianceDashboard from "./pages/ComplianceDashboard";
-import InspectionManager from "./pages/InspectionManager";
-import AssetHealthDashboard from "./pages/AssetHealthDashboard";
-import AuditLogViewer from "./pages/AuditLogViewer";
-import StockForecastDashboard from "./pages/StockForecastDashboard";
-import WarehouseRebalanceDashboard from "./pages/WarehouseRebalanceDashboard";
+import WarehouseRebalanceDashboard from "@/pages/WarehouseRebalanceDashboard";
+import VendorIntelligenceDashboard from "./pages/VendorIntelligenceDashboard";
+import ProcurementDashboard from "@/pages/ProcurementDashboard";
+import SupplyChainRiskDashboard from "@/pages/SupplyChainRiskDashboard";
+import FleetOperationsDashboard from "@/pages/FleetOperationsDashboard";
+import ExecutiveDashboard from "@/pages/ExecutiveDashboard";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
 function Router() {
@@ -86,16 +86,16 @@ function Router() {
       <Route path="/work-order-templates" component={WorkOrderTemplates} />
       <Route path="/maintenance" component={Maintenance} />
       <Route path="/inventory" component={Inventory} />
+      <Route path="/warehouse-rebalance" component={WarehouseRebalanceDashboard} />
+      <Route path="/vendor-intelligence" component={VendorIntelligenceDashboard} />
+      <Route path="/procurement" component={ProcurementDashboard} />
+      <Route path="/supply-chain-risk" component={SupplyChainRiskDashboard} />
+      <Route path="/fleet-operations" component={FleetOperationsDashboard} />
+      <Route path="/executive" component={ExecutiveDashboard} />
       <Route path="/vendors" component={Vendors} />
       <Route path="/financial" component={Financial} />
       <Route path="/depreciation" component={DepreciationDashboard} />
       <Route path="/compliance" component={Compliance} />
-      <Route path="/compliance-dashboard" component={ComplianceDashboard} />
-      <Route path="/inspections" component={InspectionManager} />
-      <Route path="/asset-health" component={AssetHealthDashboard} />
-      <Route path="/stock-forecasts" component={StockForecastDashboard} />
-      <Route path="/warehouse-rebalance" component={WarehouseRebalanceDashboard} />
-      <Route path="/audit-logs" component={AuditLogViewer} />
       <Route path="/sites" component={Sites} />
       <Route path="/users" component={Users} />
       <Route path="/pending-users" component={PendingUsers} />

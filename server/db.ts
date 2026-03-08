@@ -1,6 +1,5 @@
 import { eq, and, desc, asc, gte, lte, sql, or, like, isNotNull, isNull } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, users, sites, InsertSite, assetCategories, assets, InsertAsset,
   workOrders, InsertWorkOrder, maintenanceSchedules, InsertMaintenanceSchedule,
@@ -11,23 +10,19 @@ import {
   userPreferences, InsertUserPreferences, emailNotifications, InsertEmailNotification,
   workOrderTemplates, InsertWorkOrderTemplate, branchCodes, categoryCodes, subCategories,
   assetEditHistory, telemetryPoints, telemetryAggregates, reportSnapshots, predictiveScores,
-  inspectionTemplates, inspections, complianceRules, complianceEvents, slaMetrics, auditLogsV1,
-  ruvectorMemories, primeAgentExecutions, stockForecasts, warehouseTransferRecommendations
+  warehouseTransferRecommendations, vendorPerformanceMetrics, vendorRiskScores,
+  procurementRecommendations, purchaseOrders, supplyChainRiskScores, supplyChainRiskEvents,
+  fleetUnits, technicians, dispatchAssignments, executiveMetricsSnapshots, operationalKpiTrends
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { logger } from "./_core/logger";
 
 let _db: ReturnType<typeof drizzle> | null = null;
-let _pgClient: ReturnType<typeof postgres> | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _pgClient = postgres(process.env.DATABASE_URL, {
-        max: 10,
-        prepare: false,
-      });
-      _db = drizzle(_pgClient);
+      _db = drizzle(process.env.DATABASE_URL);
     } catch (error) {
       logger.warn("Database connection initialization failed", {
         errorType: error instanceof Error ? error.name : typeof error,
@@ -95,8 +90,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
-    await db.insert(users).values(values).onConflictDoUpdate({
-      target: users.openId,
+    await db.insert(users).values(values).onDuplicateKeyUpdate({
       set: updateSet,
     });
   } catch (error) {
@@ -133,9 +127,9 @@ export async function updateUserRole(userId: number, role: "admin" | "manager" |
 export async function createSite(site: InsertSite) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(sites).values(site).returning({ id: sites.id });
-  const insertId = Number(result[0]?.id ?? 0);
-  if (!insertId || Number.isNaN(insertId)) throw new Error("Failed to get insert ID");
+  const result = await db.insert(sites).values(site);
+  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
+  if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
   return await db.select().from(sites).where(eq(sites.id, insertId)).limit(1).then(r => r[0]);
 }
 
@@ -169,9 +163,9 @@ export async function getAllAssetCategories() {
 export async function createAssetCategory(name: string, description?: string) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(assetCategories).values({ name, description }).returning({ id: assetCategories.id });
-  const insertId = Number(result[0]?.id ?? 0);
-  if (!insertId || Number.isNaN(insertId)) throw new Error("Failed to get insert ID");
+  const result = await db.insert(assetCategories).values({ name, description });
+  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
+  if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
   return await db.select().from(assetCategories).where(eq(assetCategories.id, insertId)).limit(1).then(r => r[0]);
 }
 
@@ -180,9 +174,9 @@ export async function createAssetCategory(name: string, description?: string) {
 export async function createAsset(asset: InsertAsset) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(assets).values(asset).returning({ id: assets.id });
-  const insertId = Number(result[0]?.id ?? 0);
-  if (!insertId || Number.isNaN(insertId)) {
+  const result = await db.insert(assets).values(asset);
+  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
+  if (!insertId || isNaN(insertId)) {
     throw new Error("Failed to get insert ID");
   }
   return await db.select().from(assets).where(eq(assets.id, insertId)).limit(1).then(r => r[0]);
@@ -243,9 +237,9 @@ export async function searchAssets(searchTerm: string) {
 export async function createWorkOrder(workOrder: InsertWorkOrder) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(workOrders).values(workOrder).returning({ id: workOrders.id });
-  const insertId = Number(result[0]?.id ?? 0);
-  if (!insertId || Number.isNaN(insertId)) throw new Error("Failed to get insert ID");
+  const result = await db.insert(workOrders).values(workOrder);
+  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
+  if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
   return await db.select().from(workOrders).where(eq(workOrders.id, insertId)).limit(1).then(r => r[0]);
 }
 
@@ -285,12 +279,9 @@ export async function updateWorkOrder(id: number, data: Partial<InsertWorkOrder>
 export async function createMaintenanceSchedule(schedule: InsertMaintenanceSchedule) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db
-    .insert(maintenanceSchedules)
-    .values(schedule)
-    .returning({ id: maintenanceSchedules.id });
-  const insertId = Number(result[0]?.id ?? 0);
-  if (!insertId || Number.isNaN(insertId)) throw new Error("Failed to get insert ID");
+  const result = await db.insert(maintenanceSchedules).values(schedule);
+  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
+  if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
   return await db.select().from(maintenanceSchedules).where(eq(maintenanceSchedules.id, insertId)).limit(1).then(r => r[0]);
 }
 
@@ -337,9 +328,9 @@ export async function updateMaintenanceSchedule(id: number, data: Partial<Insert
 export async function createInventoryItem(item: InsertInventoryItem) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(inventoryItems).values(item).returning({ id: inventoryItems.id });
-  const insertId = Number(result[0]?.id ?? 0);
-  if (!insertId || Number.isNaN(insertId)) throw new Error("Failed to get insert ID");
+  const result = await db.insert(inventoryItems).values(item);
+  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
+  if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
   return await db.select().from(inventoryItems).where(eq(inventoryItems.id, insertId)).limit(1).then(r => r[0]);
 }
 
@@ -352,17 +343,6 @@ export async function getAllInventoryItems(siteId?: number) {
   }
   
   return await db.select().from(inventoryItems).orderBy(asc(inventoryItems.name));
-}
-
-export async function getInventoryItemById(id: number) {
-  const db = await getDb();
-  if (!db) return null;
-  return await db
-    .select()
-    .from(inventoryItems)
-    .where(eq(inventoryItems.id, id))
-    .limit(1)
-    .then(r => r[0] ?? null);
 }
 
 export async function getLowStockItems(siteId?: number) {
@@ -414,14 +394,194 @@ export async function getInventoryTransactions(itemId: number) {
     .orderBy(desc(inventoryTransactions.transactionDate));
 }
 
+export async function getInventoryWarehouseMetrics(tenantId: number, stockItemId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const itemRows = await db
+    .select()
+    .from(inventoryItems)
+    .where(eq(inventoryItems.id, stockItemId))
+    .limit(1);
+
+  const item = itemRows[0];
+  if (!item) return [];
+
+  const sitesList = await db.select().from(sites).where(eq(sites.isActive, true));
+  const siteAssetCounts = await db
+    .select({
+      siteId: assets.siteId,
+      count: sql<number>`count(*)`,
+    })
+    .from(assets)
+    .groupBy(assets.siteId);
+
+  const siteBacklogCounts = await db
+    .select({
+      siteId: workOrders.siteId,
+      count: sql<number>`count(*)`,
+    })
+    .from(workOrders)
+    .where(
+      and(
+        eq(workOrders.status, "pending"),
+        or(eq(workOrders.priority, "high"), eq(workOrders.priority, "critical")),
+      ),
+    )
+    .groupBy(workOrders.siteId);
+
+  const transferOutBySite = await db
+    .select({
+      siteId: inventoryTransactions.fromSiteId,
+      quantity: sql<number>`coalesce(sum(${inventoryTransactions.quantity}), 0)`,
+    })
+    .from(inventoryTransactions)
+    .where(
+      and(
+        eq(inventoryTransactions.itemId, stockItemId),
+        eq(inventoryTransactions.type, "transfer"),
+        isNotNull(inventoryTransactions.fromSiteId),
+      ),
+    )
+    .groupBy(inventoryTransactions.fromSiteId);
+
+  const transferInBySite = await db
+    .select({
+      siteId: inventoryTransactions.toSiteId,
+      quantity: sql<number>`coalesce(sum(${inventoryTransactions.quantity}), 0)`,
+    })
+    .from(inventoryTransactions)
+    .where(
+      and(
+        eq(inventoryTransactions.itemId, stockItemId),
+        eq(inventoryTransactions.type, "transfer"),
+        isNotNull(inventoryTransactions.toSiteId),
+      ),
+    )
+    .groupBy(inventoryTransactions.toSiteId);
+
+  const usageBySite = await db
+    .select({
+      siteId: inventoryTransactions.fromSiteId,
+      quantity: sql<number>`coalesce(sum(${inventoryTransactions.quantity}), 0)`,
+    })
+    .from(inventoryTransactions)
+    .where(
+      and(
+        eq(inventoryTransactions.itemId, stockItemId),
+        eq(inventoryTransactions.type, "out"),
+        isNotNull(inventoryTransactions.fromSiteId),
+      ),
+    )
+    .groupBy(inventoryTransactions.fromSiteId);
+
+  const assetMap = new Map(siteAssetCounts.map((row) => [row.siteId, Number(row.count)]));
+  const backlogMap = new Map(siteBacklogCounts.map((row) => [row.siteId, Number(row.count)]));
+  const transferOutMap = new Map(transferOutBySite.map((row) => [row.siteId, Number(row.quantity)]));
+  const transferInMap = new Map(transferInBySite.map((row) => [row.siteId, Number(row.quantity)]));
+  const usageMap = new Map(usageBySite.map((row) => [row.siteId, Number(row.quantity)]));
+
+  // This system currently stores inventory item stock by site row.
+  // Fallback to each site with neutral stock if item is site-specific.
+  const itemRowsBySite = await db
+    .select()
+    .from(inventoryItems)
+    .where(eq(inventoryItems.itemCode, item.itemCode));
+  const stockBySite = new Map(itemRowsBySite.map((row) => [row.siteId, row]));
+
+  return sitesList.map((site) => {
+    const siteStockRow = stockBySite.get(site.id);
+    const currentStock = siteStockRow?.currentStock ?? 0;
+    const minStockLevel = siteStockRow?.minStockLevel ?? item.minStockLevel;
+    const reorderPoint = siteStockRow?.reorderPoint ?? item.reorderPoint;
+    const netTransfer = (transferInMap.get(site.id) ?? 0) - (transferOutMap.get(site.id) ?? 0);
+    return {
+      tenantId,
+      stockItemId,
+      warehouseId: site.id,
+      warehouseName: site.name,
+      currentStock,
+      minStockLevel,
+      reorderPoint,
+      backlogCount: backlogMap.get(site.id) ?? 0,
+      assetDensity: assetMap.get(site.id) ?? 0,
+      recentUsage: usageMap.get(site.id) ?? 0,
+      netTransfer,
+    };
+  });
+}
+
+export async function upsertWarehouseTransferRecommendations(params: {
+  tenantId: number;
+  recommendations: Array<{
+    stockItemId: number;
+    sourceWarehouseId: number;
+    targetWarehouseId: number;
+    transferQuantity: number;
+    transferPriority: "balanced" | "moderate" | "urgent" | "critical";
+    pressureScore: number;
+    agentExecutionId: string;
+  }>;
+}) {
+  const db = await getDb();
+  if (!db || params.recommendations.length === 0) {
+    return 0;
+  }
+
+  for (const reco of params.recommendations) {
+    await db
+      .insert(warehouseTransferRecommendations)
+      .values({
+        tenantId: params.tenantId,
+        stockItemId: reco.stockItemId,
+        sourceWarehouseId: reco.sourceWarehouseId,
+        targetWarehouseId: reco.targetWarehouseId,
+        transferQuantity: reco.transferQuantity,
+        transferPriority: reco.transferPriority,
+        pressureScore: reco.pressureScore.toFixed(4),
+        agentExecutionId: reco.agentExecutionId,
+      })
+      .onDuplicateKeyUpdate({
+        set: {
+          transferQuantity: reco.transferQuantity,
+          transferPriority: reco.transferPriority,
+          pressureScore: reco.pressureScore.toFixed(4),
+        },
+      });
+  }
+
+  return params.recommendations.length;
+}
+
+export async function listWarehouseTransferRecommendations(params: {
+  tenantId: number;
+  stockItemId?: number;
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [eq(warehouseTransferRecommendations.tenantId, params.tenantId)];
+  if (params.stockItemId) {
+    conditions.push(eq(warehouseTransferRecommendations.stockItemId, params.stockItemId));
+  }
+
+  return db
+    .select()
+    .from(warehouseTransferRecommendations)
+    .where(and(...conditions))
+    .orderBy(desc(warehouseTransferRecommendations.createdAt))
+    .limit(params.limit ?? 50);
+}
+
 // ============= VENDORS =============
 
 export async function createVendor(vendor: InsertVendor) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(vendors).values(vendor).returning({ id: vendors.id });
-  const insertId = Number(result[0]?.id ?? 0);
-  if (!insertId || Number.isNaN(insertId)) throw new Error("Failed to get insert ID");
+  const result = await db.insert(vendors).values(vendor);
+  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
+  if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
   return await db.select().from(vendors).where(eq(vendors.id, insertId)).limit(1).then(r => r[0]);
 }
 
@@ -436,6 +596,850 @@ export async function updateVendor(id: number, data: Partial<InsertVendor>) {
   if (!db) return null;
   await db.update(vendors).set(data).where(eq(vendors.id, id));
   return await db.select().from(vendors).where(eq(vendors.id, id)).limit(1).then(r => r[0] || null);
+}
+
+export async function getVendorScoringInputs(tenantId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const vendorRows = await db.select().from(vendors).where(eq(vendors.isActive, true));
+  if (vendorRows.length === 0) return [];
+
+  const vendorInventory = await db
+    .select()
+    .from(inventoryItems)
+    .where(isNotNull(inventoryItems.vendorId));
+
+  const inventoryByVendor = new Map<number, typeof vendorInventory>();
+  for (const row of vendorInventory) {
+    const vendorId = row.vendorId;
+    if (!vendorId) continue;
+    const existing = inventoryByVendor.get(vendorId) ?? [];
+    existing.push(row);
+    inventoryByVendor.set(vendorId, existing);
+  }
+
+  const allTransactions = await db
+    .select()
+    .from(inventoryTransactions)
+    .where(or(eq(inventoryTransactions.type, "in"), eq(inventoryTransactions.type, "out")));
+
+  const transactionsByItem = new Map<number, typeof allTransactions>();
+  for (const row of allTransactions) {
+    const existing = transactionsByItem.get(row.itemId) ?? [];
+    existing.push(row);
+    transactionsByItem.set(row.itemId, existing);
+  }
+
+  return vendorRows.map((vendor) => {
+    const items = inventoryByVendor.get(vendor.id) ?? [];
+    const unitCosts = items.map((item) => Number(item.unitCost ?? 0)).filter((value) => value > 0);
+    const avgUnitCost = unitCosts.length > 0 ? unitCosts.reduce((sum, value) => sum + value, 0) / unitCosts.length : 0;
+    const avgCostDeviation =
+      unitCosts.length > 1 && avgUnitCost > 0
+        ? unitCosts.reduce((sum, value) => sum + Math.abs(value - avgUnitCost), 0) / unitCosts.length / avgUnitCost
+        : 0;
+
+    let txIn = 0;
+    let txOut = 0;
+    let txTotal = 0;
+    for (const item of items) {
+      const transactions = transactionsByItem.get(item.id) ?? [];
+      txTotal += transactions.length;
+      txIn += transactions.filter((tx) => tx.type === "in").length;
+      txOut += transactions.filter((tx) => tx.type === "out").length;
+    }
+
+    const lowStockCount = items.filter((item) => item.currentStock <= item.reorderPoint).length;
+    const lowStockRatio = items.length > 0 ? lowStockCount / items.length : 0;
+
+    return {
+      tenantId,
+      vendorId: vendor.id,
+      vendorName: vendor.name,
+      txIn,
+      txOut,
+      txTotal,
+      lowStockRatio,
+      costDeviation: avgCostDeviation,
+    };
+  });
+}
+
+export async function upsertVendorIntelligenceSnapshots(params: {
+  tenantId: number;
+  performance: Array<{
+    vendorId: number;
+    deliveryReliability: number;
+    costVariance: number;
+    leadTimeStability: number;
+    defectRate: number;
+    vendorScore: number;
+    agentExecutionId: string;
+  }>;
+  risks: Array<{
+    vendorId: number;
+    vendorScore: number;
+    riskScore: number;
+    riskBand: "low" | "medium" | "high";
+    agentExecutionId: string;
+  }>;
+}) {
+  const db = await getDb();
+  if (!db) return { performanceRows: 0, riskRows: 0 };
+
+  for (const row of params.performance) {
+    await db
+      .insert(vendorPerformanceMetrics)
+      .values({
+        tenantId: params.tenantId,
+        vendorId: row.vendorId,
+        deliveryReliability: row.deliveryReliability.toFixed(4),
+        costVariance: row.costVariance.toFixed(4),
+        leadTimeStability: row.leadTimeStability.toFixed(4),
+        defectRate: row.defectRate.toFixed(4),
+        vendorScore: row.vendorScore.toFixed(4),
+        agentExecutionId: row.agentExecutionId,
+      })
+      .onDuplicateKeyUpdate({
+        set: {
+          deliveryReliability: row.deliveryReliability.toFixed(4),
+          costVariance: row.costVariance.toFixed(4),
+          leadTimeStability: row.leadTimeStability.toFixed(4),
+          defectRate: row.defectRate.toFixed(4),
+          vendorScore: row.vendorScore.toFixed(4),
+        },
+      });
+  }
+
+  for (const row of params.risks) {
+    await db
+      .insert(vendorRiskScores)
+      .values({
+        tenantId: params.tenantId,
+        vendorId: row.vendorId,
+        vendorScore: row.vendorScore.toFixed(4),
+        riskScore: row.riskScore.toFixed(4),
+        riskBand: row.riskBand,
+        agentExecutionId: row.agentExecutionId,
+      })
+      .onDuplicateKeyUpdate({
+        set: {
+          vendorScore: row.vendorScore.toFixed(4),
+          riskScore: row.riskScore.toFixed(4),
+          riskBand: row.riskBand,
+        },
+      });
+  }
+
+  return {
+    performanceRows: params.performance.length,
+    riskRows: params.risks.length,
+  };
+}
+
+export async function listVendorRiskScores(params: { tenantId: number; limit?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(vendorRiskScores)
+    .where(eq(vendorRiskScores.tenantId, params.tenantId))
+    .orderBy(desc(vendorRiskScores.createdAt))
+    .limit(params.limit ?? 50);
+}
+
+export async function getProcurementInputSignals(params: { tenantId: number; stockItemId?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const inventoryRows = params.stockItemId
+    ? await db.select().from(inventoryItems).where(eq(inventoryItems.id, params.stockItemId))
+    : await db.select().from(inventoryItems);
+  const vendorRiskRows = await db
+    .select()
+    .from(vendorRiskScores)
+    .where(eq(vendorRiskScores.tenantId, params.tenantId))
+    .orderBy(desc(vendorRiskScores.createdAt));
+
+  const latestRiskByVendor = new Map<number, { riskScore: number }>();
+  for (const row of vendorRiskRows) {
+    if (!latestRiskByVendor.has(row.vendorId)) {
+      latestRiskByVendor.set(row.vendorId, { riskScore: Number(row.riskScore) });
+    }
+  }
+
+  return inventoryRows
+    .filter((item) => item.vendorId !== null && item.vendorId !== undefined)
+    .map((item) => {
+      const deficit = Math.max(0, item.reorderPoint - item.currentStock);
+      const demandPressure = item.reorderPoint > 0 ? deficit / item.reorderPoint : 0;
+      const stockoutProbability = item.minStockLevel > 0 ? Math.max(0, (item.minStockLevel - item.currentStock) / item.minStockLevel) : 0;
+      const risk = latestRiskByVendor.get(item.vendorId!);
+      const vendorRisk = risk?.riskScore ?? 0.5;
+      const leadTimeRisk = Math.min(1, vendorRisk * 0.9 + 0.1);
+
+      return {
+        tenantId: params.tenantId,
+        stockItemId: item.id,
+        candidateVendorId: item.vendorId!,
+        demandPressure: Math.max(0, Math.min(1, Number(demandPressure.toFixed(4)))),
+        leadTimeRisk: Math.max(0, Math.min(1, Number(leadTimeRisk.toFixed(4)))),
+        vendorRisk: Math.max(0, Math.min(1, Number(vendorRisk.toFixed(4)))),
+        stockoutProbability: Math.max(0, Math.min(1, Number(stockoutProbability.toFixed(4)))),
+        currentStock: item.currentStock,
+        reorderPoint: item.reorderPoint,
+        unitCost: Number(item.unitCost ?? 0),
+      };
+    });
+}
+
+export async function upsertProcurementRecommendations(params: {
+  tenantId: number;
+  recommendations: Array<{
+    stockItemId: number;
+    recommendedVendorId: number;
+    recommendedQuantity: number;
+    demandScore: number;
+    vendorRiskScore: number;
+    procurementPriority: "monitor" | "prepare_procurement" | "reorder" | "immediate_procurement";
+    agentExecutionId: string;
+  }>;
+}) {
+  const db = await getDb();
+  if (!db || params.recommendations.length === 0) return 0;
+
+  for (const row of params.recommendations) {
+    await db
+      .insert(procurementRecommendations)
+      .values({
+        tenantId: params.tenantId,
+        stockItemId: row.stockItemId,
+        recommendedVendorId: row.recommendedVendorId,
+        recommendedQuantity: row.recommendedQuantity,
+        demandScore: row.demandScore.toFixed(4),
+        vendorRiskScore: row.vendorRiskScore.toFixed(4),
+        procurementPriority: row.procurementPriority,
+        agentExecutionId: row.agentExecutionId,
+      })
+      .onDuplicateKeyUpdate({
+        set: {
+          recommendedQuantity: row.recommendedQuantity,
+          demandScore: row.demandScore.toFixed(4),
+          vendorRiskScore: row.vendorRiskScore.toFixed(4),
+          procurementPriority: row.procurementPriority,
+        },
+      });
+  }
+  return params.recommendations.length;
+}
+
+export async function listProcurementRecommendations(params: {
+  tenantId: number;
+  stockItemId?: number;
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(procurementRecommendations.tenantId, params.tenantId)];
+  if (params.stockItemId) {
+    conditions.push(eq(procurementRecommendations.stockItemId, params.stockItemId));
+  }
+  return db
+    .select()
+    .from(procurementRecommendations)
+    .where(and(...conditions))
+    .orderBy(desc(procurementRecommendations.createdAt))
+    .limit(params.limit ?? 50);
+}
+
+export async function createPurchaseOrderFromRecommendation(params: {
+  tenantId: number;
+  recommendationId: number;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const rows = await db
+    .select()
+    .from(procurementRecommendations)
+    .where(
+      and(
+        eq(procurementRecommendations.id, params.recommendationId),
+        eq(procurementRecommendations.tenantId, params.tenantId),
+      ),
+    )
+    .limit(1);
+  const recommendation = rows[0];
+  if (!recommendation) return null;
+
+  const itemRows = await db
+    .select()
+    .from(inventoryItems)
+    .where(eq(inventoryItems.id, recommendation.stockItemId))
+    .limit(1);
+  const item = itemRows[0];
+  const unitCost = Number(item?.unitCost ?? 0);
+  const totalValue = unitCost * recommendation.recommendedQuantity;
+
+  const result = await db.insert(purchaseOrders).values({
+    tenantId: params.tenantId,
+    vendorId: recommendation.recommendedVendorId,
+    status: "draft",
+    totalValue: totalValue.toFixed(2),
+  });
+  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId || 0);
+  if (!insertId) return null;
+  const inserted = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, insertId)).limit(1);
+  return inserted[0] ?? null;
+}
+
+export async function getSupplyChainRiskInputs(params: {
+  tenantId: number;
+  stockItemId?: number;
+  vendorId?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const inventoryRows = params.stockItemId
+    ? await db.select().from(inventoryItems).where(eq(inventoryItems.id, params.stockItemId))
+    : await db.select().from(inventoryItems);
+
+  const vendorRiskRows = await db
+    .select()
+    .from(vendorRiskScores)
+    .where(eq(vendorRiskScores.tenantId, params.tenantId))
+    .orderBy(desc(vendorRiskScores.createdAt));
+  const latestVendorRisk = new Map<number, number>();
+  for (const row of vendorRiskRows) {
+    if (!latestVendorRisk.has(row.vendorId)) {
+      latestVendorRisk.set(row.vendorId, Number(row.riskScore));
+    }
+  }
+
+  const procurementRows = await db
+    .select()
+    .from(procurementRecommendations)
+    .where(eq(procurementRecommendations.tenantId, params.tenantId))
+    .orderBy(desc(procurementRecommendations.createdAt));
+  const latestProcByStock = new Map<number, { demandScore: number }>();
+  for (const row of procurementRows) {
+    if (!latestProcByStock.has(row.stockItemId)) {
+      latestProcByStock.set(row.stockItemId, { demandScore: Number(row.demandScore) });
+    }
+  }
+
+  const transferRows = await db
+    .select()
+    .from(warehouseTransferRecommendations)
+    .where(eq(warehouseTransferRecommendations.tenantId, params.tenantId))
+    .orderBy(desc(warehouseTransferRecommendations.createdAt));
+  const transferCountByStock = new Map<number, number>();
+  for (const row of transferRows) {
+    transferCountByStock.set(row.stockItemId, (transferCountByStock.get(row.stockItemId) ?? 0) + 1);
+  }
+
+  const scopedItems = inventoryRows.filter((item) => item.vendorId !== null && item.vendorId !== undefined);
+  return scopedItems
+    .filter((item) => (params.vendorId ? item.vendorId === params.vendorId : true))
+    .map((item) => {
+      const deficit = Math.max(0, item.reorderPoint - item.currentStock);
+      const demandVolatility = latestProcByStock.get(item.id)?.demandScore ?? (item.reorderPoint > 0 ? deficit / item.reorderPoint : 0);
+      const vendorRisk = latestVendorRisk.get(item.vendorId!) ?? 0.5;
+      const leadTimeRisk = Math.min(1, vendorRisk * 0.85 + 0.1);
+      const inventoryPressure = item.minStockLevel > 0 ? Math.max(0, (item.minStockLevel - item.currentStock) / item.minStockLevel) : 0;
+      const transferCount = transferCountByStock.get(item.id) ?? 0;
+      const transportRisk = Math.min(1, transferCount / 10);
+
+      return {
+        tenantId: params.tenantId,
+        stockItemId: item.id,
+        vendorId: item.vendorId!,
+        demandVolatility: Number(Math.max(0, Math.min(1, demandVolatility)).toFixed(4)),
+        leadTimeRisk: Number(Math.max(0, Math.min(1, leadTimeRisk)).toFixed(4)),
+        vendorRisk: Number(Math.max(0, Math.min(1, vendorRisk)).toFixed(4)),
+        transportRisk: Number(Math.max(0, Math.min(1, transportRisk)).toFixed(4)),
+        inventoryPressure: Number(Math.max(0, Math.min(1, inventoryPressure)).toFixed(4)),
+      };
+    });
+}
+
+export async function upsertSupplyChainRiskSnapshots(params: {
+  tenantId: number;
+  scores: Array<{
+    stockItemId: number;
+    vendorId: number;
+    demandVolatility: number;
+    leadTimeRisk: number;
+    vendorRisk: number;
+    transportRisk: number;
+    inventoryPressure: number;
+    riskIndex: number;
+    riskBand: "low" | "moderate" | "elevated" | "high" | "critical";
+    agentExecutionId: string;
+  }>;
+}) {
+  const db = await getDb();
+  if (!db || params.scores.length === 0) return { scoreRows: 0, eventRows: 0 };
+
+  let eventRows = 0;
+  for (const row of params.scores) {
+    await db
+      .insert(supplyChainRiskScores)
+      .values({
+        tenantId: params.tenantId,
+        stockItemId: row.stockItemId,
+        vendorId: row.vendorId,
+        demandVolatility: row.demandVolatility.toFixed(4),
+        leadTimeRisk: row.leadTimeRisk.toFixed(4),
+        vendorRisk: row.vendorRisk.toFixed(4),
+        transportRisk: row.transportRisk.toFixed(4),
+        inventoryPressure: row.inventoryPressure.toFixed(4),
+        supplyChainRiskIndex: row.riskIndex.toFixed(4),
+        riskBand: row.riskBand,
+        agentExecutionId: row.agentExecutionId,
+      })
+      .onDuplicateKeyUpdate({
+        set: {
+          demandVolatility: row.demandVolatility.toFixed(4),
+          leadTimeRisk: row.leadTimeRisk.toFixed(4),
+          vendorRisk: row.vendorRisk.toFixed(4),
+          transportRisk: row.transportRisk.toFixed(4),
+          inventoryPressure: row.inventoryPressure.toFixed(4),
+          supplyChainRiskIndex: row.riskIndex.toFixed(4),
+          riskBand: row.riskBand,
+        },
+      });
+
+    if (row.riskBand === "high" || row.riskBand === "critical") {
+      await db
+        .insert(supplyChainRiskEvents)
+        .values({
+          tenantId: params.tenantId,
+          stockItemId: row.stockItemId,
+          vendorId: row.vendorId,
+          riskType: "supply_chain_risk_event",
+          riskScore: row.riskIndex.toFixed(4),
+          riskBand: row.riskBand,
+          description: `Risk ${row.riskBand} for stock item ${row.stockItemId} and vendor ${row.vendorId}`,
+          agentExecutionId: row.agentExecutionId,
+        })
+        .onDuplicateKeyUpdate({
+          set: {
+            riskScore: row.riskIndex.toFixed(4),
+            riskBand: row.riskBand,
+            description: `Risk ${row.riskBand} for stock item ${row.stockItemId} and vendor ${row.vendorId}`,
+          },
+        });
+      eventRows += 1;
+    }
+  }
+
+  return {
+    scoreRows: params.scores.length,
+    eventRows,
+  };
+}
+
+export async function listSupplyChainRiskScores(params: {
+  tenantId: number;
+  stockItemId?: number;
+  vendorId?: number;
+  riskBand?: "low" | "moderate" | "elevated" | "high" | "critical";
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [eq(supplyChainRiskScores.tenantId, params.tenantId)];
+  if (params.stockItemId) conditions.push(eq(supplyChainRiskScores.stockItemId, params.stockItemId));
+  if (params.vendorId) conditions.push(eq(supplyChainRiskScores.vendorId, params.vendorId));
+  if (params.riskBand) conditions.push(eq(supplyChainRiskScores.riskBand, params.riskBand));
+
+  return db
+    .select()
+    .from(supplyChainRiskScores)
+    .where(and(...conditions))
+    .orderBy(desc(supplyChainRiskScores.createdAt))
+    .limit(params.limit ?? 50);
+}
+
+export async function getDispatchOptimizationInputs(params: {
+  tenantId: number;
+  workOrderId?: number;
+  facilityId?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let workOrderRows = params.workOrderId
+    ? await db.select().from(workOrders).where(eq(workOrders.id, params.workOrderId))
+    : await db
+        .select()
+        .from(workOrders)
+        .where(or(eq(workOrders.status, "pending"), eq(workOrders.status, "assigned"), eq(workOrders.status, "in_progress")));
+
+  if (params.facilityId) {
+    workOrderRows = workOrderRows.filter((row) => row.siteId === params.facilityId);
+  }
+  if (workOrderRows.length === 0) return [];
+
+  const technicianRows = await db
+    .select()
+    .from(technicians)
+    .where(and(eq(technicians.tenantId, params.tenantId), eq(technicians.availabilityStatus, "available")));
+  const fleetRows = await db
+    .select()
+    .from(fleetUnits)
+    .where(and(eq(fleetUnits.tenantId, params.tenantId), eq(fleetUnits.status, "available")));
+  if (technicianRows.length === 0 || fleetRows.length === 0) return [];
+
+  const assignmentRows = await db
+    .select()
+    .from(dispatchAssignments)
+    .where(eq(dispatchAssignments.tenantId, params.tenantId));
+  const assignmentsByTechnician = new Map<number, number>();
+  for (const row of assignmentRows) {
+    assignmentsByTechnician.set(row.technicianId, (assignmentsByTechnician.get(row.technicianId) ?? 0) + 1);
+  }
+  const maxWorkload = Math.max(1, ...Array.from(assignmentsByTechnician.values()));
+
+  return workOrderRows.flatMap((wo) => {
+    const requiredSkill =
+      wo.type === "inspection"
+        ? "inspection"
+        : wo.type === "preventive"
+          ? "calibration"
+          : wo.type === "corrective"
+            ? "mechanical"
+            : "electrical";
+    const assetPriority =
+      wo.priority === "critical" ? 1 : wo.priority === "high" ? 0.75 : wo.priority === "medium" ? 0.5 : 0.25;
+
+    return technicianRows.flatMap((tech) => {
+      const workload = assignmentsByTechnician.get(tech.id) ?? 0;
+      const workloadBalance = Math.max(0, 1 - workload / maxWorkload);
+      const skillMatch = tech.skillProfile.toLowerCase().includes(requiredSkill) ? 1 : 0.3;
+
+      return fleetRows.map((fleet) => {
+        const baseDistance = Math.abs((tech.id % 30) - (wo.siteId % 30)) + Math.abs((fleet.id % 20) - (wo.id % 20));
+        const routeDistance = Number((baseDistance + 3).toFixed(2));
+        const travelTime = Number(Math.max(0, Math.min(1, routeDistance / 120)).toFixed(4));
+        const routeEfficiency = Number((1 - Math.min(1, routeDistance / 150)).toFixed(4));
+
+        return {
+          tenantId: params.tenantId,
+          workOrderId: wo.id,
+          technicianId: tech.id,
+          fleetUnitId: fleet.id,
+          travelTime,
+          technicianSkillMatch: skillMatch,
+          assetPriority,
+          workloadBalance: Number(workloadBalance.toFixed(4)),
+          routeEfficiency,
+          routeDistance,
+        };
+      });
+    });
+  });
+}
+
+export async function upsertDispatchAssignments(params: {
+  tenantId: number;
+  assignments: Array<{
+    workOrderId: number;
+    technicianId: number;
+    fleetUnitId: number;
+    dispatchPriority: "routine" | "prioritized" | "urgent" | "critical";
+    estimatedTravelTime: number;
+    routeDistance: number;
+    dispatchScore: number;
+    agentExecutionId: string;
+  }>;
+}) {
+  const db = await getDb();
+  if (!db || params.assignments.length === 0) return 0;
+
+  for (const row of params.assignments) {
+    await db
+      .insert(dispatchAssignments)
+      .values({
+        tenantId: params.tenantId,
+        workOrderId: row.workOrderId,
+        technicianId: row.technicianId,
+        fleetUnitId: row.fleetUnitId,
+        dispatchPriority: row.dispatchPriority,
+        estimatedTravelTime: row.estimatedTravelTime.toFixed(2),
+        routeDistance: row.routeDistance.toFixed(2),
+        dispatchScore: row.dispatchScore.toFixed(4),
+        status: "created",
+        agentExecutionId: row.agentExecutionId,
+      })
+      .onDuplicateKeyUpdate({
+        set: {
+          dispatchPriority: row.dispatchPriority,
+          estimatedTravelTime: row.estimatedTravelTime.toFixed(2),
+          routeDistance: row.routeDistance.toFixed(2),
+          dispatchScore: row.dispatchScore.toFixed(4),
+          status: "created",
+        },
+      });
+  }
+  return params.assignments.length;
+}
+
+export async function listDispatchAssignments(params: {
+  tenantId: number;
+  facilityId?: number;
+  technicianId?: number;
+  status?: "created" | "completed" | "delayed";
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [eq(dispatchAssignments.tenantId, params.tenantId)];
+  if (params.technicianId) {
+    conditions.push(eq(dispatchAssignments.technicianId, params.technicianId));
+  }
+  if (params.status) {
+    conditions.push(eq(dispatchAssignments.status, params.status));
+  }
+
+  let rows = await db
+    .select()
+    .from(dispatchAssignments)
+    .where(and(...conditions))
+    .orderBy(desc(dispatchAssignments.createdAt))
+    .limit(params.limit ?? 50);
+
+  if (params.facilityId) {
+    const allowedWorkOrders = await db
+      .select({ id: workOrders.id })
+      .from(workOrders)
+      .where(eq(workOrders.siteId, params.facilityId));
+    const allowedSet = new Set(allowedWorkOrders.map((wo) => wo.id));
+    rows = rows.filter((row) => allowedSet.has(row.workOrderId));
+  }
+
+  return rows;
+}
+
+export async function getExecutiveMetricsInputs(tenantId: number) {
+  const db = await getDb();
+  if (!db) {
+    return {
+      assetHealthIndex: 0.5,
+      maintenanceCostProjection: 0.5,
+      inventoryPressureIndex: 0.5,
+      vendorRiskIndex: 0.5,
+      supplyChainRiskIndex: 0.5,
+      fleetUtilizationRate: 0.5,
+      technicianProductivityScore: 0.5,
+    };
+  }
+
+  const latestPredictive = await db
+    .select()
+    .from(predictiveScores)
+    .where(eq(predictiveScores.tenantId, tenantId))
+    .orderBy(desc(predictiveScores.scoredAt))
+    .limit(50);
+  const avgRisk = latestPredictive.length
+    ? latestPredictive.reduce((sum, row) => sum + Number(row.riskScore), 0) / latestPredictive.length / 100
+    : 0.5;
+  const assetHealthIndex = Number((1 - Math.max(0, Math.min(1, avgRisk))).toFixed(4));
+
+  const recentFinancial = await db
+    .select()
+    .from(financialTransactions)
+    .orderBy(desc(financialTransactions.transactionDate))
+    .limit(100);
+  const maintenanceTx = recentFinancial.filter((row) =>
+    row.transactionType === "maintenance" || row.transactionType === "repair",
+  );
+  const maintenanceAvg = maintenanceTx.length
+    ? maintenanceTx.reduce((sum, row) => sum + Number(row.amount), 0) / maintenanceTx.length
+    : 0;
+  const maintenanceCostProjection = Number(Math.max(0, Math.min(1, maintenanceAvg / 1000000)).toFixed(4));
+
+  const inventoryRows = await db.select().from(inventoryItems);
+  const pressureRatios = inventoryRows.map((row) =>
+    row.reorderPoint > 0 ? Math.max(0, (row.reorderPoint - row.currentStock) / row.reorderPoint) : 0,
+  );
+  const inventoryPressureIndex = pressureRatios.length
+    ? Number((pressureRatios.reduce((sum, v) => sum + v, 0) / pressureRatios.length).toFixed(4))
+    : 0.5;
+
+  const latestVendorRisks = await db
+    .select()
+    .from(vendorRiskScores)
+    .where(eq(vendorRiskScores.tenantId, tenantId))
+    .orderBy(desc(vendorRiskScores.createdAt))
+    .limit(100);
+  const vendorRiskIndex = latestVendorRisks.length
+    ? Number((latestVendorRisks.reduce((sum, row) => sum + Number(row.riskScore), 0) / latestVendorRisks.length).toFixed(4))
+    : 0.5;
+
+  const latestSupplyChain = await db
+    .select()
+    .from(supplyChainRiskScores)
+    .where(eq(supplyChainRiskScores.tenantId, tenantId))
+    .orderBy(desc(supplyChainRiskScores.createdAt))
+    .limit(100);
+  const supplyChainRiskIndex = latestSupplyChain.length
+    ? Number(
+        (latestSupplyChain.reduce((sum, row) => sum + Number(row.supplyChainRiskIndex), 0) / latestSupplyChain.length).toFixed(4),
+      )
+    : 0.5;
+
+  const fleetRows = await db.select().from(fleetUnits).where(eq(fleetUnits.tenantId, tenantId));
+  const assignedFleet = fleetRows.filter((row) => row.status === "assigned").length;
+  const fleetUtilizationRate = fleetRows.length ? Number((assignedFleet / fleetRows.length).toFixed(4)) : 0.5;
+
+  const dispatchRows = await db
+    .select()
+    .from(dispatchAssignments)
+    .where(eq(dispatchAssignments.tenantId, tenantId))
+    .orderBy(desc(dispatchAssignments.createdAt))
+    .limit(100);
+  const completedOrCreated = dispatchRows.filter((row) => row.status === "completed" || row.status === "created").length;
+  const technicianProductivityScore = dispatchRows.length ? Number((completedOrCreated / dispatchRows.length).toFixed(4)) : 0.5;
+
+  return {
+    assetHealthIndex,
+    maintenanceCostProjection,
+    inventoryPressureIndex,
+    vendorRiskIndex,
+    supplyChainRiskIndex,
+    fleetUtilizationRate,
+    technicianProductivityScore,
+  };
+}
+
+export async function upsertExecutiveMetricsSnapshot(params: {
+  tenantId: number;
+  snapshotDate: Date;
+  agentExecutionId: string;
+  snapshot: {
+    assetHealthIndex: number;
+    maintenanceCostProjection: number;
+    inventoryPressureIndex: number;
+    vendorRiskIndex: number;
+    supplyChainRiskIndex: number;
+    fleetUtilizationRate: number;
+    technicianProductivityScore: number;
+    overallOperationsIndex: number;
+  };
+}) {
+  const db = await getDb();
+  if (!db) return { snapshotRows: 0, trendRows: 0 };
+
+  await db
+    .insert(executiveMetricsSnapshots)
+    .values({
+      tenantId: params.tenantId,
+      snapshotDate: params.snapshotDate,
+      assetHealthIndex: params.snapshot.assetHealthIndex.toFixed(4),
+      maintenanceCostProjection: params.snapshot.maintenanceCostProjection.toFixed(4),
+      inventoryPressureIndex: params.snapshot.inventoryPressureIndex.toFixed(4),
+      vendorRiskIndex: params.snapshot.vendorRiskIndex.toFixed(4),
+      supplyChainRiskIndex: params.snapshot.supplyChainRiskIndex.toFixed(4),
+      fleetUtilizationRate: params.snapshot.fleetUtilizationRate.toFixed(4),
+      technicianProductivityScore: params.snapshot.technicianProductivityScore.toFixed(4),
+      overallOperationsIndex: params.snapshot.overallOperationsIndex.toFixed(2),
+      agentExecutionId: params.agentExecutionId,
+    })
+    .onDuplicateKeyUpdate({
+      set: {
+        assetHealthIndex: params.snapshot.assetHealthIndex.toFixed(4),
+        maintenanceCostProjection: params.snapshot.maintenanceCostProjection.toFixed(4),
+        inventoryPressureIndex: params.snapshot.inventoryPressureIndex.toFixed(4),
+        vendorRiskIndex: params.snapshot.vendorRiskIndex.toFixed(4),
+        supplyChainRiskIndex: params.snapshot.supplyChainRiskIndex.toFixed(4),
+        fleetUtilizationRate: params.snapshot.fleetUtilizationRate.toFixed(4),
+        technicianProductivityScore: params.snapshot.technicianProductivityScore.toFixed(4),
+        overallOperationsIndex: params.snapshot.overallOperationsIndex.toFixed(2),
+      },
+    });
+
+  const trendItems: Array<{ metricName: string; metricValue: number }> = [
+    { metricName: "asset_health_index", metricValue: params.snapshot.assetHealthIndex },
+    { metricName: "maintenance_cost_projection", metricValue: params.snapshot.maintenanceCostProjection },
+    { metricName: "inventory_pressure_index", metricValue: params.snapshot.inventoryPressureIndex },
+    { metricName: "vendor_risk_index", metricValue: params.snapshot.vendorRiskIndex },
+    { metricName: "supply_chain_risk_index", metricValue: params.snapshot.supplyChainRiskIndex },
+    { metricName: "fleet_utilization_rate", metricValue: params.snapshot.fleetUtilizationRate },
+    { metricName: "technician_productivity_score", metricValue: params.snapshot.technicianProductivityScore },
+    { metricName: "overall_operations_index", metricValue: params.snapshot.overallOperationsIndex },
+  ];
+
+  let trendRows = 0;
+  for (const item of trendItems) {
+    const previous = await db
+      .select()
+      .from(operationalKpiTrends)
+      .where(and(eq(operationalKpiTrends.tenantId, params.tenantId), eq(operationalKpiTrends.metricName, item.metricName)))
+      .orderBy(desc(operationalKpiTrends.metricDate))
+      .limit(1);
+    const prevValue = previous[0] ? Number(previous[0].metricValue) : item.metricValue;
+    const trendDirection = item.metricValue > prevValue ? "up" : item.metricValue < prevValue ? "down" : "stable";
+
+    await db
+      .insert(operationalKpiTrends)
+      .values({
+        tenantId: params.tenantId,
+        metricName: item.metricName,
+        metricValue: item.metricValue.toFixed(4),
+        metricDate: params.snapshotDate,
+        trendDirection,
+        agentExecutionId: params.agentExecutionId,
+      })
+      .onDuplicateKeyUpdate({
+        set: {
+          metricValue: item.metricValue.toFixed(4),
+          trendDirection,
+        },
+      });
+    trendRows += 1;
+  }
+
+  return { snapshotRows: 1, trendRows };
+}
+
+export async function getLatestExecutiveMetricsSnapshot(tenantId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(executiveMetricsSnapshots)
+    .where(eq(executiveMetricsSnapshots.tenantId, tenantId))
+    .orderBy(desc(executiveMetricsSnapshots.snapshotDate))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function listOperationalKpiTrends(params: {
+  tenantId: number;
+  metricName?: string;
+  startDate?: Date;
+  endDate?: Date;
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(operationalKpiTrends.tenantId, params.tenantId)];
+  if (params.metricName) conditions.push(eq(operationalKpiTrends.metricName, params.metricName));
+  if (params.startDate) conditions.push(gte(operationalKpiTrends.metricDate, params.startDate));
+  if (params.endDate) conditions.push(lte(operationalKpiTrends.metricDate, params.endDate));
+
+  return db
+    .select()
+    .from(operationalKpiTrends)
+    .where(and(...conditions))
+    .orderBy(desc(operationalKpiTrends.metricDate))
+    .limit(params.limit ?? 100);
 }
 
 // ============= FINANCIAL TRANSACTIONS =============
@@ -571,12 +1575,12 @@ export async function getDashboardStats() {
     .where(sql`${inventoryItems.currentStock} <= ${inventoryItems.reorderPoint}`);
   
   return {
-    totalAssets: Number(totalAssets?.count || 0),
-    operationalAssets: Number(operationalAssets?.count || 0),
-    maintenanceAssets: Number(maintenanceAssets?.count || 0),
-    pendingWorkOrders: Number(pendingWorkOrders?.count || 0),
-    inProgressWorkOrders: Number(inProgressWorkOrders?.count || 0),
-    lowStockItems: Number(lowStockCount?.count || 0),
+    totalAssets: totalAssets?.count || 0,
+    operationalAssets: operationalAssets?.count || 0,
+    maintenanceAssets: maintenanceAssets?.count || 0,
+    pendingWorkOrders: pendingWorkOrders?.count || 0,
+    inProgressWorkOrders: inProgressWorkOrders?.count || 0,
+    lowStockItems: lowStockCount?.count || 0,
   };
 }
 
@@ -585,8 +1589,8 @@ export async function getDashboardStats() {
 export async function createNotification(notification: typeof notifications.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(notifications).values(notification).returning({ id: notifications.id });
-  return Number(result[0]?.id || 0);
+  const result = await db.insert(notifications).values(notification);
+  return Number(result[0].insertId);
 }
 
 export async function getUserNotifications(userId: number, limit: number = 50) {
@@ -607,7 +1611,7 @@ export async function getUnreadNotificationCount(userId: number) {
       eq(notifications.userId, userId),
       eq(notifications.isRead, false)
     ));
-  return Number(result[0]?.count || 0);
+  return result[0]?.count || 0;
 }
 
 export async function markNotificationAsRead(id: number) {
@@ -671,7 +1675,7 @@ export async function createAssetPhoto(data: InsertAssetPhoto) {
   if (!db) throw new Error("Database not available");
   
   const result = await db.insert(assetPhotos).values(data);
-  const insertId = Number((result as any)[0]?.insertId || 0);
+  const insertId = Number(result[0].insertId);
   return insertId;
 }
 
@@ -702,7 +1706,7 @@ export async function createScheduledReport(data: InsertScheduledReport) {
   if (!db) throw new Error("Database not available");
   
   const result = await db.insert(scheduledReports).values(data);
-  const insertId = Number((result as any)[0]?.insertId || 0);
+  const insertId = Number(result[0].insertId);
   return insertId;
 }
 
@@ -876,14 +1880,8 @@ export async function getQuickBooksConfig() {
   const db = await getDb();
   if (!db) return null;
   
-  const result = await db.select().from(quickbooksConfig).where(eq(quickbooksConfig.isActive, true)).limit(1);
-  if (result.length === 0) return null;
-  const row = result[0] as any;
-  return {
-    ...row,
-    isActive: row.isActive ? 1 : 0,
-    autoSync: row.autoSync ? 1 : 0,
-  };
+  const result = await db.select().from(quickbooksConfig).where(eq(quickbooksConfig.isActive, 1)).limit(1);
+  return result.length > 0 ? result[0] : null;
 }
 
 export async function saveQuickBooksConfig(config: InsertQuickBooksConfig) {
@@ -891,26 +1889,13 @@ export async function saveQuickBooksConfig(config: InsertQuickBooksConfig) {
   if (!db) return undefined;
   
   // Deactivate all existing configs
-  await db.update(quickbooksConfig).set({ isActive: false });
+  await db.update(quickbooksConfig).set({ isActive: 0 });
   
   // Insert new config
-  const result = await db
-    .insert(quickbooksConfig)
-    .values({
-      ...config,
-      isActive: Boolean((config as any).isActive),
-      autoSync: Boolean((config as any).autoSync),
-    } as InsertQuickBooksConfig)
-    .returning({ id: quickbooksConfig.id });
-  const insertId = Number(result[0]?.id ?? 0);
+  const result = await db.insert(quickbooksConfig).values(config);
+  const insertId = result[0].insertId;
   
-  const row = await db.select().from(quickbooksConfig).where(eq(quickbooksConfig.id, insertId)).limit(1).then(r => r[0]);
-  if (!row) return row;
-  return {
-    ...row,
-    isActive: (row as any).isActive ? 1 : 0,
-    autoSync: (row as any).autoSync ? 1 : 0,
-  } as any;
+  return await db.select().from(quickbooksConfig).where(eq(quickbooksConfig.id, Number(insertId))).limit(1).then(r => r[0]);
 }
 
 export async function updateQuickBooksTokens(id: number, accessToken: string, refreshToken: string, expiresAt: Date) {
@@ -973,7 +1958,7 @@ export async function upsertUserPreferences(prefs: InsertUserPreferences) {
     return await getUserPreferences(prefs.userId);
   } else {
     const result = await db.insert(userPreferences).values(prefs);
-    const insertId = (result as any)[0]?.insertId;
+    const insertId = result[0].insertId;
     return await db.select().from(userPreferences).where(eq(userPreferences.id, Number(insertId))).limit(1).then(r => r[0]);
   }
 }
@@ -985,7 +1970,7 @@ export async function createEmailNotification(notification: InsertEmailNotificat
   if (!db) return null;
   
   const result = await db.insert(emailNotifications).values(notification);
-  const insertId = (result as any)[0]?.insertId;
+  const insertId = result[0].insertId;
   return await db.select().from(emailNotifications).where(eq(emailNotifications.id, Number(insertId))).limit(1).then(r => r[0]);
 }
 
@@ -1026,7 +2011,7 @@ export async function createWorkOrderTemplate(data: InsertWorkOrderTemplate) {
   if (!db) throw new Error("Database not available");
   
   const result = await db.insert(workOrderTemplates).values(data);
-  return Number((result as any)[0]?.insertId || 0);
+  return Number(result[0].insertId);
 }
 
 export async function getWorkOrderTemplates(filters?: {
@@ -1574,13 +2559,7 @@ export async function aggregateTelemetryHourly(params: {
         minValue: group.min.toString(),
         count: group.count,
       })
-      .onConflictDoUpdate({
-        target: [
-          telemetryAggregates.tenantId,
-          telemetryAggregates.assetId,
-          telemetryAggregates.metric,
-          telemetryAggregates.hourBucket,
-        ],
+      .onDuplicateKeyUpdate({
         set: {
           avgValue: (group.sum / group.count).toString(),
           maxValue: group.max.toString(),
@@ -1694,616 +2673,5 @@ export async function createPredictiveScore(params: {
     factorsJson: JSON.stringify(params.factors ?? {}),
     scoredAt: new Date(),
   });
-  return Number((result as any)[0]?.insertId || (result as any).insertId || 0) || null;
-}
-
-export async function getPredictiveScoresByTenant(tenantId: number, limit = 100) {
-  const db = await getDb();
-  if (!db) return [];
-  return await db
-    .select()
-    .from(predictiveScores)
-    .where(eq(predictiveScores.tenantId, tenantId))
-    .orderBy(desc(predictiveScores.scoredAt))
-    .limit(Math.min(Math.max(limit, 1), 1000));
-}
-
-// ============= PHASE 3A READ SCAFFOLDING =============
-
-export async function getInspectionTemplatesByTenant(tenantId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  return await db
-    .select()
-    .from(inspectionTemplates)
-    .where(eq(inspectionTemplates.tenantId, tenantId))
-    .orderBy(desc(inspectionTemplates.createdAt));
-}
-
-export async function getInspectionTemplateByIdAndTenant(tenantId: number, templateId: number) {
-  const db = await getDb();
-  if (!db) return null;
-  return await db
-    .select()
-    .from(inspectionTemplates)
-    .where(and(eq(inspectionTemplates.tenantId, tenantId), eq(inspectionTemplates.id, templateId)))
-    .limit(1)
-    .then(r => r[0] ?? null);
-}
-
-export async function createInspectionTemplate(input: {
-  tenantId: number;
-  name: string;
-  description?: string;
-  checklistJson: string;
-  frequency?: string;
-}) {
-  const db = await getDb();
-  if (!db) return null;
-  const result = await db.insert(inspectionTemplates).values({
-    tenantId: input.tenantId,
-    name: input.name,
-    description: input.description,
-    checklistJson: input.checklistJson,
-    frequency: input.frequency ?? "monthly",
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
-  if (!insertId || isNaN(insertId)) return null;
-  return await db
-    .select()
-    .from(inspectionTemplates)
-    .where(eq(inspectionTemplates.id, insertId))
-    .limit(1)
-    .then(r => r[0] ?? null);
-}
-
-export async function getInspectionsByTenant(tenantId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  return await db
-    .select()
-    .from(inspections)
-    .where(eq(inspections.tenantId, tenantId))
-    .orderBy(desc(inspections.createdAt));
-}
-
-export async function findInspectionForTemplate(tenantId: number, assetId: number, templateId: number) {
-  const db = await getDb();
-  if (!db) return null;
-  return await db
-    .select()
-    .from(inspections)
-    .where(
-      and(
-        eq(inspections.tenantId, tenantId),
-        eq(inspections.assetId, assetId),
-        eq(inspections.templateId, templateId),
-        or(eq(inspections.status, "scheduled"), eq(inspections.status, "in_progress"), eq(inspections.status, "completed"))
-      )
-    )
-    .orderBy(desc(inspections.createdAt))
-    .limit(1)
-    .then(r => r[0] ?? null);
-}
-
-export async function getInspectionById(tenantId: number, inspectionId: number) {
-  const db = await getDb();
-  if (!db) return null;
-  return await db
-    .select()
-    .from(inspections)
-    .where(and(eq(inspections.tenantId, tenantId), eq(inspections.id, inspectionId)))
-    .limit(1)
-    .then(r => r[0] ?? null);
-}
-
-export async function getComplianceRulesByTenant(tenantId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  return await db
-    .select()
-    .from(complianceRules)
-    .where(eq(complianceRules.tenantId, tenantId))
-    .orderBy(desc(complianceRules.createdAt));
-}
-
-export async function getComplianceEventsByTenant(tenantId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  return await db
-    .select()
-    .from(complianceEvents)
-    .where(eq(complianceEvents.tenantId, tenantId))
-    .orderBy(desc(complianceEvents.detectedAt));
-}
-
-export async function findOpenComplianceEvent(params: {
-  tenantId: number;
-  assetId: number;
-  ruleId: number;
-  eventType: string;
-}) {
-  const db = await getDb();
-  if (!db) return null;
-  return await db
-    .select()
-    .from(complianceEvents)
-    .where(
-      and(
-        eq(complianceEvents.tenantId, params.tenantId),
-        eq(complianceEvents.assetId, params.assetId),
-        eq(complianceEvents.ruleId, params.ruleId),
-        eq(complianceEvents.eventType, params.eventType),
-        eq(complianceEvents.status, "open")
-      )
-    )
-    .orderBy(desc(complianceEvents.createdAt))
-    .limit(1)
-    .then(r => r[0] ?? null);
-}
-
-export async function getAuditLogsByTenant(tenantId: number, limit = 100) {
-  const db = await getDb();
-  if (!db) return [];
-  return await db
-    .select()
-    .from(auditLogsV1)
-    .where(eq(auditLogsV1.tenantId, tenantId))
-    .orderBy(desc(auditLogsV1.timestamp))
-    .limit(limit);
-}
-
-export async function getAssetHealthSummary(tenantId: number) {
-  const db = await getDb();
-  if (!db) {
-    return {
-      tenantId,
-      totalAssets: 0,
-      averageRiskScore: 0,
-      highRiskAssets: 0,
-      computedAt: new Date().toISOString(),
-    };
-  }
-
-  const scores = await db
-    .select()
-    .from(predictiveScores)
-    .where(eq(predictiveScores.tenantId, tenantId));
-
-  const totalAssets = scores.length;
-  const totalRisk = scores.reduce((sum, row) => sum + row.riskScore, 0);
-  const averageRiskScore = totalAssets > 0 ? totalRisk / totalAssets : 0;
-  const highRiskAssets = scores.filter(row => row.riskScore >= 70).length;
-
-  return {
-    tenantId,
-    totalAssets,
-    averageRiskScore: Number(averageRiskScore.toFixed(2)),
-    highRiskAssets,
-    computedAt: new Date().toISOString(),
-  };
-}
-
-export async function getMaintenanceBacklogSummary(tenantId: number) {
-  const db = await getDb();
-  if (!db) {
-    return {
-      tenantId,
-      pending: 0,
-      assigned: 0,
-      inProgress: 0,
-      onHold: 0,
-      totalBacklog: 0,
-      computedAt: new Date().toISOString(),
-    };
-  }
-
-  const tenantInspections = await db
-    .select()
-    .from(inspections)
-    .where(eq(inspections.tenantId, tenantId));
-
-  const pending = tenantInspections.filter(i => i.status === "scheduled").length;
-  const assigned = tenantInspections.filter(i => i.status === "in_progress").length;
-  const inProgress = tenantInspections.filter(i => i.status === "in_progress").length;
-  const onHold = tenantInspections.filter(i => i.status === "cancelled").length;
-
-  return {
-    tenantId,
-    pending,
-    assigned,
-    inProgress,
-    onHold,
-    totalBacklog: pending + assigned + inProgress + onHold,
-    computedAt: new Date().toISOString(),
-  };
-}
-
-// ============= PHASE 4A - INTELLIGENCE FOUNDATION =============
-
-export async function createRuVectorMemory(input: {
-  tenantId: number;
-  entityType: string;
-  entityId?: number | null;
-  eventType: string;
-  vector: number[];
-  metadata?: unknown;
-}) {
-  const db = await getDb();
-  if (!db) return null;
-  const result = await db.insert(ruvectorMemories).values({
-    tenantId: input.tenantId,
-    entityType: input.entityType,
-    entityId: input.entityId ?? null,
-    eventType: input.eventType,
-    vectorJson: JSON.stringify(input.vector ?? []),
-    metadataJson: JSON.stringify(input.metadata ?? {}),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
-  return Number((result as any)[0]?.insertId || (result as any).insertId || 0) || null;
-}
-
-export async function listRuVectorMemoriesByTenant(input: {
-  tenantId: number;
-  eventType?: string;
-  limit?: number;
-}) {
-  const db = await getDb();
-  if (!db) return [];
-  const safeLimit = Math.min(Math.max(input.limit ?? 200, 1), 1000);
-  let query = db
-    .select()
-    .from(ruvectorMemories)
-    .where(eq(ruvectorMemories.tenantId, input.tenantId))
-    .orderBy(desc(ruvectorMemories.createdAt))
-    .limit(safeLimit);
-  if (input.eventType) {
-    query = db
-      .select()
-      .from(ruvectorMemories)
-      .where(and(eq(ruvectorMemories.tenantId, input.tenantId), eq(ruvectorMemories.eventType, input.eventType)))
-      .orderBy(desc(ruvectorMemories.createdAt))
-      .limit(safeLimit);
-  }
-  return await query;
-}
-
-export async function createPrimeAgentExecution(input: {
-  tenantId: number;
-  agentType: string;
-  status: "completed" | "no_action" | "failed";
-  payload: unknown;
-  output?: unknown;
-  reasonTrace?: string;
-}) {
-  const db = await getDb();
-  if (!db) return null;
-  const result = await db.insert(primeAgentExecutions).values({
-    tenantId: input.tenantId,
-    agentType: input.agentType,
-    status: input.status,
-    inputPayload: JSON.stringify(input.payload ?? {}),
-    outputPayload: JSON.stringify(input.output ?? {}),
-    reasonTrace: input.reasonTrace ?? null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
-  return Number((result as any)[0]?.insertId || (result as any).insertId || 0) || null;
-}
-
-export async function createStockForecast(input: {
-  tenantId: number;
-  stockItemId: number;
-  demandScore: number;
-  recommendedAction: "no_action" | "monitor" | "prepare_procurement" | "reorder" | "emergency_restock";
-  forecastTimestamp: Date;
-  agentExecutionId?: number | null;
-}) {
-  const db = await getDb();
-  if (!db) return null;
-  const result = await db.insert(stockForecasts).values({
-    tenantId: input.tenantId,
-    stockItemId: input.stockItemId,
-    demandScore: String(Number(input.demandScore.toFixed(4))),
-    recommendedAction: input.recommendedAction,
-    forecastTimestamp: input.forecastTimestamp,
-    agentExecutionId: input.agentExecutionId ?? null,
-    createdAt: new Date(),
-  });
-  return Number((result as any)[0]?.insertId || (result as any).insertId || 0) || null;
-}
-
-export async function getStockForecastsByTenant(input: {
-  tenantId: number;
-  stockItemId?: number;
-  limit?: number;
-}) {
-  const db = await getDb();
-  if (!db) return [];
-  const safeLimit = Math.min(Math.max(input.limit ?? 50, 1), 500);
-
-  if (input.stockItemId) {
-    return await db
-      .select()
-      .from(stockForecasts)
-      .where(and(eq(stockForecasts.tenantId, input.tenantId), eq(stockForecasts.stockItemId, input.stockItemId)))
-      .orderBy(desc(stockForecasts.forecastTimestamp))
-      .limit(safeLimit);
-  }
-
-  return await db
-    .select()
-    .from(stockForecasts)
-    .where(eq(stockForecasts.tenantId, input.tenantId))
-    .orderBy(desc(stockForecasts.forecastTimestamp))
-    .limit(safeLimit);
-}
-
-export async function createWarehouseTransferRecommendation(input: {
-  tenantId: number;
-  stockItemId: number;
-  sourceWarehouseId: number;
-  targetWarehouseId: number;
-  transferQuantity: number;
-  transferPriority: string;
-  generatedAt?: Date;
-  agentExecutionId?: number | null;
-}) {
-  const db = await getDb();
-  if (!db) return null;
-  const result = await db.insert(warehouseTransferRecommendations).values({
-    tenantId: input.tenantId,
-    stockItemId: input.stockItemId,
-    sourceWarehouseId: input.sourceWarehouseId,
-    targetWarehouseId: input.targetWarehouseId,
-    transferQuantity: input.transferQuantity,
-    transferPriority: input.transferPriority,
-    generatedAt: input.generatedAt ?? new Date(),
-    agentExecutionId: input.agentExecutionId ?? null,
-    createdAt: new Date(),
-  });
-  return Number((result as any)[0]?.insertId || (result as any).insertId || 0) || null;
-}
-
-export async function listWarehouseTransferRecommendationsByTenant(input: {
-  tenantId: number;
-  stockItemId?: number;
-  limit?: number;
-}) {
-  const db = await getDb();
-  if (!db) return [];
-  const safeLimit = Math.min(Math.max(input.limit ?? 50, 1), 500);
-
-  if (input.stockItemId !== undefined) {
-    return await db
-      .select()
-      .from(warehouseTransferRecommendations)
-      .where(
-        and(
-          eq(warehouseTransferRecommendations.tenantId, input.tenantId),
-          eq(warehouseTransferRecommendations.stockItemId, input.stockItemId)
-        )
-      )
-      .orderBy(desc(warehouseTransferRecommendations.generatedAt))
-      .limit(safeLimit);
-  }
-
-  return await db
-    .select()
-    .from(warehouseTransferRecommendations)
-    .where(eq(warehouseTransferRecommendations.tenantId, input.tenantId))
-    .orderBy(desc(warehouseTransferRecommendations.generatedAt))
-    .limit(safeLimit);
-}
-
-export async function findRecentStockForecast(input: {
-  tenantId: number;
-  stockItemId: number;
-  lookbackMinutes?: number;
-}) {
-  const db = await getDb();
-  if (!db) return null;
-  const since = new Date(Date.now() - (input.lookbackMinutes ?? 5) * 60 * 1000);
-
-  return await db
-    .select()
-    .from(stockForecasts)
-    .where(
-      and(
-        eq(stockForecasts.tenantId, input.tenantId),
-        eq(stockForecasts.stockItemId, input.stockItemId),
-        gte(stockForecasts.forecastTimestamp, since)
-      )
-    )
-    .orderBy(desc(stockForecasts.forecastTimestamp))
-    .limit(1)
-    .then(r => r[0] ?? null);
-}
-
-export async function findRecentWarehouseTransferRecommendation(input: {
-  tenantId: number;
-  stockItemId: number;
-  sourceWarehouseId: number;
-  targetWarehouseId: number;
-  lookbackMinutes?: number;
-}) {
-  const db = await getDb();
-  if (!db) return null;
-  const since = new Date(Date.now() - (input.lookbackMinutes ?? 10) * 60 * 1000);
-
-  return await db
-    .select()
-    .from(warehouseTransferRecommendations)
-    .where(
-      and(
-        eq(warehouseTransferRecommendations.tenantId, input.tenantId),
-        eq(warehouseTransferRecommendations.stockItemId, input.stockItemId),
-        eq(warehouseTransferRecommendations.sourceWarehouseId, input.sourceWarehouseId),
-        eq(warehouseTransferRecommendations.targetWarehouseId, input.targetWarehouseId),
-        gte(warehouseTransferRecommendations.generatedAt, since)
-      )
-    )
-    .orderBy(desc(warehouseTransferRecommendations.generatedAt))
-    .limit(1)
-    .then(r => r[0] ?? null);
-}
-
-export async function createInspection(input: {
-  tenantId: number;
-  assetId: number;
-  templateId?: number | null;
-  inspectionType: string;
-  status: string;
-  inspectorId?: number | null;
-  scheduledAt?: Date;
-  notes?: string;
-}) {
-  const db = await getDb();
-  if (!db) return null;
-
-  const result = await db.insert(inspections).values({
-    tenantId: input.tenantId,
-    assetId: input.assetId,
-    templateId: input.templateId ?? null,
-    inspectionType: input.inspectionType,
-    status: input.status,
-    inspectorId: input.inspectorId ?? null,
-    scheduledAt: input.scheduledAt ?? null,
-    notes: input.notes ?? null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
-
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId || 0);
-  if (!insertId || isNaN(insertId)) return null;
-  return await db
-    .select()
-    .from(inspections)
-    .where(eq(inspections.id, insertId))
-    .limit(1)
-    .then(r => r[0] ?? null);
-}
-
-export async function getRecentReportSnapshot(tenantId: number, reportType: string, maxAgeMinutes = 10) {
-  const db = await getDb();
-  if (!db) return null;
-  const since = new Date(Date.now() - maxAgeMinutes * 60 * 1000);
-  return await db
-    .select()
-    .from(reportSnapshots)
-    .where(
-      and(
-        eq(reportSnapshots.tenantId, tenantId),
-        eq(reportSnapshots.reportType, reportType),
-        gte(reportSnapshots.generatedAt, since)
-      )
-    )
-    .orderBy(desc(reportSnapshots.generatedAt))
-    .limit(1)
-    .then(r => r[0] ?? null);
-}
-
-export async function completeInspection(input: {
-  tenantId: number;
-  inspectionId: number;
-  result: "pass" | "fail" | "needs_attention";
-  notes?: string;
-}) {
-  const db = await getDb();
-  if (!db) return null;
-
-  await db
-    .update(inspections)
-    .set({
-      status: "completed",
-      result: input.result,
-      notes: input.notes ?? null,
-      completedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(and(eq(inspections.id, input.inspectionId), eq(inspections.tenantId, input.tenantId)));
-
-  return await db
-    .select()
-    .from(inspections)
-    .where(and(eq(inspections.id, input.inspectionId), eq(inspections.tenantId, input.tenantId)))
-    .limit(1)
-    .then(r => r[0] ?? null);
-}
-
-export async function createComplianceEvent(input: {
-  tenantId: number;
-  assetId?: number;
-  ruleId?: number;
-  eventType: string;
-  status?: string;
-  detailsJson?: string;
-}) {
-  const db = await getDb();
-  if (!db) return null;
-
-  const result = await db.insert(complianceEvents).values({
-    tenantId: input.tenantId,
-    assetId: input.assetId ?? null,
-    ruleId: input.ruleId ?? null,
-    eventType: input.eventType,
-    status: input.status ?? "open",
-    detailsJson: input.detailsJson ?? null,
-    detectedAt: new Date(),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
-
-  return Number((result as any)[0]?.insertId || (result as any).insertId || 0) || null;
-}
-
-export async function createSlaMetric(input: {
-  tenantId: number;
-  assetId?: number;
-  metricType: string;
-  targetValue?: number;
-  actualValue?: number;
-  periodStart: Date;
-  periodEnd: Date;
-}) {
-  const db = await getDb();
-  if (!db) return null;
-
-  const metricConditions = [
-    eq(slaMetrics.tenantId, input.tenantId),
-    eq(slaMetrics.metricType, input.metricType),
-    eq(slaMetrics.periodStart, input.periodStart),
-    eq(slaMetrics.periodEnd, input.periodEnd),
-  ];
-  if (input.assetId === undefined) {
-    metricConditions.push(isNull(slaMetrics.assetId));
-  } else {
-    metricConditions.push(eq(slaMetrics.assetId, input.assetId));
-  }
-
-  const existing = await db
-    .select()
-    .from(slaMetrics)
-    .where(and(...metricConditions))
-    .limit(1)
-    .then(r => r[0] ?? null);
-  if (existing) return existing.id;
-
-  const result = await db.insert(slaMetrics).values({
-    tenantId: input.tenantId,
-    assetId: input.assetId ?? null,
-    metricType: input.metricType,
-    targetValue: input.targetValue?.toString() ?? null,
-    actualValue: input.actualValue?.toString() ?? null,
-    periodStart: input.periodStart,
-    periodEnd: input.periodEnd,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
-
   return Number((result as any)[0]?.insertId || (result as any).insertId || 0) || null;
 }

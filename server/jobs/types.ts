@@ -3,18 +3,12 @@ export type BackgroundJobName =
   | "predictive.scoreAssets"
   | "reports.generateSnapshot"
   | "telemetry.aggregateHourly"
-  | "inspection.schedule"
-  | "inspection.evaluate"
-  | "compliance.evaluate"
-  | "sla.calculate"
-  | "report.generateAnalytics"
-  | "stock.predictDemand"
-  | "stock.recommendSubstitution"
-  | "stock.allocateInventory"
-  | "stock.detectAnomalies"
-  | "warehouse.optimizeLayout"
   | "warehouse.rebalanceStock"
-  | "vendor.evaluatePerformance";
+  | "vendor.computeRiskScores"
+  | "procurement.generateRecommendations"
+  | "supplychain.evaluateRisk"
+  | "dispatch.optimizeAssignments"
+  | "executive.computeMetrics";
 
 export type ReportJobType =
   | "lifecycle-cost"
@@ -46,59 +40,30 @@ export interface TelemetryAggregationJobPayload extends BaseBackgroundJobPayload
   hour?: string;
 }
 
-export interface InspectionScheduleJobPayload extends BaseBackgroundJobPayload {
-  assetId: number;
-  templateId: number;
-}
-
-export interface InspectionEvaluateJobPayload extends BaseBackgroundJobPayload {
-  assetId: number;
-}
-
-export interface ComplianceEvaluateJobPayload extends BaseBackgroundJobPayload {
-  assetId: number;
-}
-
-export interface SlaCalculationJobPayload extends BaseBackgroundJobPayload {
-  assetId: number;
-}
-
-export interface ReportAnalyticsJobPayload extends BaseBackgroundJobPayload {
-  reportType: string;
-}
-
-export interface StockPredictDemandJobPayload extends BaseBackgroundJobPayload {
+export interface WarehouseRebalanceJobPayload extends BaseBackgroundJobPayload {
   stockItemId: number;
-  horizonDays?: number;
 }
 
-export interface StockRecommendSubstitutionJobPayload extends BaseBackgroundJobPayload {
-  itemId: number;
-  assetId?: number;
-}
-
-export interface StockAllocateInventoryJobPayload extends BaseBackgroundJobPayload {
-  workOrderId: number;
-  assetId?: number;
-}
-
-export interface StockDetectAnomaliesJobPayload extends BaseBackgroundJobPayload {
-  warehouseId?: number;
-}
-
-export interface WarehouseOptimizeLayoutJobPayload extends BaseBackgroundJobPayload {
-  warehouseId: number;
-}
-
-export interface WarehouseRebalanceStockJobPayload extends BaseBackgroundJobPayload {
-  warehouseId?: number;
-  stockItemId?: number;
-  lookbackMinutes?: number;
-  limit?: number;
-}
-
-export interface VendorEvaluatePerformanceJobPayload extends BaseBackgroundJobPayload {
+export interface VendorRiskScoringJobPayload extends BaseBackgroundJobPayload {
   vendorId?: number;
+}
+
+export interface ProcurementRecommendationJobPayload extends BaseBackgroundJobPayload {
+  stockItemId?: number;
+}
+
+export interface SupplyChainRiskEvaluationJobPayload extends BaseBackgroundJobPayload {
+  stockItemId?: number;
+  vendorId?: number;
+}
+
+export interface DispatchOptimizationJobPayload extends BaseBackgroundJobPayload {
+  workOrderId?: number;
+  facilityId?: number;
+}
+
+export interface ExecutiveMetricsJobPayload extends BaseBackgroundJobPayload {
+  snapshotDate?: string;
 }
 
 export type BackgroundJobPayload =
@@ -106,15 +71,9 @@ export type BackgroundJobPayload =
   | PredictiveScoringJobPayload
   | ReportGenerationJobPayload
   | TelemetryAggregationJobPayload
-  | InspectionScheduleJobPayload
-  | InspectionEvaluateJobPayload
-  | ComplianceEvaluateJobPayload
-  | SlaCalculationJobPayload
-  | ReportAnalyticsJobPayload
-  | StockPredictDemandJobPayload
-  | StockRecommendSubstitutionJobPayload
-  | StockAllocateInventoryJobPayload
-  | StockDetectAnomaliesJobPayload
-  | WarehouseOptimizeLayoutJobPayload
-  | WarehouseRebalanceStockJobPayload
-  | VendorEvaluatePerformanceJobPayload;
+  | WarehouseRebalanceJobPayload
+  | VendorRiskScoringJobPayload
+  | ProcurementRecommendationJobPayload
+  | SupplyChainRiskEvaluationJobPayload
+  | DispatchOptimizationJobPayload
+  | ExecutiveMetricsJobPayload;

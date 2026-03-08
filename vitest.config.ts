@@ -1,6 +1,7 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
 import "dotenv/config";
+import { alias } from "./config/aliases";
 
 const templateRoot = path.resolve(import.meta.dirname);
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -32,7 +33,7 @@ export default defineConfig({
   root: templateRoot,
   resolve: {
     alias: {
-      "@": path.resolve(templateRoot, "client", "src"),
+      ...alias,
       "@shared": path.resolve(templateRoot, "shared"),
       "@assets": path.resolve(templateRoot, "attached_assets"),
     },
