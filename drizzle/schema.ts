@@ -1458,30 +1458,3 @@ export const stockForecasts = mysqlTable(
 
 export type StockForecast = typeof stockForecasts.$inferSelect;
 export type InsertStockForecast = typeof stockForecasts.$inferInsert;
-
-/**
- * Warehouse transfer recommendations produced by rebalancing agents
- */
-export const warehouseTransferRecommendations = mysqlTable(
-  "warehouse_transfer_recommendations",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    tenantId: int("tenant_id").notNull(),
-    stockItemId: int("stock_item_id").notNull(),
-    sourceWarehouseId: int("source_warehouse_id").notNull(),
-    targetWarehouseId: int("target_warehouse_id").notNull(),
-    transferQuantity: int("transfer_quantity").notNull(),
-    transferPriority: varchar("transfer_priority", { length: 30 }).notNull(),
-    generatedAt: timestamp("generated_at").defaultNow().notNull(),
-    agentExecutionId: int("agent_execution_id"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
-  table => ({
-    tenantIdx: index("idx_warehouse_transfer_recommendations_tenant").on(table.tenantId),
-    stockItemIdx: index("idx_warehouse_transfer_recommendations_stock_item").on(table.stockItemId),
-    generatedAtIdx: index("idx_warehouse_transfer_recommendations_generated_at").on(table.generatedAt),
-  })
-);
-
-export type WarehouseTransferRecommendation = typeof warehouseTransferRecommendations.$inferSelect;
-export type InsertWarehouseTransferRecommendation = typeof warehouseTransferRecommendations.$inferInsert;
