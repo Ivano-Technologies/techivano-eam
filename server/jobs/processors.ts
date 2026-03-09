@@ -73,26 +73,30 @@ async function processPmEvaluation(payload: PmEvaluationJobPayload) {
   };
 }
 
+type AssetRow = { id: number; acquisitionDate?: string | Date };
+type WorkOrderRow = { id?: number; type?: string; status?: string; actualStart?: string | Date; actualEnd?: string | Date; priority?: string };
 async function processPredictiveScoring(payload: PredictiveScoringJobPayload) {
-  const assets = payload.assetId
+  const rawAssets = payload.assetId
     ? [await db.getAssetById(payload.assetId)].filter(Boolean)
     : await db.getAllAssets({ status: "operational" });
+  const assets = rawAssets as AssetRow[];
 
   const scores: Array<{ assetId: number; riskScore: number; factors: Record<string, unknown> }> = [];
 
   for (const asset of assets) {
     if (!asset) continue;
 
-    const acquisitionDate = asset.acquisitionDate ? new Date(asset.acquisitionDate) : null;
+    const acquisitionDate = asset.acquisitionDate != null ? new Date(asset.acquisitionDate) : null;
     const ageYears = acquisitionDate
       ? Math.max(0, (Date.now() - acquisitionDate.getTime()) / (1000 * 60 * 60 * 24 * 365))
       : 0;
 
-    const workOrders = await db.getAssetWorkOrders(asset.id);
+    const rawWorkOrders = await db.getAssetWorkOrders(asset.id);
+    const workOrders = rawWorkOrders as WorkOrderRow[];
     const maintenanceEvents = workOrders.filter(
-      wo => wo.type === "preventive" || wo.type === "corrective" || wo.type === "inspection"
+      wo => (wo.type ?? "") === "preventive" || (wo.type ?? "") === "corrective" || (wo.type ?? "") === "inspection"
     );
-    const downtimeEvents = workOrders.filter(wo => wo.status === "on_hold" || wo.status === "in_progress");
+    const downtimeEvents = workOrders.filter(wo => (wo.status ?? "") === "on_hold" || (wo.status ?? "") === "in_progress");
     const telemetryAnomalies = await db.getTelemetryAnomalyStats(payload.tenantId, asset.id);
 
     const ageScore = Math.min(30, ageYears * 6);
@@ -141,22 +145,24 @@ async function processReportGeneration(payload: ReportGenerationJobPayload) {
   if (payload.reportType === "lifecycle-cost") {
     snapshot = await db.getCostAnalytics(30);
   } else if (payload.reportType === "maintenance-backlog") {
-    const workOrders = await db.getAllWorkOrders();
-    const backlog = workOrders.filter(wo => ["pending", "assigned", "in_progress", "on_hold"].includes(wo.status));
+    const rawBacklogWos = await db.getAllWorkOrders();
+    const workOrders = rawBacklogWos as WorkOrderRow[];
+    const backlog = workOrders.filter(wo => ["pending", "assigned", "in_progress", "on_hold"].includes(wo.status ?? ""));
     snapshot = {
       totalBacklog: backlog.length,
       byPriority: {
-        critical: backlog.filter(wo => wo.priority === "critical").length,
-        high: backlog.filter(wo => wo.priority === "high").length,
-        medium: backlog.filter(wo => wo.priority === "medium").length,
-        low: backlog.filter(wo => wo.priority === "low").length,
+        critical: backlog.filter(wo => (wo.priority ?? "") === "critical").length,
+        high: backlog.filter(wo => (wo.priority ?? "") === "high").length,
+        medium: backlog.filter(wo => (wo.priority ?? "") === "medium").length,
+        low: backlog.filter(wo => (wo.priority ?? "") === "low").length,
       },
     };
   } else if (payload.reportType === "downtime-analytics") {
-    const workOrders = await db.getAllWorkOrders();
+    const rawDowntimeWos = await db.getAllWorkOrders();
+    const workOrders = rawDowntimeWos as WorkOrderRow[];
     let downtimeHours = 0;
     for (const wo of workOrders) {
-      if (wo.actualStart && wo.actualEnd) {
+      if (wo.actualStart != null && wo.actualEnd != null) {
         downtimeHours +=
           (new Date(wo.actualEnd).getTime() - new Date(wo.actualStart).getTime()) / (1000 * 60 * 60);
       }
@@ -166,13 +172,14 @@ async function processReportGeneration(payload: ReportGenerationJobPayload) {
       averageDowntimeHoursPerWorkOrder: workOrders.length > 0 ? Number((downtimeHours / workOrders.length).toFixed(2)) : 0,
     };
   } else {
-    const assets = await db.getAllAssets();
+    const rawReportAssets = await db.getAllAssets();
+    const reportAssets = rawReportAssets as { status?: string }[];
     const runtimeAgg = await db.aggregateTelemetryHourly({
       tenantId: payload.tenantId,
     });
     snapshot = {
-      totalAssets: assets.length,
-      operationalAssets: assets.filter(a => a.status === "operational").length,
+      totalAssets: reportAssets.length,
+      operationalAssets: reportAssets.filter(a => (a.status ?? "") === "operational").length,
       telemetryWindow: runtimeAgg,
     };
   }

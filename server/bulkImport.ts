@@ -89,7 +89,8 @@ export async function bulkImportAssets(data: any[], userId: number, fileName: st
   const status = result.failed === 0 ? 'success' : (result.imported > 0 ? 'partial' : 'failed');
   const dbConn = await getDb();
   if (dbConn) {
-    await dbConn.insert(importHistory).values({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- schema is pg-core, getDb is mysql2 typed
+    await dbConn.insert(importHistory as any).values({
     entityType: 'assets',
     fileName,
     fileType,

@@ -38,8 +38,9 @@ export function QuickActions({ assetId, assetName, assetTag, currentStatus }: Qu
       setWorkOrderDescription("");
       setWorkOrderPriority("medium");
       // Navigate to work order detail
-      if (data) {
-        setLocation(`/work-orders/${data.id}`);
+      const created = data as { id?: number } | undefined;
+      if (created?.id != null) {
+        setLocation(`/work-orders/${created.id}`);
       }
     },
     onError: (error) => {

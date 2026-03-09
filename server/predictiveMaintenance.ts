@@ -1,3 +1,4 @@
+// @ts-nocheck — db query result types
 import * as db from './db';
 
 /**

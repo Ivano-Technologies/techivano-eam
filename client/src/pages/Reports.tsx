@@ -17,8 +17,10 @@ export default function Reports() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
-  const { data: sites } = trpc.sites.list.useQuery();
-  const { data: categories } = trpc.assetCategories.list.useQuery();
+  const { data: rawSites } = trpc.sites.list.useQuery();
+  const { data: rawCategories } = trpc.assetCategories.list.useQuery();
+  const sites: { id: number; name?: string }[] = Array.isArray(rawSites) ? (rawSites as { id: number; name?: string }[]) : [];
+  const categories: { id: number; name?: string }[] = Array.isArray(rawCategories) ? (rawCategories as { id: number; name?: string }[]) : [];
 
   const assetInventoryMutation = trpc.reports.assetInventory.useMutation();
   const maintenanceScheduleMutation = trpc.reports.maintenanceSchedule.useMutation();

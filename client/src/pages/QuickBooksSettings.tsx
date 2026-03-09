@@ -14,7 +14,8 @@ export default function QuickBooksSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const { data: config, refetch: refetchConfig } = trpc.quickbooks.getConfig.useQuery();
+  const { data: rawConfig, refetch: refetchConfig } = trpc.quickbooks.getConfig.useQuery();
+  const config = rawConfig as { clientId?: string; clientSecret?: string; realmId?: string; lastSyncAt?: string | Date; autoSync?: boolean } | undefined;
   const { data: connectionStatus, refetch: refetchConnection } = trpc.quickbooks.testConnection.useQuery();
   const saveConfigMutation = trpc.quickbooks.saveConfig.useMutation();
   const syncMutation = trpc.quickbooks.syncTransactions.useMutation();

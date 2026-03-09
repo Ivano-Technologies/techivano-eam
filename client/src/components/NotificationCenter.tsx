@@ -14,14 +14,26 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
+interface NotificationEntry {
+  id: number;
+  isRead?: boolean;
+  type?: string;
+  title?: string;
+  message?: string;
+  createdAt?: Date | string;
+}
+
 export function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
   const utils = trpc.useUtils();
 
-  const { data: notifications = [], isLoading } = trpc.notifications.list.useQuery(
+  const { data: rawNotifications, isLoading } = trpc.notifications.list.useQuery(
     { limit: 20 },
     { enabled: isOpen }
   );
+  const notifications: NotificationEntry[] = Array.isArray(rawNotifications)
+    ? (rawNotifications as NotificationEntry[])
+    : [];
 
   const { data: unreadCount = 0 } = trpc.notifications.unreadCount.useQuery(undefined, {
     refetchInterval: 30000, // Refresh every 30 seconds
@@ -50,9 +62,9 @@ export function NotificationCenter() {
     },
   });
 
-  const getNotificationIcon = (type: string) => {
+  const getNotificationIcon = (type: string | undefined) => {
     const iconClass = "h-4 w-4";
-    switch (type) {
+    switch (type ?? "") {
       case "maintenance_due":
         return <span className={`${iconClass} text-orange-600`}>🔧</span>;
       case "low_stock":
@@ -140,7 +152,7 @@ export function NotificationCenter() {
                             {notification.message}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {formatDistanceToNow(new Date(notification.createdAt), {
+                            {formatDistanceToNow(new Date(notification.createdAt ?? Date.now()), {
                               addSuffix: true,
                             })}
                           </p>

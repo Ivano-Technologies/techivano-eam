@@ -20,21 +20,41 @@ import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { BulkEditDialog } from "@/components/BulkEditDialog";
 import { NRCSAssetForm } from "@/components/NRCSAssetForm";
 
+interface AssetListItem {
+  id: number;
+  name?: string;
+  description?: string;
+  assetTag?: string;
+  serialNumber?: string;
+  status?: string;
+  location?: string;
+  categoryId?: number | string;
+  siteId?: number | string;
+  manufacturer?: string;
+  model?: string;
+}
+
+interface SiteOption {
+  id: number;
+  name?: string;
+}
+
 export default function Assets() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [siteFilter, setSiteFilter] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingAsset, setEditingAsset] = useState<any>(null);
+  const [editingAsset, setEditingAsset] = useState<AssetListItem | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  const { data: assets, isLoading, refetch } = trpc.assets.list.useQuery({
+  const { data: rawAssets, isLoading, refetch } = trpc.assets.list.useQuery({
     siteId: siteFilter !== "all" ? Number(siteFilter) : undefined,
     status: statusFilter !== "all" ? statusFilter : undefined,
   });
+  const assets: AssetListItem[] = Array.isArray(rawAssets) ? (rawAssets as AssetListItem[]) : [];
 
   // Pull-to-refresh for mobile
   const { pullDistance, isRefreshing } = usePullToRefresh({
@@ -45,8 +65,12 @@ export default function Assets() {
     enabled: true,
   });
 
-  const { data: sites } = trpc.sites.list.useQuery();
-  const { data: categories } = trpc.assetCategories.list.useQuery();
+  const { data: rawSites } = trpc.sites.list.useQuery();
+  const { data: rawCategories } = trpc.assetCategories.list.useQuery();
+  const sites: SiteOption[] = Array.isArray(rawSites) ? (rawSites as SiteOption[]) : [];
+  const categories: { id: number; name?: string }[] = Array.isArray(rawCategories)
+    ? (rawCategories as { id: number; name?: string }[])
+    : [];
   
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [selectedAssetIds, setSelectedAssetIds] = useState<number[]>([]);
@@ -186,6 +210,7 @@ export default function Assets() {
   };
 
   const handleSaveEdit = () => {
+    if (!editingAsset) return;
     if (!editingAsset.assetTag || !editingAsset.name || !editingAsset.categoryId || !editingAsset.siteId) {
       toast.error("Please fill in all required fields");
       return;
@@ -206,11 +231,11 @@ export default function Assets() {
     });
   };
 
-  const filteredAssets = assets?.filter((asset) =>
+  const filteredAssets = assets.filter((asset) =>
     searchTerm === "" ||
-    asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.assetTag.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+    (asset.name ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (asset.assetTag ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (asset.serialNumber ?? "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusColor = (status: string) => {
@@ -240,10 +265,10 @@ export default function Assets() {
   };
 
   const handleSelectAll = () => {
-    if (selectedAssetIds.length === filteredAssets?.length) {
+    if (selectedAssetIds.length === filteredAssets.length) {
       setSelectedAssetIds([]);
     } else {
-      setSelectedAssetIds(filteredAssets?.map(a => a.id) || []);
+      setSelectedAssetIds(filteredAssets.map((a) => a.id));
     }
   };
 
@@ -317,8 +342,8 @@ export default function Assets() {
                 <NRCSAssetForm
                   asset={newAsset}
                   onChange={handleAssetFieldChange}
-                  sites={sites || []}
-                  categories={categories || []}
+                  sites={sites}
+                  categories={categories}
                 />
               </div>
               <DialogFooter>
@@ -335,7 +360,7 @@ export default function Assets() {
         )}
       </div>
 
-      {isBulkEditMode && filteredAssets && filteredAssets.length > 0 && (
+      {isBulkEditMode && filteredAssets.length > 0 && (
         <div className="flex items-center justify-between bg-muted p-4 rounded-lg">
           <div className="flex items-center gap-4">
             <Button variant="outline" size="sm" onClick={handleSelectAll}>
@@ -455,7 +480,7 @@ export default function Assets() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge className={getStatusColor(asset.status)}>
+                        <Badge className={getStatusColor(asset.status ?? "")}>
                           {asset.status}
                         </Badge>
                         {canCreateAsset && (
@@ -545,7 +570,7 @@ export default function Assets() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-category">Category *</Label>
-                  <Select value={editingAsset.categoryId} onValueChange={(value) => setEditingAsset({ ...editingAsset, categoryId: value })}>
+                  <Select value={String(editingAsset.categoryId ?? "")} onValueChange={(value) => setEditingAsset({ ...editingAsset, categoryId: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -560,7 +585,7 @@ export default function Assets() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-site">Site *</Label>
-                  <Select value={editingAsset.siteId} onValueChange={(value) => setEditingAsset({ ...editingAsset, siteId: value })}>
+                  <Select value={String(editingAsset.siteId ?? "")} onValueChange={(value) => setEditingAsset({ ...editingAsset, siteId: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select site" />
                     </SelectTrigger>
@@ -577,7 +602,7 @@ export default function Assets() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-status">Status</Label>
-                  <Select value={editingAsset.status} onValueChange={(value) => setEditingAsset({ ...editingAsset, status: value })}>
+                  <Select value={editingAsset.status ?? ""} onValueChange={(value) => setEditingAsset({ ...editingAsset, status: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>

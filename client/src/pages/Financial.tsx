@@ -13,7 +13,9 @@ import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function Financial() {
   const { user } = useAuth();
-  const { data: transactions, isLoading, refetch } = trpc.financial.list.useQuery();
+  const { data: rawTransactions, isLoading, refetch } = trpc.financial.list.useQuery();
+  type TxEntry = { id: number; transactionType?: string; amount?: string | number; description?: string; transactionDate?: string; receiptNumber?: string; currency?: string };
+  const transactions: TxEntry[] = Array.isArray(rawTransactions) ? (rawTransactions as TxEntry[]) : [];
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<number | null>(null);
   const [editData, setEditData] = useState<any>({});
@@ -89,13 +91,13 @@ export default function Financial() {
     });
   };
 
-  const handleStartEdit = (transaction: any) => {
+  const handleStartEdit = (transaction: TxEntry) => {
     setEditingTransactionId(transaction.id);
     setEditData({
       transactionType: transaction.transactionType,
       amount: transaction.amount,
       description: transaction.description || "",
-      transactionDate: transaction.transactionDate.split('T')[0],
+      transactionDate: (transaction.transactionDate ?? "").split("T")[0],
       receiptNumber: transaction.receiptNumber || "",
     });
   };
@@ -128,8 +130,8 @@ export default function Financial() {
   const revenueTransactions = transactions?.filter(t => t.transactionType === "revenue") || [];
   const expenseTransactions = transactions?.filter(t => t.transactionType !== "revenue") || [];
   
-  const totalRevenue = revenueTransactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
-  const totalExpenses = expenseTransactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
+  const totalRevenue = revenueTransactions.reduce((sum, t) => sum + Number(t.amount ?? 0), 0);
+  const totalExpenses = expenseTransactions.reduce((sum, t) => sum + Number(t.amount ?? 0), 0);
   const netProfit = totalRevenue - totalExpenses;
 
   const canManageFinancial = user?.role === "admin" || user?.role === "manager";
@@ -331,7 +333,7 @@ export default function Financial() {
                       <div>
                         <p className="font-medium">{t.description || "Revenue"}</p>
                         <p className="text-sm text-muted-foreground">
-                          {new Date(t.transactionDate).toLocaleDateString()}
+                          {t.transactionDate ? new Date(t.transactionDate).toLocaleDateString() : "—"}
                           {t.receiptNumber && ` • ${t.receiptNumber}`}
                         </p>
                       </div>
@@ -415,9 +417,9 @@ export default function Financial() {
                   ) : (
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium capitalize">{t.transactionType.replace('_', ' ')}</p>
+                        <p className="font-medium capitalize">{(t.transactionType ?? "").replace("_", " ")}</p>
                         <p className="text-sm text-muted-foreground">
-                          {new Date(t.transactionDate).toLocaleDateString()}
+                          {t.transactionDate ? new Date(t.transactionDate).toLocaleDateString() : "—"}
                           {t.description && ` • ${t.description}`}
                         </p>
                       </div>

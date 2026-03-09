@@ -26,10 +26,17 @@ export default function Maintenance() {
   });
 
   const utils = trpc.useUtils();
-  const { data: schedules, isLoading } = trpc.maintenance.list.useQuery();
-  const { data: upcoming } = trpc.maintenance.upcoming.useQuery({ days: 30 });
-  const { data: assets } = trpc.assets.list.useQuery();
-  const { data: users } = trpc.users.list.useQuery();
+  const { data: rawSchedules, isLoading } = trpc.maintenance.list.useQuery();
+  const { data: rawUpcoming } = trpc.maintenance.upcoming.useQuery({ days: 30 });
+  const { data: rawAssets } = trpc.assets.list.useQuery();
+  const { data: rawUsers } = trpc.users.list.useQuery();
+  type ScheduleRow = { id: number; name?: string; nextDue?: string | Date; frequency?: string; description?: string; isActive?: boolean };
+  type AssetOption = { id: number; name?: string; assetTag?: string };
+  type UserOption = { id: number; name?: string };
+  const schedules: ScheduleRow[] = Array.isArray(rawSchedules) ? (rawSchedules as ScheduleRow[]) : [];
+  const upcoming: ScheduleRow[] = Array.isArray(rawUpcoming) ? (rawUpcoming as ScheduleRow[]) : [];
+  const assets: AssetOption[] = Array.isArray(rawAssets) ? (rawAssets as AssetOption[]) : [];
+  const users: UserOption[] = Array.isArray(rawUsers) ? (rawUsers as UserOption[]) : [];
 
   const createMutation = trpc.maintenance.create.useMutation({
     onSuccess: () => {
@@ -235,7 +242,7 @@ export default function Maintenance() {
             <div className="space-y-3">
               {upcoming.map((s) => (
                 <div key={s.id} className="flex items-center justify-between border-b pb-3 last:border-0">
-                  <div><p className="font-medium">{s.name}</p><p className="text-sm text-muted-foreground">Due: {new Date(s.nextDue).toLocaleDateString()}</p></div>
+                  <div><p className="font-medium">{s.name}</p><p className="text-sm text-muted-foreground">Due: {s.nextDue != null ? new Date(s.nextDue).toLocaleDateString() : "—"}</p></div>
                   <Badge>{s.frequency}</Badge>
                 </div>
               ))}

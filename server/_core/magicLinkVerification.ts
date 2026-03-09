@@ -31,7 +31,8 @@ export async function handleMagicLinkVerification(req: Request, res: Response) {
     }
 
     // Get user details
-    const user = await db.getUserById(userId);
+    type UserShape = { id: number; email?: string; name?: string; role?: string };
+    const user = (await db.getUserById(userId)) as UserShape | null;
 
     if (!user) {
       return res.status(404).json({

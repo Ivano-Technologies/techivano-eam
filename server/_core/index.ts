@@ -298,15 +298,16 @@ async function startServer() {
     let queuedForOcr = false;
     if ((uploadType === "documents" || uploadType === "ocr") && process.env.REDIS_URL) {
       const orgContext = getOrganizationIdFromRequest(req, body.organizationId ?? body.tenantId);
-      if (Number.isInteger(orgContext.tenantId) && orgContext.tenantId > 0) {
+      const tid = orgContext.tenantId;
+      if (tid != null && Number.isInteger(tid) && tid > 0) {
         try {
           const encryptionMeta = await getOcrQueueEncryptionMetadata({
             organizationId: orgContext.organizationId,
             fileKey,
           });
           await enqueueUploadedDocumentForOcr({
-            tenantId: orgContext.tenantId,
-            tenant_id: orgContext.tenantId,
+            tenantId: tid,
+            tenant_id: tid,
             organizationId: orgContext.organizationId ?? undefined,
             encryptionKeyVersion: encryptionMeta.encryptionKeyVersion,
             encryptionAlgorithm: encryptionMeta.encryptionAlgorithm,
@@ -848,19 +849,21 @@ async function startServer() {
       const fileUrl = resolvePublicUrl(fileKey);
       const shouldQueueOcr = uploadType === "documents" || uploadType === "ocr";
       let queuedForOcr = false;
+      const multipartTid = orgContext.tenantId;
       if (
         shouldQueueOcr &&
         process.env.REDIS_URL &&
-        Number.isInteger(orgContext.tenantId) &&
-        orgContext.tenantId > 0
+        multipartTid != null &&
+        Number.isInteger(multipartTid) &&
+        multipartTid > 0
       ) {
         const encryptionMeta = await getOcrQueueEncryptionMetadata({
           organizationId: orgContext.organizationId,
           fileKey,
         });
         await enqueueUploadedDocumentForOcr({
-          tenantId: orgContext.tenantId,
-          tenant_id: orgContext.tenantId,
+          tenantId: multipartTid,
+          tenant_id: multipartTid,
           organizationId: orgContext.organizationId ?? undefined,
           encryptionKeyVersion: encryptionMeta.encryptionKeyVersion,
           encryptionAlgorithm: encryptionMeta.encryptionAlgorithm,
@@ -883,7 +886,7 @@ async function startServer() {
             fileType: normalizeContentType(fileType) || null,
             fileSize: Number.isFinite(fileSize) && fileSize > 0 ? fileSize : null,
             entityType: "organization",
-            entityId: Number.isInteger(orgContext.tenantId) && orgContext.tenantId > 0 ? orgContext.tenantId : null,
+            entityId: multipartTid != null && Number.isInteger(multipartTid) && multipartTid > 0 ? multipartTid : null,
             organizationId: orgContext.organizationId,
             uploadedBy: user.id,
           });
@@ -911,7 +914,8 @@ async function startServer() {
     if (!orgContext.organizationId) {
       return res.status(400).json({ error: "organizationId or x-tenant-id header is required" });
     }
-    if (!Number.isInteger(orgContext.tenantId) || orgContext.tenantId <= 0) {
+    const recTenantId = orgContext.tenantId;
+    if (recTenantId == null || !Number.isInteger(recTenantId) || recTenantId <= 0) {
       return res.status(400).json({ error: "tenantId context is required for recommendations" });
     }
     if (stockItemId !== undefined && (!Number.isInteger(stockItemId) || stockItemId <= 0)) {
@@ -924,7 +928,7 @@ async function startServer() {
     try {
       await sdk.authenticateRequest(req);
       const recommendations = await listWarehouseTransferRecommendations({
-        tenantId: orgContext.tenantId,
+        tenantId: recTenantId,
         stockItemId,
         limit,
       });

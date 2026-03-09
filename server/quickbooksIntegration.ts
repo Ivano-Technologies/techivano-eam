@@ -133,6 +133,7 @@ export function createQuickBooksClient(config: QuickBooksConfig): any {
   );
 }
 
+type FinancialTxRow = { id: number; amount?: string | number; description?: string };
 /**
  * Sync financial transaction to QuickBooks as expense
  */
@@ -141,7 +142,8 @@ export async function syncExpenseToQuickBooks(
   config: QuickBooksConfig
 ): Promise<boolean> {
   try {
-    const transaction = await db.getFinancialTransactionById(transactionId);
+    const raw = await db.getFinancialTransactionById(transactionId);
+    const transaction = raw as FinancialTxRow | null;
     if (!transaction) {
       throw new Error('Transaction not found');
     }
@@ -155,12 +157,12 @@ export async function syncExpenseToQuickBooks(
         name: 'Maintenance Expense',
       },
       PaymentType: 'Cash',
-      TotalAmt: parseFloat(transaction.amount),
+      TotalAmt: parseFloat(String(transaction.amount ?? 0)),
       Line: [
         {
-          Amount: parseFloat(transaction.amount),
+          Amount: parseFloat(String(transaction.amount ?? 0)),
           DetailType: 'AccountBasedExpenseLineDetail',
-          Description: transaction.description || 'EAM System Expense',
+          Description: (transaction.description as string) || 'EAM System Expense',
           AccountBasedExpenseLineDetail: {
             AccountRef: {
               value: '1',
@@ -192,7 +194,8 @@ export async function syncExpenseToQuickBooks(
  * Sync all pending financial transactions
  */
 export async function syncAllTransactions(config: QuickBooksConfig): Promise<SyncResult> {
-  const transactions = await db.getFinancialTransactions();
+  const raw = await db.getFinancialTransactions();
+  const transactions = raw as FinancialTxRow[];
   
   let synced = 0;
   let failed = 0;
@@ -200,16 +203,18 @@ export async function syncAllTransactions(config: QuickBooksConfig): Promise<Syn
   
   for (const transaction of transactions) {
     try {
-      const success = await syncExpenseToQuickBooks(transaction.id, config);
+      const id = transaction.id;
+      if (id == null) continue;
+      const success = await syncExpenseToQuickBooks(id, config);
       if (success) {
         synced++;
       } else {
         failed++;
-        errors.push(`Transaction ${transaction.id}: Sync failed`);
+        errors.push(`Transaction ${id}: Sync failed`);
       }
     } catch (error: any) {
       failed++;
-      errors.push(`Transaction ${transaction.id}: ${error.message}`);
+      errors.push(`Transaction ${transaction.id ?? "?"}: ${error.message}`);
     }
   }
   

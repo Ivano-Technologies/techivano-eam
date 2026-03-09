@@ -28,9 +28,11 @@ import { toast } from "sonner";
 export default function Users() {
   const { user } = useAuth();
 
-  const { data: users, isLoading } = trpc.users.list.useQuery(undefined, {
+  const { data: rawUsers, isLoading } = trpc.users.list.useQuery(undefined, {
     enabled: user?.role === "admin",
   });
+  type UserRow = { id: number; name?: string; email?: string; role?: string; loginMethod?: string; lastSignedIn?: string | Date };
+  const users: UserRow[] = Array.isArray(rawUsers) ? (rawUsers as UserRow[]) : [];
   const updateRoleMutation = trpc.users.updateRole.useMutation();
   const updateUserMutation = trpc.users.update.useMutation();
   const deleteUserMutation = trpc.users.delete.useMutation();
@@ -161,7 +163,7 @@ export default function Users() {
       </div>
       
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {users?.map((u) => (
+        {users.map((u) => (
           <Card key={u.id}>
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -180,7 +182,7 @@ export default function Users() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge className={getRoleBadgeColor(u.role)}>{u.role}</Badge>
+                  <Badge className={getRoleBadgeColor(u.role ?? "")}>{u.role ?? ""}</Badge>
                   {u.id !== user?.id && (
                     editingUserId === u.id ? (
                       <div className="flex gap-1">
@@ -193,10 +195,10 @@ export default function Users() {
                       </div>
                     ) : (
                       <div className="flex gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => handleStartEdit(u.id, u.name || "", u.email || "")}>
+                        <Button size="sm" variant="ghost" onClick={() => handleStartEdit(u.id, u.name ?? "", u.email ?? "")}>
                           <Edit2 className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleDeleteClick(u.id, u.name || "User")}>
+                        <Button size="sm" variant="ghost" onClick={() => handleDeleteClick(u.id, u.name ?? "User")}>
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
                       </div>
@@ -232,7 +234,7 @@ export default function Users() {
                 )}
                 <p className="text-muted-foreground">
                   <span className="font-medium">Last Sign In:</span>{" "}
-                  {new Date(u.lastSignedIn).toLocaleDateString()}
+                  {u.lastSignedIn != null ? new Date(u.lastSignedIn).toLocaleDateString() : "—"}
                 </p>
                 
                 {/* Role Management */}
@@ -243,7 +245,7 @@ export default function Users() {
                     </label>
                     <Select
                       value={u.role}
-                      onValueChange={(newRole) => handleRoleChange(u.id, u.name || 'User', u.role, newRole)}
+                      onValueChange={(newRole) => handleRoleChange(u.id, u.name ?? "User", u.role ?? "", newRole)}
                       disabled={u.id === user?.id} // Prevent changing own role
                     >
                       <SelectTrigger className="w-full">

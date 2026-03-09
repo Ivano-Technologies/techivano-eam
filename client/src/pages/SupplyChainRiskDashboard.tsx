@@ -25,6 +25,8 @@ export default function SupplyChainRiskDashboard() {
 
   const utils = trpc.useUtils();
   const riskQuery = trpc.supplyChainV1.risk.useQuery({ limit: 50 });
+  type RiskRow = { id?: number; stockItemId?: number; vendorId?: number; supplyChainRiskIndex?: number; riskBand?: string };
+  const riskRows: RiskRow[] = Array.isArray(riskQuery.data) ? (riskQuery.data as RiskRow[]) : [];
   const evaluateMutation = trpc.supplyChainV1.evaluate.useMutation({
     onSuccess: () => {
       toast.success("Supply chain risk evaluation queued");
@@ -85,19 +87,19 @@ export default function SupplyChainRiskDashboard() {
         <CardContent>
           {riskQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading risk scores...</p>
-          ) : riskQuery.data && riskQuery.data.length > 0 ? (
+          ) : riskRows.length > 0 ? (
             <div className="space-y-3">
-              {riskQuery.data.map((row) => (
-                <div key={row.id} className="rounded-md border p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              {riskRows.map((row, idx) => (
+                <div key={row.id ?? idx} className="rounded-md border p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-1">
                     <p className="text-sm">
                       Stock #{row.stockItemId} | Vendor #{row.vendorId}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Risk index {Number(row.supplyChainRiskIndex).toFixed(3)}
+                      Risk index {Number(row.supplyChainRiskIndex ?? 0).toFixed(3)}
                     </p>
                   </div>
-                  <Badge className={riskTone(row.riskBand)}>{row.riskBand}</Badge>
+                  <Badge className={riskTone(row.riskBand ?? "")}>{row.riskBand ?? ""}</Badge>
                 </div>
               ))}
             </div>

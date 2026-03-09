@@ -9,34 +9,64 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
 interface NRCSAssetFormProps {
-  asset?: any;
-  onChange: (field: string, value: any) => void;
-  sites: any[];
-  categories: any[];
+  asset?: Record<string, unknown>;
+  onChange: (field: string, value: unknown) => void;
+  sites: { id: number; name?: string }[];
+  categories: unknown[];
+}
+
+function str(val: unknown): string {
+  if (val === null || val === undefined) return "";
+  return String(val);
+}
+
+interface SubCategoryEntry {
+  id: number;
+  name?: string;
+  categoryType?: string;
+}
+
+interface BranchEntry {
+  id: number;
+  code?: string;
+  name?: string;
+  state?: string;
+}
+
+interface CategoryEntry {
+  id: number;
+  code?: string;
+  name?: string;
+  usefulLifeYears?: number;
+  depreciationRate?: number;
 }
 
 export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetFormProps) {
-  const { data: branchCodes } = trpc.nrcs.getBranchCodes.useQuery();
-  const { data: categoryCodes } = trpc.nrcs.getCategoryCodes.useQuery();
-  const { data: allSubCategories } = trpc.nrcs.getSubCategories.useQuery();
-  
+  const { data: branchCodesRaw } = trpc.nrcs.getBranchCodes.useQuery();
+  const { data: categoryCodesRaw } = trpc.nrcs.getCategoryCodes.useQuery();
+  const { data: allSubCategoriesRaw } = trpc.nrcs.getSubCategories.useQuery();
+
+  const branchCodes: BranchEntry[] = Array.isArray(branchCodesRaw) ? (branchCodesRaw as BranchEntry[]) : [];
+  const categoryCodes: CategoryEntry[] = Array.isArray(categoryCodesRaw) ? (categoryCodesRaw as CategoryEntry[]) : [];
+  const allSubCategories: SubCategoryEntry[] = Array.isArray(allSubCategoriesRaw)
+    ? (allSubCategoriesRaw as SubCategoryEntry[])
+    : [];
+
   const [generatedCode, setGeneratedCode] = useState<string>("");
-  const [itemType, setItemType] = useState(asset?.itemType || "Asset");
-  
+  const [itemType, setItemType] = useState((asset?.itemType as string) || "Asset");
+
   // Filter sub-categories by item type
-  const filteredSubCategories = allSubCategories?.filter(
+  const filteredSubCategories = allSubCategories.filter(
     (sub) => sub.categoryType === itemType || sub.categoryType === "Both"
   );
 
+  const branchCode = typeof asset?.branchCode === "string" ? asset.branchCode : "";
+  const categoryCode = typeof asset?.itemCategoryCode === "string" ? asset.itemCategoryCode : "";
+
   // Generate asset code when branch and category are selected
   const { data: assetCode } = trpc.nrcs.generateAssetCode.useQuery(
-    {
-      branchCode: asset?.branchCode || '',
-      categoryCode: asset?.itemCategoryCode || '',
-    },
-    {
-      enabled: !!(asset?.branchCode && asset?.itemCategoryCode),
-    }
+    { branchCode, categoryCode },
+    { enabled: !!(branchCode && categoryCode) }
   );
 
   useEffect(() => {
@@ -114,7 +144,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
               <Label htmlFor="assetTag">Asset Tag *</Label>
               <Input
                 id="assetTag"
-                value={asset?.assetTag || ""}
+                value={str(asset?.assetTag)}
                 onChange={(e) => onChange("assetTag", e.target.value)}
                 placeholder="e.g., NRCS_NHQCO0001"
               />
@@ -125,7 +155,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
               <Label htmlFor="name">Item Name/Description *</Label>
               <Input
                 id="name"
-                value={asset?.name || ""}
+                value={str(asset?.name)}
                 onChange={(e) => onChange("name", e.target.value)}
                 placeholder="e.g., Dell Latitude 7420 Laptop"
               />
@@ -135,7 +165,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
             <div className="space-y-2">
               <Label htmlFor="subCategory">Sub-Category</Label>
               <Select
-                value={asset?.subCategory || ""}
+                value={str(asset?.subCategory)}
                 onValueChange={(value) => onChange("subCategory", value)}
               >
                 <SelectTrigger>
@@ -143,7 +173,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
                 </SelectTrigger>
                 <SelectContent>
                   {filteredSubCategories?.map((sub) => (
-                    <SelectItem key={sub.id} value={sub.name}>
+                    <SelectItem key={sub.id} value={sub.name ?? ""}>
                       {sub.name}
                     </SelectItem>
                   ))}
@@ -156,7 +186,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
               <Label htmlFor="manufacturer">Manufacturer/Make</Label>
               <Input
                 id="manufacturer"
-                value={asset?.manufacturer || ""}
+                value={str(asset?.manufacturer)}
                 onChange={(e) => onChange("manufacturer", e.target.value)}
                 placeholder="e.g., Dell, HP, Toyota"
               />
@@ -167,7 +197,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
               <Label htmlFor="model">Model</Label>
               <Input
                 id="model"
-                value={asset?.model || ""}
+                value={str(asset?.model)}
                 onChange={(e) => onChange("model", e.target.value)}
                 placeholder="e.g., Latitude 7420"
               />
@@ -178,7 +208,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
               <Label htmlFor="productNumber">Serial/Product Number</Label>
               <Input
                 id="productNumber"
-                value={asset?.productNumber || ""}
+                value={str(asset?.productNumber)}
                 onChange={(e) => onChange("productNumber", e.target.value)}
                 placeholder="Serial or product identification number"
               />
@@ -198,7 +228,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
             <div className="space-y-2">
               <Label htmlFor="branchCode">Branch Code *</Label>
               <Select
-                value={asset?.branchCode || ""}
+                value={str(asset?.branchCode)}
                 onValueChange={(value) => onChange("branchCode", value)}
               >
                 <SelectTrigger>
@@ -206,7 +236,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
                 </SelectTrigger>
                 <SelectContent>
                   {branchCodes?.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.code}>
+                    <SelectItem key={branch.id} value={branch.code ?? ""}>
                       {branch.code} - {branch.name} {branch.state && `(${branch.state})`}
                     </SelectItem>
                   ))}
@@ -218,7 +248,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
             <div className="space-y-2">
               <Label htmlFor="itemCategoryCode">Category Code *</Label>
               <Select
-                value={asset?.itemCategoryCode || ""}
+                value={str(asset?.itemCategoryCode)}
                 onValueChange={(value) => onChange("itemCategoryCode", value)}
               >
                 <SelectTrigger>
@@ -226,7 +256,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
                 </SelectTrigger>
                 <SelectContent>
                   {categoryCodes?.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.code}>
+                    <SelectItem key={cat.id} value={cat.code ?? ""}>
                       {cat.code} - {cat.name} ({cat.usefulLifeYears}yr, {cat.depreciationRate}% annual)
                     </SelectItem>
                   ))}
@@ -238,7 +268,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
             <div className="space-y-2">
               <Label htmlFor="siteId">Site/Location *</Label>
               <Select
-                value={asset?.siteId?.toString() || ""}
+                value={asset?.siteId != null ? String(asset.siteId) : ""}
                 onValueChange={(value) => onChange("siteId", value)}
               >
                 <SelectTrigger>
@@ -258,7 +288,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
             <div className="space-y-2">
               <Label htmlFor="methodOfAcquisition">Method of Acquisition</Label>
               <Select
-                value={asset?.methodOfAcquisition || ""}
+                value={str(asset?.methodOfAcquisition)}
                 onValueChange={(value) => onChange("methodOfAcquisition", value)}
               >
                 <SelectTrigger>
@@ -279,7 +309,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
               <Label htmlFor="projectReference">Project Reference/Name</Label>
               <Input
                 id="projectReference"
-                value={asset?.projectReference || ""}
+                value={str(asset?.projectReference)}
                 onChange={(e) => onChange("projectReference", e.target.value)}
                 placeholder="Associated project name or code"
               />
@@ -293,7 +323,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
                 type="number"
                 min="2000"
                 max={new Date().getFullYear()}
-                value={asset?.yearAcquired || ""}
+                value={str(asset?.yearAcquired)}
                 onChange={(e) => onChange("yearAcquired", parseInt(e.target.value))}
                 placeholder={new Date().getFullYear().toString()}
               />
@@ -303,7 +333,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
             <div className="space-y-2">
               <Label htmlFor="acquiredCondition">Acquired Condition</Label>
               <Select
-                value={asset?.acquiredCondition || ""}
+                value={str(asset?.acquiredCondition)}
                 onValueChange={(value) => onChange("acquiredCondition", value)}
               >
                 <SelectTrigger>
@@ -322,7 +352,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
               <Input
                 id="acquisitionCost"
                 type="number"
-                value={asset?.acquisitionCost || ""}
+                value={str(asset?.acquisitionCost)}
                 onChange={(e) => onChange("acquisitionCost", e.target.value)}
                 placeholder="0.00"
               />
@@ -334,7 +364,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
               <Input
                 id="currentDepreciatedValue"
                 type="number"
-                value={asset?.currentDepreciatedValue || ""}
+                value={str(asset?.currentDepreciatedValue)}
                 onChange={(e) => onChange("currentDepreciatedValue", e.target.value)}
                 placeholder="Auto-calculated or manual entry"
               />
@@ -354,7 +384,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
             <div className="space-y-2">
               <Label htmlFor="status">Current Status</Label>
               <Select
-                value={asset?.status || "In Use"}
+                value={str(asset?.status) || "In Use"}
                 onValueChange={(value) => onChange("status", value)}
               >
                 <SelectTrigger>
@@ -375,7 +405,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
               <Label htmlFor="assignedToName">Assigned To (Name)</Label>
               <Input
                 id="assignedToName"
-                value={asset?.assignedToName || ""}
+                value={str(asset?.assignedToName)}
                 onChange={(e) => onChange("assignedToName", e.target.value)}
                 placeholder="Full name of person assigned"
               />
@@ -386,7 +416,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
               <Label htmlFor="department">Department/Unit</Label>
               <Input
                 id="department"
-                value={asset?.department || ""}
+                value={str(asset?.department)}
                 onChange={(e) => onChange("department", e.target.value)}
                 placeholder="e.g., Finance, Operations, IT"
               />
@@ -396,7 +426,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
             <div className="space-y-2">
               <Label htmlFor="condition">Physical Condition</Label>
               <Select
-                value={asset?.condition || ""}
+                value={str(asset?.condition)}
                 onValueChange={(value) => onChange("condition", value)}
               >
                 <SelectTrigger>
@@ -418,7 +448,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
               <Input
                 id="lastPhysicalCheckDate"
                 type="date"
-                value={asset?.lastPhysicalCheckDate || ""}
+                value={str(asset?.lastPhysicalCheckDate)}
                 onChange={(e) => onChange("lastPhysicalCheckDate", e.target.value)}
               />
             </div>
@@ -428,7 +458,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
               <Label htmlFor="checkConductedBy">Check Conducted By</Label>
               <Input
                 id="checkConductedBy"
-                value={asset?.checkConductedBy || ""}
+                value={str(asset?.checkConductedBy)}
                 onChange={(e) => onChange("checkConductedBy", e.target.value)}
                 placeholder="Name of person who conducted physical check"
               />
@@ -439,7 +469,7 @@ export function NRCSAssetForm({ asset, onChange, sites, categories }: NRCSAssetF
               <Label htmlFor="remarks">Remarks/Notes</Label>
               <Textarea
                 id="remarks"
-                value={asset?.remarks || ""}
+                value={str(asset?.remarks)}
                 onChange={(e) => onChange("remarks", e.target.value)}
                 placeholder="Additional notes or observations"
                 rows={4}

@@ -21,7 +21,9 @@ export default function WorkOrderDetail() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const workOrderId = params?.id ? Number(params.id) : 0;
-  const { data: workOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({ id: workOrderId });
+  const { data: rawWorkOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({ id: workOrderId });
+  type WorkOrderDetailShape = { id: number; title?: string; workOrderNumber?: string; status?: string; priority?: string; type?: string; description?: string; estimatedCost?: string | number; actualCost?: string | number; completionNotes?: string };
+  const workOrder = rawWorkOrder as WorkOrderDetailShape | undefined;
   const isMobile = useIsMobile();
 
   const [showSuccess, setShowSuccess] = useState(false);
@@ -39,7 +41,7 @@ export default function WorkOrderDetail() {
 
   const handleEdit = () => {
     if (workOrder) {
-      setEditForm({ status: workOrder.status, completionNotes: workOrder.completionNotes || "" });
+      setEditForm({ status: workOrder.status ?? "", completionNotes: workOrder.completionNotes ?? "" });
       setIsEditDialogOpen(true);
     }
   };
@@ -65,12 +67,12 @@ export default function WorkOrderDetail() {
       <Card>
         <CardHeader><CardTitle>Work Order Details</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div><p className="text-sm font-medium text-muted-foreground">Status</p><Badge>{workOrder.status}</Badge></div>
-          <div><p className="text-sm font-medium text-muted-foreground">Priority</p><Badge>{workOrder.priority}</Badge></div>
-          <div><p className="text-sm font-medium text-muted-foreground">Type</p><p>{workOrder.type}</p></div>
+          <div><p className="text-sm font-medium text-muted-foreground">Status</p><Badge>{workOrder.status ?? ""}</Badge></div>
+          <div><p className="text-sm font-medium text-muted-foreground">Priority</p><Badge>{workOrder.priority ?? ""}</Badge></div>
+          <div><p className="text-sm font-medium text-muted-foreground">Type</p><p>{workOrder.type ?? ""}</p></div>
           {workOrder.description && <div><p className="text-sm font-medium text-muted-foreground">Description</p><p>{workOrder.description}</p></div>}
-          {workOrder.estimatedCost && <div><p className="text-sm font-medium text-muted-foreground">Estimated Cost</p><p className="font-mono tabular-nums">{formatNaira(workOrder.estimatedCost)}</p></div>}
-          {workOrder.actualCost && <div><p className="text-sm font-medium text-muted-foreground">Actual Cost</p><p className="font-mono tabular-nums">{formatNaira(workOrder.actualCost)}</p></div>}
+          {workOrder.estimatedCost != null && <div><p className="text-sm font-medium text-muted-foreground">Estimated Cost</p><p className="font-mono tabular-nums">{formatNaira(Number(workOrder.estimatedCost))}</p></div>}
+          {workOrder.actualCost != null && <div><p className="text-sm font-medium text-muted-foreground">Actual Cost</p><p className="font-mono tabular-nums">{formatNaira(Number(workOrder.actualCost))}</p></div>}
         </CardContent>
       </Card>
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -98,7 +100,7 @@ export default function WorkOrderDetail() {
       </Dialog>
 
       {/* Floating Action Buttons - Mobile Only */}
-      {isMobile && workOrder.status !== 'completed' && (
+      {isMobile && (workOrder.status ?? "") !== "completed" && (
         <FloatingActionGroup position="bottom-right">
           <FloatingActionButton
             icon={<Camera className="h-6 w-6" />}

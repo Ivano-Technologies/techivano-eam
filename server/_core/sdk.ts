@@ -291,9 +291,10 @@ class SDKServer {
     if (!user) {
       throw ForbiddenError("User not found");
     }
-
+    type UserWithOpenId = { openId: string; [k: string]: unknown };
+    const u = user as UserWithOpenId;
     await db.upsertUser({
-      openId: user.openId,
+      openId: u.openId,
       lastSignedIn: signedInAt,
     });
 

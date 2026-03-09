@@ -9,7 +9,16 @@ import { useState } from "react";
 
 export default function CostAnalytics() {
   const [days, setDays] = useState(30);
-  const { data: analytics, isLoading } = trpc.financial.getCostAnalytics.useQuery({ days });
+  const { data: rawAnalytics, isLoading } = trpc.financial.getCostAnalytics.useQuery({ days });
+  type CostAnalyticsData = {
+    totalCost?: number;
+    maintenanceCost?: number;
+    repairCost?: number;
+    byCategory?: { categoryId?: number; categoryName?: string; total?: number }[];
+    bySite?: { siteId?: number; siteName?: string; total?: number }[];
+    byVendor?: { vendorId?: number; vendorName?: string; total?: number; transactionCount?: number }[];
+  };
+  const analytics = rawAnalytics as CostAnalyticsData | undefined;
 
   const exportMutation = trpc.reports.workOrders.useMutation({
     onSuccess: (data: any) => {
@@ -92,7 +101,7 @@ export default function CostAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono tabular-nums">
-              {formatNaira(analytics?.totalCost || 0)}
+              {formatNaira(Number(analytics?.totalCost ?? 0))}
             </div>
             <p className="text-xs text-muted-foreground">
               All expenses in selected period
@@ -107,7 +116,7 @@ export default function CostAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ₦{analytics?.maintenanceCost.toLocaleString() || '0'}
+              ₦{((analytics?.maintenanceCost as number | undefined) ?? 0).toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
               Preventive maintenance costs
@@ -122,7 +131,7 @@ export default function CostAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ₦{analytics?.repairCost.toLocaleString() || '0'}
+              ₦{((analytics?.repairCost ?? 0) as number).toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
               Emergency repair costs

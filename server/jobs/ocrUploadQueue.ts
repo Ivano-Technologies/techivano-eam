@@ -71,12 +71,13 @@ function resolveOptionalEncryptionMetadata(payload: OcrUploadJobPayload): {
 }
 
 export async function enqueueUploadedDocumentForOcr(payload: OcrUploadJobPayload) {
-  const canonicalTenantId = Number.isInteger(payload.tenantId) && payload.tenantId > 0
+  const rawTenantId = Number.isInteger(payload.tenantId) && payload.tenantId > 0
     ? payload.tenantId
     : payload.tenant_id;
-  if (!Number.isInteger(canonicalTenantId) || canonicalTenantId <= 0) {
+  if (rawTenantId == null || !Number.isInteger(rawTenantId) || rawTenantId <= 0) {
     throw new Error("tenantId is required to enqueue OCR upload job");
   }
+  const canonicalTenantId: number = rawTenantId;
 
   const normalizedPayload: OcrUploadJobPayload = {
     ...payload,

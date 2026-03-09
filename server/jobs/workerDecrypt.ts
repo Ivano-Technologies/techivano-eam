@@ -55,10 +55,10 @@ export function resolveWorkerEncryptionMetadata(payload: OcrQueuePayloadLike): {
   const keyVersion =
     parsePositiveInteger(payload.encryptionKeyVersion) ??
     parsePositiveInteger(payload.encryption_key_version);
+  const rawAlg = payload.encryptionAlgorithm ?? payload.encryption_algorithm;
   const algorithm =
-    typeof (payload.encryptionAlgorithm ?? payload.encryption_algorithm) === "string" &&
-    (payload.encryptionAlgorithm ?? payload.encryption_algorithm)?.trim()
-      ? String(payload.encryptionAlgorithm ?? payload.encryption_algorithm).trim().toLowerCase()
+    typeof rawAlg === "string" && String(rawAlg).trim().length > 0
+      ? String(rawAlg).trim().toLowerCase()
       : "";
   if (!keyVersion || !algorithm) return null;
   if (algorithm !== "aes-256-gcm") return null;

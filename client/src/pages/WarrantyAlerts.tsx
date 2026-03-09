@@ -7,8 +7,10 @@ import { AlertTriangle, Calendar, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 export default function WarrantyAlerts() {
-  const { data: expiringWarranties, isLoading } = trpc.assets.getExpiringWarranties.useQuery();
-  
+  const { data: rawExpiring, isLoading } = trpc.assets.getExpiringWarranties.useQuery();
+  type WarrantyAsset = { id: number; name?: string; warrantyExpiry?: string | Date; assetTag?: string; manufacturer?: string; model?: string };
+  const expiringWarranties: WarrantyAsset[] = Array.isArray(rawExpiring) ? (rawExpiring as WarrantyAsset[]) : [];
+
   const sendAlertMutation = trpc.assets.sendWarrantyAlert.useMutation({
     onSuccess: () => {
       toast.success("Warranty alert sent successfully");
@@ -53,14 +55,15 @@ export default function WarrantyAlerts() {
         <div className="flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-destructive" />
           <span className="text-sm text-muted-foreground">
-            {expiringWarranties?.filter(a => getDaysUntilExpiry(a.warrantyExpiry!) <= 90).length || 0} expiring soon
+            {expiringWarranties.filter((a) => a.warrantyExpiry != null && getDaysUntilExpiry(a.warrantyExpiry) <= 90).length} expiring soon
           </span>
         </div>
       </div>
 
       <div className="grid gap-4">
-        {expiringWarranties?.map((asset) => {
-          const daysUntil = getDaysUntilExpiry(asset.warrantyExpiry!);
+        {expiringWarranties.map((asset) => {
+          const expiry = asset.warrantyExpiry;
+          const daysUntil = expiry != null ? getDaysUntilExpiry(expiry) : 0;
           const urgency = getUrgencyColor(daysUntil);
 
           return (
@@ -91,7 +94,7 @@ export default function WarrantyAlerts() {
                     <p className="text-sm text-muted-foreground">Warranty Expiry</p>
                     <p className="font-medium flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
-                      {new Date(asset.warrantyExpiry!).toLocaleDateString()}
+                      {asset.warrantyExpiry != null ? new Date(asset.warrantyExpiry).toLocaleDateString() : "—"}
                     </p>
                   </div>
                 </div>
@@ -109,7 +112,7 @@ export default function WarrantyAlerts() {
           );
         })}
 
-        {(!expiringWarranties || expiringWarranties.length === 0) && (
+        {expiringWarranties.length === 0 && (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">No warranties expiring in the next 90 days</p>

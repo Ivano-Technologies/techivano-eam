@@ -29,9 +29,18 @@ export default function Compliance() {
   });
 
   const utils = trpc.useUtils();
-  const { data: records, isLoading } = trpc.compliance.list.useQuery();
-  const { data: assets } = trpc.assets.list.useQuery();
-  const { data: users } = trpc.users.list.useQuery();
+  const { data: rawRecords, isLoading } = trpc.compliance.list.useQuery();
+  const records: { id: number; title?: string; regulatoryBody?: string; status?: string; requirementType?: string; dueDate?: string | Date }[] = Array.isArray(rawRecords)
+    ? (rawRecords as { id: number; title?: string; regulatoryBody?: string; status?: string; requirementType?: string; dueDate?: string | Date }[])
+    : [];
+  const { data: rawAssets } = trpc.assets.list.useQuery();
+  const { data: rawUsers } = trpc.users.list.useQuery();
+  const assets: { id: number; name?: string; assetTag?: string }[] = Array.isArray(rawAssets)
+    ? (rawAssets as { id: number; name?: string; assetTag?: string }[])
+    : [];
+  const users: { id: number; name?: string }[] = Array.isArray(rawUsers)
+    ? (rawUsers as { id: number; name?: string }[])
+    : [];
 
   const createMutation = trpc.compliance.create.useMutation({
     onSuccess: () => {
@@ -172,7 +181,7 @@ export default function Compliance() {
                       <SelectValue placeholder="Select asset (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      {assets?.map((asset) => (
+                      {assets.map((asset) => (
                         <SelectItem key={asset.id} value={asset.id.toString()}>
                           {asset.name} ({asset.assetTag})
                         </SelectItem>
@@ -218,7 +227,7 @@ export default function Compliance() {
                       <SelectValue placeholder="Select user (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      {users?.map((user) => (
+                      {users.map((user) => (
                         <SelectItem key={user.id} value={user.id.toString()}>
                           {user.name}
                         </SelectItem>
@@ -263,7 +272,7 @@ export default function Compliance() {
       </div>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {records?.map((record) => (
+        {records.map((record) => (
           <Card key={record.id}>
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -271,7 +280,7 @@ export default function Compliance() {
                   <FileCheck className="h-5 w-5 text-primary" />
                   <div><CardTitle className="text-lg">{record.title}</CardTitle>{record.regulatoryBody && <p className="text-xs text-muted-foreground">{record.regulatoryBody}</p>}</div>
                 </div>
-                <Badge className={getStatusColor(record.status)}>{record.status.replace("_", " ")}</Badge>
+                <Badge className={getStatusColor(record.status ?? "")}>{record.status != null ? record.status.replace("_", " ") : ""}</Badge>
               </div>
             </CardHeader>
             <CardContent>

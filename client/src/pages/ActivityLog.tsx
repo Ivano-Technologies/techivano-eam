@@ -7,14 +7,24 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Activity, User, Clock } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 
+interface AuditLogEntry {
+  id: number;
+  action?: string;
+  entityType?: string;
+  changes?: string;
+  userId?: number;
+  timestamp?: Date | string;
+}
+
 export default function ActivityLog() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [entityFilter, setEntityFilter] = useState<string>("all");
 
-  const { data: logs, isLoading } = trpc.auditLogs.list.useQuery({
+  const { data: rawLogs, isLoading } = trpc.auditLogs.list.useQuery({
     entityType: entityFilter !== "all" ? entityFilter : undefined,
   });
+  const logs: AuditLogEntry[] = Array.isArray(rawLogs) ? (rawLogs as AuditLogEntry[]) : [];
 
   if (user?.role !== "admin" && user?.role !== "manager") {
     return (
@@ -24,9 +34,9 @@ export default function ActivityLog() {
     );
   }
 
-  const filteredLogs = logs?.filter((log) =>
+  const filteredLogs = logs.filter((log) =>
     searchTerm === "" ||
-    log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (log.action ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (log.entityType?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
     (log.changes?.toLowerCase() || "").includes(searchTerm.toLowerCase())
   );
@@ -90,7 +100,7 @@ export default function ActivityLog() {
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
-      ) : filteredLogs && filteredLogs.length > 0 ? (
+      ) : filteredLogs.length > 0 ? (
         <div className="space-y-4">
           {filteredLogs.map((log) => (
             <Card key={log.id} className="hover:shadow-md transition-shadow">
@@ -98,7 +108,7 @@ export default function ActivityLog() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2">
-                      <Badge className={getActionBadgeColor(log.action)}>
+                      <Badge className={getActionBadgeColor(log.action ?? "")}>
                         {log.action}
                       </Badge>
                       <Badge variant="outline">{log.entityType}</Badge>
@@ -117,7 +127,7 @@ export default function ActivityLog() {
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        <span>{new Date(log.timestamp).toLocaleString()}</span>
+                        <span>{log.timestamp != null ? new Date(log.timestamp).toLocaleString() : "—"}</span>
                       </div>
                     </div>
                   </div>

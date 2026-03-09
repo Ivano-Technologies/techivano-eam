@@ -21,6 +21,8 @@ export default function ProcurementDashboard() {
 
   const utils = trpc.useUtils();
   const recommendationsQuery = trpc.procurementV1.recommendations.useQuery({ limit: 50 });
+  type RecRow = { id?: number; stockItemId?: number; recommendedVendorId?: number; recommendedQuantity?: number; procurementPriority?: string };
+  const recommendations: RecRow[] = Array.isArray(recommendationsQuery.data) ? (recommendationsQuery.data as RecRow[]) : [];
   const recommendMutation = trpc.procurementV1.recommend.useMutation({
     onSuccess: () => {
       toast.success("Procurement recommendations job queued");
@@ -81,10 +83,10 @@ export default function ProcurementDashboard() {
         <CardContent>
           {recommendationsQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading recommendations...</p>
-          ) : recommendationsQuery.data && recommendationsQuery.data.length > 0 ? (
+          ) : recommendations.length > 0 ? (
             <div className="space-y-3">
-              {recommendationsQuery.data.map((row) => (
-                <div key={row.id} className="rounded-md border p-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              {recommendations.map((row) => (
+                <div key={row.id ?? 0} className="rounded-md border p-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-1">
                     <p className="text-sm">
                       <span className="font-medium">Stock item:</span> #{row.stockItemId}
@@ -94,11 +96,11 @@ export default function ProcurementDashboard() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge className={priorityTone(row.procurementPriority)}>{row.procurementPriority}</Badge>
+                    <Badge className={priorityTone(row.procurementPriority ?? "")}>{row.procurementPriority ?? ""}</Badge>
                     <Button
                       size="sm"
                       disabled={createPoMutation.isPending}
-                      onClick={() => createPoMutation.mutate({ recommendationId: row.id })}
+                      onClick={() => { if (row.id != null) createPoMutation.mutate({ recommendationId: row.id }); }}
                     >
                       Create PO
                     </Button>
