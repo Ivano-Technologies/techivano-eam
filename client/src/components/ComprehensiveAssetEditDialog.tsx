@@ -17,6 +17,21 @@ interface ComprehensiveAssetEditDialogProps {
   isUpdating: boolean;
 }
 
+interface BranchCodeOption {
+  code: string;
+  name: string;
+}
+
+interface CategoryCodeOption {
+  code: string;
+  name: string;
+}
+
+interface SubCategoryOption {
+  id: number | string;
+  name: string;
+}
+
 export function ComprehensiveAssetEditDialog({
   open,
   onOpenChange,
@@ -60,6 +75,31 @@ export function ComprehensiveAssetEditDialog({
   const { data: subCategories } = trpc.nrcs.getSubCategories.useQuery({
     type: editForm.itemType as "Asset" | "Inventory",
   });
+
+  const branchCodeOptions: BranchCodeOption[] = Array.isArray(branchCodes)
+    ? branchCodes.filter(
+        (branch): branch is BranchCodeOption =>
+          typeof (branch as { code?: unknown }).code === "string" &&
+          typeof (branch as { name?: unknown }).name === "string"
+      )
+    : [];
+
+  const categoryCodeOptions: CategoryCodeOption[] = Array.isArray(categoryCodes)
+    ? categoryCodes.filter(
+        (cat): cat is CategoryCodeOption =>
+          typeof (cat as { code?: unknown }).code === "string" &&
+          typeof (cat as { name?: unknown }).name === "string"
+      )
+    : [];
+
+  const subCategoryOptions: SubCategoryOption[] = Array.isArray(subCategories)
+    ? subCategories.filter(
+        (sub): sub is SubCategoryOption =>
+          (typeof (sub as { id?: unknown }).id === "string" ||
+            typeof (sub as { id?: unknown }).id === "number") &&
+          typeof (sub as { name?: unknown }).name === "string"
+      )
+    : [];
 
   const handleSubmit = () => {
     onUpdate({
@@ -189,7 +229,7 @@ export function ComprehensiveAssetEditDialog({
                     <SelectValue placeholder="Select branch" />
                   </SelectTrigger>
                   <SelectContent>
-                    {branchCodes?.map((branch) => (
+                    {branchCodeOptions.map((branch) => (
                       <SelectItem key={branch.code} value={branch.code}>
                         {branch.code} - {branch.name}
                       </SelectItem>
@@ -207,7 +247,7 @@ export function ComprehensiveAssetEditDialog({
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categoryCodes?.map((cat) => (
+                    {categoryCodeOptions.map((cat) => (
                       <SelectItem key={cat.code} value={cat.code}>
                         {cat.code} - {cat.name}
                       </SelectItem>
@@ -223,7 +263,7 @@ export function ComprehensiveAssetEditDialog({
                     <SelectValue placeholder="Select sub-category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {subCategories?.map((sub) => (
+                    {subCategoryOptions.map((sub) => (
                       <SelectItem key={sub.id} value={sub.id.toString()}>
                         {sub.name}
                       </SelectItem>

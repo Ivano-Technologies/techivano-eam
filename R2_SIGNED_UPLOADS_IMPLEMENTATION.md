@@ -78,6 +78,7 @@ Request body:
 - `fileType`
 - `uploadType`
 - `tenantId` (optional but recommended for OCR jobs)
+- `organizationId` (optional; preferred for org-scoped OCR + encryption metadata lookup)
 
 Response:
 
@@ -96,6 +97,9 @@ Responsibilities:
 
 - Publishes `process-uploaded-document` jobs to queue `ocr-processing`
 - Payload includes tenant/user, file key, file type, and resolved file URL
+- Includes normalized `organizationId` when available
+- Includes `encryptionKeyVersion` + `encryptionAlgorithm` only when encrypted document metadata already exists
+- Keeps queue contract backward compatible by mirroring tenant identity as both `tenantId` and legacy `tenant_id`
 
 ### 5) Multipart upload endpoints
 

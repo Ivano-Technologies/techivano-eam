@@ -16,6 +16,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { logger } from "./_core/logger";
+import { decryptOrgDataKey, encryptOrgDataKey, generateOrgDataKey } from "./_core/encryption";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -1542,22 +1543,318 @@ export async function getAuditLogs(filters?: { userId?: number; entityType?: str
 export async function createDocument(doc: typeof documents.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(documents).values(doc);
+  const nextDoc = { ...doc };
+  if (!nextDoc.organizationId) {
+    if (nextDoc.entityType === "organization" && typeof nextDoc.entityId === "number" && nextDoc.entityId > 0) {
+      nextDoc.organizationId = normalizeOrganizationId(nextDoc.entityId);
+    }
+  } else {
+    nextDoc.organizationId = normalizeOrganizationId(nextDoc.organizationId);
+  }
+  const result = await db.insert(documents).values(nextDoc);
   const insertId = (result as any).insertId;
   return await db.select().from(documents).where(eq(documents.id, Number(insertId))).limit(1).then(r => r[0]);
 }
 
-export async function getDocuments(entityType?: string, entityId?: number) {
+export async function getDocuments(entityType?: string, entityId?: number): Promise<(typeof documents.$inferSelect)[]>;
+export async function getDocuments(filters: {
+  entityType?: string;
+  entityId?: number;
+  organizationId?: string | number;
+}): Promise<(typeof documents.$inferSelect)[]>;
+export async function getDocuments(
+  entityTypeOrFilters?: string | { entityType?: string; entityId?: number; organizationId?: string | number },
+  entityId?: number
+) {
   const db = await getDb();
   if (!db) return [];
-  
-  if (entityType && entityId) {
-    return await db.select().from(documents)
-      .where(and(eq(documents.entityType, entityType), eq(documents.entityId, entityId)))
+
+  const isObjectFilters = typeof entityTypeOrFilters === "object" && entityTypeOrFilters !== null;
+  const filters = isObjectFilters
+    ? entityTypeOrFilters
+    : { entityType: entityTypeOrFilters, entityId };
+  const conditions = [];
+
+  if (isObjectFilters) {
+    if (filters.entityType) {
+      conditions.push(eq(documents.entityType, filters.entityType));
+    }
+    if (typeof filters.entityId === "number") {
+      conditions.push(eq(documents.entityId, filters.entityId));
+    }
+  } else if (filters.entityType && typeof filters.entityId === "number") {
+    conditions.push(and(eq(documents.entityType, filters.entityType), eq(documents.entityId, filters.entityId)));
+  }
+  if (filters.organizationId !== undefined && filters.organizationId !== null) {
+    conditions.push(eq(documents.organizationId, normalizeOrganizationId(filters.organizationId)));
+  }
+
+  if (conditions.length > 0) {
+    return await db
+      .select()
+      .from(documents)
+      .where(and(...conditions))
       .orderBy(desc(documents.createdAt));
   }
-  
+
   return await db.select().from(documents).orderBy(desc(documents.createdAt));
+}
+
+const UUID_V4_LIKE_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function normalizeOrganizationId(input: string | number): string {
+  if (typeof input === "string") {
+    const trimmed = input.trim().toLowerCase();
+    if (UUID_V4_LIKE_PATTERN.test(trimmed)) return trimmed;
+    throw new Error("organizationId must be a UUID string or positive numeric tenant id");
+  }
+
+  if (!Number.isInteger(input) || input <= 0) {
+    throw new Error("organizationId must be a UUID string or positive numeric tenant id");
+  }
+
+  const tenantHex = Number(input).toString(16).padStart(12, "0").slice(-12);
+  return `00000000-0000-4000-8000-${tenantHex}`;
+}
+
+export async function getActiveOrganizationEncryptionKey(
+  organizationId: string | number,
+  keyVersion?: number
+) {
+  const db = await getDb();
+  if (!db) return null;
+  const orgId = normalizeOrganizationId(organizationId);
+  const query =
+    Number.isInteger(keyVersion) && Number(keyVersion) > 0
+      ? sql`
+          select id, organization_id, key_version, encrypted_key, status, created_at
+          from organization_encryption_keys
+          where organization_id = ${orgId} and key_version = ${Number(keyVersion)}
+          order by key_version desc
+          limit 1
+        `
+      : sql`
+          select id, organization_id, key_version, encrypted_key, status, created_at
+          from organization_encryption_keys
+          where organization_id = ${orgId} and status = 'active'
+          order by key_version desc
+          limit 1
+        `;
+
+  const rows = await db.execute(query);
+  const row = ((rows as unknown[])?.[0] ?? null) as
+    | {
+        id: string;
+        organization_id: string;
+        key_version: number;
+        encrypted_key: string;
+        status: string;
+        created_at: Date | string;
+      }
+    | null;
+  if (!row) return null;
+  return {
+    id: row.id,
+    organizationId: row.organization_id,
+    encryptedKey: row.encrypted_key,
+    keyVersion: Number(row.key_version),
+    status: row.status,
+    createdAt: new Date(row.created_at),
+  } as {
+    id: string;
+    organizationId: string;
+    encryptedKey: string;
+    keyVersion: number;
+    status: string;
+    createdAt: Date;
+  };
+}
+
+export async function createOrganizationEncryptionKey(params: {
+  organizationId: string | number;
+  encryptedKey: string;
+  keyVersion: number;
+  status?: "active" | "retired";
+}) {
+  const db = await getDb();
+  if (!db) return null;
+  const orgId = normalizeOrganizationId(params.organizationId);
+  const nextStatus = params.status ?? "active";
+
+  if (nextStatus === "active") {
+    await db.execute(sql`
+      update organization_encryption_keys
+      set status = 'retired', retired_at = now()
+      where organization_id = ${orgId}
+        and status = 'active'
+    `);
+  }
+
+  await db.execute(sql`
+    insert into organization_encryption_keys (
+      organization_id,
+      key_version,
+      encrypted_key,
+      status
+    ) values (
+      ${orgId},
+      ${params.keyVersion},
+      ${params.encryptedKey},
+      ${nextStatus}
+    )
+  `);
+
+  const rows = await db.execute(sql`
+    select id, organization_id, key_version, encrypted_key, status, created_at
+    from organization_encryption_keys
+    where organization_id = ${orgId}
+      and key_version = ${params.keyVersion}
+    limit 1
+  `);
+  const row = ((rows as unknown[])?.[0] ?? null) as
+    | {
+        id: string;
+        organization_id: string;
+        key_version: number;
+        encrypted_key: string;
+        status: string;
+        created_at: Date | string;
+      }
+    | null;
+  if (!row) return null;
+  return {
+    id: row.id,
+    organizationId: row.organization_id,
+    encryptedKey: row.encrypted_key,
+    keyVersion: Number(row.key_version),
+    status: row.status,
+    createdAt: new Date(row.created_at),
+  } as {
+    id: string;
+    organizationId: string;
+    encryptedKey: string;
+    keyVersion: number;
+    status: string;
+    createdAt: Date;
+  };
+}
+
+export async function createEncryptedDocumentMetadata(params: {
+  organizationId: string | number;
+  uploadedBy: number;
+  fileName: string;
+  fileKey: string;
+  fileUrl?: string;
+  fileType: string;
+  fileSize: number;
+  encryption: {
+    algorithm: string;
+    iv: string;
+    authTag: string;
+    keyVersion: number;
+    isEncrypted: true;
+  };
+}) {
+  const organizationId = normalizeOrganizationId(params.organizationId);
+  return createDocument({
+    name: params.fileName,
+    description: JSON.stringify({ originalFileName: params.fileName }),
+    fileUrl: params.fileUrl ?? "",
+    fileKey: params.fileKey,
+    fileType: params.fileType,
+    fileSize: params.fileSize,
+    entityType: "organization",
+    entityId: null,
+    organizationId,
+    encryptionAlgorithm: params.encryption.algorithm,
+    encryptionKeyVersion: params.encryption.keyVersion,
+    encryptionIv: params.encryption.iv,
+    encryptionAuthTag: params.encryption.authTag,
+    encryptedAt: new Date(),
+    isEncrypted: true,
+    uploadedBy: params.uploadedBy,
+  });
+}
+
+export async function getDocumentById(
+  documentId: number,
+  options?: { organizationId?: string | number }
+) {
+  const db = await getDb();
+  if (!db) return null;
+  const conditions = [eq(documents.id, documentId)];
+  if (options?.organizationId !== undefined && options.organizationId !== null) {
+    conditions.push(eq(documents.organizationId, normalizeOrganizationId(options.organizationId)));
+  }
+  const rows = await db.select().from(documents).where(and(...conditions)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getDocumentByFileKey(
+  fileKey: string,
+  options?: { organizationId?: string | number }
+) {
+  const db = await getDb();
+  if (!db) return null;
+  const normalizedFileKey = fileKey.trim();
+  if (!normalizedFileKey) return null;
+
+  const conditions = [eq(documents.fileKey, normalizedFileKey)];
+  if (options?.organizationId !== undefined && options.organizationId !== null) {
+    conditions.push(eq(documents.organizationId, normalizeOrganizationId(options.organizationId)));
+  }
+
+  const rows = await db
+    .select()
+    .from(documents)
+    .where(and(...conditions))
+    .orderBy(desc(documents.createdAt))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function createInitialOrganizationEncryptionKey(organizationId: string | number) {
+  const existing = await getActiveOrganizationEncryptionKey(organizationId);
+  if (existing) return existing;
+  const encryptedKey = encryptOrgDataKey(generateOrgDataKey());
+  return createOrganizationEncryptionKey({
+    organizationId,
+    encryptedKey,
+    keyVersion: 1,
+    status: "active",
+  });
+}
+
+export async function rotateOrganizationEncryptionKey(organizationId: string | number) {
+  const active = await getActiveOrganizationEncryptionKey(organizationId);
+  const nextVersion = active ? Number(active.keyVersion) + 1 : 1;
+  const encryptedKey = encryptOrgDataKey(generateOrgDataKey());
+  const created = await createOrganizationEncryptionKey({
+    organizationId,
+    encryptedKey,
+    keyVersion: nextVersion,
+    status: "active",
+  });
+  return {
+    retiredVersion: active ? Number(active.keyVersion) : null,
+    activeKeyVersion: created ? Number(created.keyVersion) : null,
+    organizationId: created?.organizationId ?? normalizeOrganizationId(organizationId),
+  };
+}
+
+export async function getOrganizationEncryptionKeyMaterial(
+  organizationId: string | number,
+  keyVersion?: number
+) {
+  const keyRecord = await getActiveOrganizationEncryptionKey(organizationId, keyVersion);
+  if (!keyRecord) return null;
+  return {
+    organizationId: keyRecord.organizationId,
+    keyVersion: keyRecord.keyVersion,
+    algorithm: "aes-256-gcm",
+    dataKey: decryptOrgDataKey(keyRecord.encryptedKey),
+  };
 }
 
 // ============= DASHBOARD STATISTICS =============

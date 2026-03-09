@@ -4,6 +4,7 @@ import {
   integer,
   text,
   timestamp as pgTimestamp,
+  uuid,
   varchar,
   numeric,
   boolean,
@@ -750,9 +751,41 @@ export const documents = mysqlTable("documents", {
   fileSize: bigint("fileSize", { mode: "number" }),
   entityType: varchar("entityType", { length: 100 }),
   entityId: int("entityId"),
+  organizationId: uuid("organization_id"),
+  encryptionAlgorithm: text("encryption_algorithm"),
+  encryptionKeyVersion: integer("encryption_key_version"),
+  encryptionIv: text("encryption_iv"),
+  encryptionAuthTag: text("encryption_auth_tag"),
+  encryptedAt: pgTimestamp("encrypted_at", { withTimezone: true }),
+  isEncrypted: boolean("is_encrypted").default(false).notNull(),
   uploadedBy: int("uploadedBy").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => ({
+  organizationIdIdx: index("idx_documents_organization_id").on(table.organizationId),
+  orgEncryptedCreatedIdx: index("idx_documents_org_encrypted_created")
+    .on(table.organizationId, table.isEncrypted),
+  encryptionKeyVersionIdx: index("idx_documents_encryption_key_version").on(table.encryptionKeyVersion),
+}));
+
+export const organizationEncryptionKeys = mysqlTable(
+  "organization_encryption_keys",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id").notNull(),
+    keyVersion: integer("key_version").notNull().default(1),
+    encryptedKey: text("encrypted_key").notNull(),
+    status: text("status").notNull().default("active"),
+    createdAt: pgTimestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    retiredAt: pgTimestamp("retired_at", { withTimezone: true }),
+  },
+  (table) => ({
+    organizationIdIdx: index("idx_org_encryption_keys_organization_id").on(table.organizationId),
+    orgStatusCreatedIdx: index("idx_org_encryption_keys_org_status_created")
+      .on(table.organizationId, table.status, table.createdAt),
+    organizationVersionUniqueIdx: uniqueIndex("uq_org_encryption_keys_org_version")
+      .on(table.organizationId, table.keyVersion),
+  }),
+);
 
 // Type exports
 export type User = typeof users.$inferSelect;
@@ -801,6 +834,7 @@ export type FinancialTransaction = typeof financialTransactions.$inferSelect;
 export type ComplianceRecord = typeof complianceRecords.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type Document = typeof documents.$inferSelect;
+export type OrganizationEncryptionKey = typeof organizationEncryptionKeys.$inferSelect;
 
 /**
  * Notifications - In-app notification system
