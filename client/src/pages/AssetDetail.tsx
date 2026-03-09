@@ -22,6 +22,9 @@ import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { RefreshCw } from "lucide-react";
 
+const MULTIPART_THRESHOLD_BYTES = 10 * 1024 * 1024;
+const MULTIPART_PART_SIZE_BYTES = 8 * 1024 * 1024;
+
 export default function AssetDetail() {
   const [, params] = useRoute("/assets/:id");
   const [, setLocation] = useLocation();
@@ -90,8 +93,8 @@ export default function AssetDetail() {
         toast.error(`${file.name} is not an image file`);
         return false;
       }
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error(`${file.name} exceeds 5MB limit`);
+      if (file.size > 2 * 1024 * 1024 * 1024) {
+        toast.error(`${file.name} exceeds 2GB limit`);
         return false;
       }
       return true;
@@ -106,6 +109,9 @@ export default function AssetDetail() {
 
   const handleUploadWithCaption = async () => {
     if (pendingFiles.length === 0) return;
+
+    const getMultipartSessionKey = (file: File) =>
+      `multipart:${file.name}:${file.size}:${file.lastModified}:${file.type}`;
 
     const uploadViaSignedUrl = (
       file: File,
@@ -132,12 +138,28 @@ export default function AssetDetail() {
         xhr.send(file);
       });
 
-    setUploadingPhoto(true);
-    setUploadProgress(0);
-    try {
-      for (let index = 0; index < pendingFiles.length; index++) {
-        const file = pendingFiles[index]!;
-        const signResponse = await fetch("/api/uploads/signed-url", {
+    const uploadViaMultipart = async (
+      file: File,
+      onProgress: (progressPercent: number) => void
+    ) => {
+      const sessionKey = getMultipartSessionKey(file);
+      const existingSessionRaw = localStorage.getItem(sessionKey);
+      const existingSession = existingSessionRaw
+        ? (JSON.parse(existingSessionRaw) as {
+            uploadId: string;
+            fileKey: string;
+            parts: Array<{ partNumber: number; eTag: string }>;
+          })
+        : null;
+
+      let uploadId = existingSession?.uploadId ?? "";
+      let fileKey = existingSession?.fileKey ?? "";
+      const uploadedPartMap = new Map<number, string>(
+        (existingSession?.parts ?? []).map((part) => [part.partNumber, part.eTag])
+      );
+
+      if (!uploadId || !fileKey) {
+        const startResponse = await fetch("/api/uploads/multipart/start", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -149,34 +171,174 @@ export default function AssetDetail() {
             uploadType: "assets",
           }),
         });
-        if (!signResponse.ok) {
-          const message = await signResponse.text();
-          throw new Error(`Failed to request signed URL for ${file.name}: ${message}`);
+        if (!startResponse.ok) {
+          const message = await startResponse.text();
+          throw new Error(`Failed to start multipart upload for ${file.name}: ${message}`);
         }
-        const { uploadUrl, fileKey } = await signResponse.json();
+        const startPayload = await startResponse.json();
+        uploadId = startPayload.uploadId;
+        fileKey = startPayload.fileKey;
+      }
 
-        await uploadViaSignedUrl(file, uploadUrl, (singleFileProgress) => {
-          const totalProgress =
-            ((index + singleFileProgress / 100) / pendingFiles.length) * 100;
-          setUploadProgress(Math.round(totalProgress));
-        });
+      const totalParts = Math.ceil(file.size / MULTIPART_PART_SIZE_BYTES);
+      const countUploadedBytes = () => {
+        let uploadedBytes = 0;
+        for (const partNumber of uploadedPartMap.keys()) {
+          const isLastPart = partNumber === totalParts;
+          const partBytes = isLastPart
+            ? file.size - (totalParts - 1) * MULTIPART_PART_SIZE_BYTES
+            : MULTIPART_PART_SIZE_BYTES;
+          uploadedBytes += Math.max(0, partBytes);
+        }
+        return uploadedBytes;
+      };
 
-        const completeResponse = await fetch("/api/uploads/complete", {
+      for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
+        if (uploadedPartMap.has(partNumber)) continue;
+
+        const startByte = (partNumber - 1) * MULTIPART_PART_SIZE_BYTES;
+        const endByte = Math.min(startByte + MULTIPART_PART_SIZE_BYTES, file.size);
+        const chunk = file.slice(startByte, endByte);
+
+        const urlResponse = await fetch("/api/uploads/multipart/url", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            uploadId,
             fileKey,
+            partNumber,
             fileType: file.type,
-            uploadType: "assets",
           }),
         });
-        if (!completeResponse.ok) {
-          const message = await completeResponse.text();
-          throw new Error(`Upload completion failed for ${file.name}: ${message}`);
+        if (!urlResponse.ok) {
+          const message = await urlResponse.text();
+          throw new Error(`Failed to get upload URL for part ${partNumber}: ${message}`);
         }
-        const { fileUrl } = await completeResponse.json();
+        const { uploadUrl } = await urlResponse.json();
+
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", uploadUrl);
+          xhr.setRequestHeader("Content-Type", file.type);
+          xhr.upload.onprogress = (event) => {
+            if (!event.lengthComputable) return;
+            const uploadedBytes = countUploadedBytes() + event.loaded;
+            onProgress((uploadedBytes / file.size) * 100);
+          };
+          xhr.onload = () => {
+            if (xhr.status < 200 || xhr.status >= 300) {
+              reject(new Error(`Failed uploading part ${partNumber}`));
+              return;
+            }
+            const eTagHeader = xhr.getResponseHeader("ETag") || xhr.getResponseHeader("etag");
+            const eTag = (eTagHeader ?? "").replaceAll('"', "");
+            if (!eTag) {
+              reject(new Error(`Missing ETag for part ${partNumber}`));
+              return;
+            }
+
+            uploadedPartMap.set(partNumber, eTag);
+            localStorage.setItem(
+              sessionKey,
+              JSON.stringify({
+                uploadId,
+                fileKey,
+                parts: Array.from(uploadedPartMap.entries()).map(([partNo, tag]) => ({
+                  partNumber: partNo,
+                  eTag: tag,
+                })),
+              })
+            );
+            resolve();
+          };
+          xhr.onerror = () => reject(new Error(`Network error uploading part ${partNumber}`));
+          xhr.send(chunk);
+        });
+      }
+
+      const completeResponse = await fetch("/api/uploads/multipart/complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          uploadId,
+          fileKey,
+          fileType: file.type,
+          fileSize: file.size,
+          uploadType: "assets",
+          parts: Array.from(uploadedPartMap.entries()).map(([partNumber, eTag]) => ({
+            partNumber,
+            eTag,
+          })),
+        }),
+      });
+      if (!completeResponse.ok) {
+        const message = await completeResponse.text();
+        throw new Error(`Failed to complete multipart upload for ${file.name}: ${message}`);
+      }
+
+      localStorage.removeItem(sessionKey);
+      return (await completeResponse.json()) as { fileKey: string; fileUrl: string };
+    };
+
+    setUploadingPhoto(true);
+    setUploadProgress(0);
+    try {
+      for (let index = 0; index < pendingFiles.length; index++) {
+        const file = pendingFiles[index]!;
+        let uploaded: { fileKey: string; fileUrl: string };
+        if (file.size > MULTIPART_THRESHOLD_BYTES) {
+          uploaded = await uploadViaMultipart(file, (singleFileProgress) => {
+            const totalProgress =
+              ((index + singleFileProgress / 100) / pendingFiles.length) * 100;
+            setUploadProgress(Math.round(totalProgress));
+          });
+        } else {
+          const signResponse = await fetch("/api/uploads/signed-url", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              fileName: file.name,
+              fileType: file.type,
+              fileSize: file.size,
+              uploadType: "assets",
+            }),
+          });
+          if (!signResponse.ok) {
+            const message = await signResponse.text();
+            throw new Error(`Failed to request signed URL for ${file.name}: ${message}`);
+          }
+          const { uploadUrl, fileKey } = await signResponse.json();
+
+          await uploadViaSignedUrl(file, uploadUrl, (singleFileProgress) => {
+            const totalProgress =
+              ((index + singleFileProgress / 100) / pendingFiles.length) * 100;
+            setUploadProgress(Math.round(totalProgress));
+          });
+
+          const completeResponse = await fetch("/api/uploads/complete", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              fileKey,
+              fileType: file.type,
+              uploadType: "assets",
+            }),
+          });
+          if (!completeResponse.ok) {
+            const message = await completeResponse.text();
+            throw new Error(`Upload completion failed for ${file.name}: ${message}`);
+          }
+          uploaded = await completeResponse.json();
+        }
+        const { fileUrl, fileKey } = uploaded;
         if (!fileUrl) {
           throw new Error(
             "Upload completed, but public asset URL is unavailable. Set R2_PUBLIC_BASE_URL."

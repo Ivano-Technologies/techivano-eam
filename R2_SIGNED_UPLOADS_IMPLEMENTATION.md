@@ -1,10 +1,14 @@
-# Cloudflare R2 Signed Uploads Implementation
+# Cloudflare R2 Signed + Multipart Uploads Implementation
 
 Last updated: 2026-03-09
 
 ## Overview
 
-Techivano now supports direct browser-to-R2 uploads using short-lived signed URLs.
+Techivano supports:
+
+- direct browser-to-R2 uploads using short-lived signed URLs (single part)
+- multipart uploads for large files with resumable client-side progress state
+
 This removes large file transfer load from the application server and keeps storage
 credentials server-side only.
 
@@ -93,6 +97,31 @@ Responsibilities:
 - Publishes `process-uploaded-document` jobs to queue `ocr-processing`
 - Payload includes tenant/user, file key, file type, and resolved file URL
 
+### 5) Multipart upload endpoints
+
+File: `server/_core/index.ts`
+
+Endpoints:
+
+- `POST /api/uploads/multipart/start`
+- `POST /api/uploads/multipart/url`
+- `POST /api/uploads/multipart/complete`
+
+Multipart flow:
+
+1. Start endpoint validates metadata and creates multipart upload session in R2
+2. URL endpoint signs `UploadPart` URLs for validated part numbers
+3. Client uploads each chunk directly to R2 and collects ETags
+4. Complete endpoint verifies listed parts/ETags and finalizes upload
+5. Metadata is recorded and OCR job is optionally queued for `documents`/`ocr`
+
+Limits:
+
+- Part size: 8MB
+- Max parts: 1000
+- Max file size: 8GB
+- Allowed multipart content types: `application/pdf`, `image/png`, `image/jpeg`
+
 ## Frontend Upload Flow
 
 File: `client/src/pages/AssetDetail.tsx`
@@ -105,6 +134,19 @@ Updated flow for asset photos:
 4. Save resulting `fileUrl` + `fileKey` through existing `trpc.photos.create`
 
 Upload progress is shown in UI during direct upload.
+
+For files above multipart threshold:
+
+1. `POST /api/uploads/multipart/start`
+2. Split into 8MB chunks
+3. `POST /api/uploads/multipart/url` per chunk
+4. Upload each chunk with signed `PUT`
+5. `POST /api/uploads/multipart/complete` with collected part ETags
+
+Resumability:
+
+- Browser stores in-progress multipart state (uploadId, fileKey, uploaded part ETags)
+- Interrupted uploads can resume from remaining parts
 
 ## Environment Variables
 
@@ -140,10 +182,11 @@ Set:
 ## Architecture Diagram
 
 User uploads file  
--> `POST /api/uploads/signed-url`  
--> Signed URL returned (5 min TTL)  
--> Browser uploads directly to Cloudflare R2  
--> `POST /api/uploads/complete`  
+-> Small file path:
+  `POST /api/uploads/signed-url` -> direct `PUT` -> `POST /api/uploads/complete`  
+-> Large file path:
+  `POST /api/uploads/multipart/start` -> part URL/sign/upload loop -> `POST /api/uploads/multipart/complete`  
+-> Cloudflare R2 stores object  
 -> OCR queue job enqueued (for documents/ocr uploads)  
 -> Railway worker processes OCR job  
 -> Metadata/extracted text persisted

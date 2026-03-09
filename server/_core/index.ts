@@ -6,7 +6,13 @@ initSentry();
 import express from "express";
 import { createServer } from "http";
 import net from "net";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
+  ListPartsCommand,
+  PutObjectCommand,
+  UploadPartCommand,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { createBullBoard } from "@bull-board/api";
@@ -24,7 +30,11 @@ import {
   getR2Client,
   getR2Config,
   getSignedUploadTtlSeconds,
+  MULTIPART_MAX_PARTS,
+  MULTIPART_PART_SIZE_BYTES,
+  normalizeContentType,
   resolvePublicUrl,
+  validateMultipartStartRequest,
   validateUploadRequest,
   type UploadCategory,
 } from "./r2";
@@ -214,6 +224,256 @@ async function startServer() {
       fileUrl,
       queuedForOcr,
     });
+  });
+
+  app.post("/api/uploads/multipart/start", async (req, res) => {
+    try {
+      await sdk.authenticateRequest(req);
+    } catch {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const body = req.body as {
+      fileName?: unknown;
+      fileType?: unknown;
+      fileSize?: unknown;
+      uploadType?: unknown;
+    };
+
+    const fileName = typeof body.fileName === "string" ? body.fileName : "";
+    const fileType = typeof body.fileType === "string" ? body.fileType : "";
+    const fileSize = Number(body.fileSize);
+    const uploadType =
+      typeof body.uploadType === "string" ? (body.uploadType as UploadCategory) : "documents";
+
+    if (!fileName || !fileType || !Number.isFinite(fileSize)) {
+      return res.status(400).json({
+        error: "fileName, fileType and fileSize are required",
+      });
+    }
+
+    const allowedCategories: UploadCategory[] = [
+      "assets",
+      "inspection-images",
+      "documents",
+      "ocr",
+    ];
+    if (!allowedCategories.includes(uploadType)) {
+      return res.status(400).json({
+        error: `uploadType must be one of: ${allowedCategories.join(", ")}`,
+      });
+    }
+
+    try {
+      validateMultipartStartRequest({ fileType, fileSize });
+    } catch (error) {
+      return res.status(400).json({
+        error: error instanceof Error ? error.message : "Invalid multipart payload",
+      });
+    }
+
+    try {
+      const normalizedType = normalizeContentType(fileType);
+      const fileKey = buildFileKey(uploadType, fileName);
+      const command = new CreateMultipartUploadCommand({
+        Bucket: getR2Config().bucketName,
+        Key: fileKey,
+        ContentType: normalizedType,
+      });
+      const response = await getR2Client().send(command);
+
+      if (!response.UploadId) {
+        return res.status(500).json({ error: "Failed to initialize multipart upload" });
+      }
+
+      return res.json({
+        uploadId: response.UploadId,
+        fileKey,
+        partSize: MULTIPART_PART_SIZE_BYTES,
+        maxParts: MULTIPART_MAX_PARTS,
+      });
+    } catch (error) {
+      console.error("Failed to start multipart upload", error);
+      return res.status(500).json({ error: "Failed to start multipart upload" });
+    }
+  });
+
+  app.post("/api/uploads/multipart/url", async (req, res) => {
+    try {
+      await sdk.authenticateRequest(req);
+    } catch {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const body = req.body as {
+      uploadId?: unknown;
+      fileKey?: unknown;
+      partNumber?: unknown;
+      fileType?: unknown;
+    };
+    const uploadId = typeof body.uploadId === "string" ? body.uploadId : "";
+    const fileKey = typeof body.fileKey === "string" ? body.fileKey : "";
+    const partNumber = Number(body.partNumber);
+    const fileType = typeof body.fileType === "string" ? body.fileType : "";
+
+    if (!uploadId || !fileKey || !Number.isInteger(partNumber)) {
+      return res.status(400).json({
+        error: "uploadId, fileKey and partNumber are required",
+      });
+    }
+    if (partNumber < 1 || partNumber > MULTIPART_MAX_PARTS) {
+      return res.status(400).json({
+        error: `partNumber must be between 1 and ${MULTIPART_MAX_PARTS}`,
+      });
+    }
+
+    try {
+      const command = new UploadPartCommand({
+        Bucket: getR2Config().bucketName,
+        Key: fileKey,
+        UploadId: uploadId,
+        PartNumber: partNumber,
+        ContentType: fileType ? normalizeContentType(fileType) : undefined,
+      });
+      const uploadUrl = await getSignedUrl(getR2Client(), command, {
+        expiresIn: getSignedUploadTtlSeconds(),
+      });
+
+      return res.json({ uploadUrl });
+    } catch (error) {
+      console.error("Failed to generate multipart part URL", error);
+      return res.status(500).json({ error: "Failed to generate multipart part URL" });
+    }
+  });
+
+  app.post("/api/uploads/multipart/complete", async (req, res) => {
+    let user;
+    try {
+      user = await sdk.authenticateRequest(req);
+    } catch {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const body = req.body as {
+      uploadId?: unknown;
+      fileKey?: unknown;
+      fileType?: unknown;
+      fileSize?: unknown;
+      uploadType?: unknown;
+      organizationId?: unknown;
+      parts?: unknown;
+    };
+    const uploadId = typeof body.uploadId === "string" ? body.uploadId : "";
+    const fileKey = typeof body.fileKey === "string" ? body.fileKey : "";
+    const fileType = typeof body.fileType === "string" ? body.fileType : "";
+    const fileSize = Number(body.fileSize);
+    const uploadType =
+      typeof body.uploadType === "string" ? (body.uploadType as UploadCategory) : "documents";
+    const organizationId = Number(body.organizationId ?? req.headers["x-tenant-id"]);
+    const parts = Array.isArray(body.parts)
+      ? body.parts
+          .map((part) => {
+            if (!part || typeof part !== "object") return null;
+            const asPart = part as { partNumber?: unknown; eTag?: unknown };
+            const partNumber = Number(asPart.partNumber);
+            const eTag = typeof asPart.eTag === "string" ? asPart.eTag : "";
+            return Number.isInteger(partNumber) && partNumber > 0 && eTag
+              ? { PartNumber: partNumber, ETag: eTag }
+              : null;
+          })
+          .filter((part): part is { PartNumber: number; ETag: string } => part !== null)
+      : [];
+
+    if (!uploadId || !fileKey || parts.length === 0) {
+      return res.status(400).json({
+        error: "uploadId, fileKey and parts are required",
+      });
+    }
+    if (parts.length > MULTIPART_MAX_PARTS) {
+      return res.status(400).json({
+        error: `Maximum number of parts is ${MULTIPART_MAX_PARTS}`,
+      });
+    }
+
+    const uniquePartNumbers = new Set(parts.map((part) => part.PartNumber));
+    if (uniquePartNumbers.size !== parts.length) {
+      return res.status(400).json({ error: "Duplicate partNumber values are not allowed" });
+    }
+
+    try {
+      const listed = await getR2Client().send(
+        new ListPartsCommand({
+          Bucket: getR2Config().bucketName,
+          Key: fileKey,
+          UploadId: uploadId,
+          MaxParts: MULTIPART_MAX_PARTS,
+        })
+      );
+      const uploadedPartMap = new Map(
+        (listed.Parts ?? []).map((part) => [part.PartNumber, (part.ETag ?? "").replaceAll('"', "")])
+      );
+      for (const part of parts) {
+        const uploadedETag = uploadedPartMap.get(part.PartNumber)?.replaceAll('"', "");
+        if (!uploadedETag || uploadedETag !== part.ETag.replaceAll('"', "")) {
+          return res.status(400).json({
+            error: `Part ${part.PartNumber} is missing or ETag does not match`,
+          });
+        }
+      }
+
+      await getR2Client().send(
+        new CompleteMultipartUploadCommand({
+          Bucket: getR2Config().bucketName,
+          Key: fileKey,
+          UploadId: uploadId,
+          MultipartUpload: {
+            Parts: [...parts].sort((a, b) => a.PartNumber - b.PartNumber),
+          },
+        })
+      );
+
+      const fileUrl = resolvePublicUrl(fileKey);
+      const shouldQueueOcr = uploadType === "documents" || uploadType === "ocr";
+      let queuedForOcr = false;
+      if (shouldQueueOcr && process.env.REDIS_URL && Number.isInteger(organizationId) && organizationId > 0) {
+        await enqueueUploadedDocumentForOcr({
+          tenantId: organizationId,
+          requestedBy: user.id ?? null,
+          fileKey,
+          fileType: normalizeContentType(fileType),
+          fileUrl,
+          uploadedAt: new Date().toISOString(),
+        });
+        queuedForOcr = true;
+      }
+
+      if (Number.isInteger(organizationId) && organizationId > 0 && fileUrl) {
+        try {
+          const db = await import("../db");
+          await db.createDocument({
+            name: fileKey.split("/").pop() ?? fileKey,
+            fileUrl,
+            fileKey,
+            fileType: normalizeContentType(fileType) || null,
+            fileSize: Number.isFinite(fileSize) && fileSize > 0 ? fileSize : null,
+            entityType: "organization",
+            entityId: organizationId,
+            uploadedBy: user.id,
+          });
+        } catch (error) {
+          console.error("Failed to record multipart upload metadata", error);
+        }
+      }
+
+      return res.json({
+        fileKey,
+        fileUrl,
+        queuedForOcr,
+      });
+    } catch (error) {
+      console.error("Failed to complete multipart upload", error);
+      return res.status(500).json({ error: "Failed to complete multipart upload" });
+    }
   });
 
   app.get("/warehouse/recommendations", async (req, res) => {
