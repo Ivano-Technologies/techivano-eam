@@ -253,6 +253,39 @@ pnpm test:watch
 pnpm test:coverage
 ```
 
+### Staging Tenant Isolation Verification
+
+Run read-only tenant-isolation checks against staging:
+
+```bash
+# ensure DATABASE_URL points to staging before running
+pnpm test:tenant-isolation:staging
+```
+
+Optional manual SQL checks:
+
+```bash
+psql "$DATABASE_URL" -f docs/scripts/tests/tenant-isolation-staging.sql
+```
+
+What this validates:
+- Org-scoped RLS is enabled and policy-backed for key tables (`organizations`, `organization_members`, `assets`, `documents`)
+- A user from Org A cannot read Org B asset rows
+- Encrypted document retrieval is blocked unless `organization_id` matches membership context
+
+Expected output:
+- `PASS` for all checks in healthy staging with representative Org B fixtures
+- Optional `SKIP` when there is no active cross-org fixture pair or Org B fixture rows are missing
+- Process exits with status `1` on any `FAIL`
+
+Failure interpretation:
+- `Org RLS policy visibility checks` fail: missing/disabled RLS or missing policy on one or more required tables
+- `Org A cannot read Org B rows` fail: cross-organization asset leakage exists
+- `Encrypted doc retrieval requires matching organization_id` fail: encrypted document access is not properly tenant-scoped
+
+Reference SQL (for manual inspection / psql runs):
+- `docs/scripts/tests/tenant-isolation-staging.sql`
+
 ## Deployment
 
 ### Manus Platform (Recommended)

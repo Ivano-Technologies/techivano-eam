@@ -14,7 +14,9 @@ export default function MobileWorkOrderDetail() {
   const [notes, setNotes] = useState("");
 
   const workOrderId = params?.id ? Number(params.id) : 0;
-  const { data: workOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({ id: workOrderId });
+  const { data: rawWorkOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({ id: workOrderId });
+  type WorkOrderDetail = { id: number; title?: string; status?: string; priority?: string; description?: string; completionNotes?: string; createdAt?: string | Date };
+  const workOrder = rawWorkOrder as WorkOrderDetail | undefined;
 
   const updateMutation = trpc.workOrders.update.useMutation({
     onSuccess: () => {
@@ -117,11 +119,11 @@ export default function MobileWorkOrderDetail() {
         <Card>
           <CardContent className="p-4">
             <div className="flex gap-2 mb-4">
-              <Badge className={getStatusColor(workOrder.status)}>
-                {workOrder.status.replace("_", " ")}
+              <Badge className={getStatusColor(workOrder.status ?? "")}>
+                {(workOrder.status ?? "").replace("_", " ")}
               </Badge>
-              <Badge className={getPriorityColor(workOrder.priority)} variant="outline">
-                {workOrder.priority}
+              <Badge className={getPriorityColor(workOrder.priority ?? "")} variant="outline">
+                {workOrder.priority ?? ""}
               </Badge>
             </div>
 
@@ -231,7 +233,7 @@ export default function MobileWorkOrderDetail() {
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Created:</span>
-              <span>{new Date(workOrder.createdAt).toLocaleDateString()}</span>
+              <span>{workOrder.createdAt != null ? new Date(workOrder.createdAt).toLocaleDateString() : "—"}</span>
             </div>
             {(workOrder as any).dueDate && (
               <div className="flex justify-between">

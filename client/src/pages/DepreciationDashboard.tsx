@@ -15,7 +15,10 @@ export default function DepreciationDashboard() {
     categoryCode: selectedCategory !== "all" ? selectedCategory : undefined,
   });
 
-  const { data: categoryCodes } = trpc.nrcs.getCategoryCodes.useQuery();
+  const { data: rawCategoryCodes } = trpc.nrcs.getCategoryCodes.useQuery();
+  const categoryCodes: { id: number; code?: string; name?: string }[] = Array.isArray(rawCategoryCodes)
+    ? (rawCategoryCodes as { id: number; code?: string; name?: string }[])
+    : [];
 
   const years = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
 
@@ -62,8 +65,8 @@ export default function DepreciationDashboard() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {categoryCodes?.map((cat) => (
-                <SelectItem key={cat.id} value={cat.code}>
+              {categoryCodes.map((cat) => (
+                <SelectItem key={cat.id} value={cat.code ?? ""}>
                   {cat.name}
                 </SelectItem>
               ))}

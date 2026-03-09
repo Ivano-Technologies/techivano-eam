@@ -20,6 +20,8 @@ export default function VendorIntelligenceDashboard() {
 
   const utils = trpc.useUtils();
   const riskQuery = trpc.vendorIntelligence.riskScores.useQuery({ limit: 50 });
+  type RiskRow = { id?: number; vendorId?: number; vendorScore?: number; riskScore?: number; riskBand?: string };
+  const riskRows: RiskRow[] = Array.isArray(riskQuery.data) ? (riskQuery.data as RiskRow[]) : [];
   const computeMutation = trpc.vendorIntelligence.compute.useMutation({
     onSuccess: () => {
       toast.success("Vendor intelligence job queued");
@@ -76,11 +78,11 @@ export default function VendorIntelligenceDashboard() {
         <CardContent>
           {riskQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading risk scores...</p>
-          ) : riskQuery.data && riskQuery.data.length > 0 ? (
+          ) : riskRows.length > 0 ? (
             <div className="space-y-3">
-              {riskQuery.data.map((row) => (
+              {riskRows.map((row, idx) => (
                 <div
-                  key={row.id}
+                  key={row.id ?? idx}
                   className="rounded-md border p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="space-y-1">
@@ -88,10 +90,10 @@ export default function VendorIntelligenceDashboard() {
                       <span className="font-medium">Vendor ID:</span> #{row.vendorId}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Vendor Score {Number(row.vendorScore).toFixed(3)} | Risk Score {Number(row.riskScore).toFixed(3)}
+                      Vendor Score {Number(row.vendorScore ?? 0).toFixed(3)} | Risk Score {Number(row.riskScore ?? 0).toFixed(3)}
                     </p>
                   </div>
-                  <Badge className={bandClass(row.riskBand)}>{row.riskBand}</Badge>
+                  <Badge className={bandClass(row.riskBand ?? "")}>{row.riskBand ?? ""}</Badge>
                 </div>
               ))}
             </div>

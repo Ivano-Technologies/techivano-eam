@@ -17,7 +17,9 @@ export default function EmailNotifications() {
   const [recipientType, setRecipientType] = useState<"all" | "role">("all");
   const [recipientRole, setRecipientRole] = useState<"admin" | "manager" | "user">("user");
 
-  const { data: history, refetch } = trpc.emailNotifications.history.useQuery();
+  const { data: rawHistory, refetch } = trpc.emailNotifications.history.useQuery();
+  type EmailHistoryEntry = { id?: number; subject?: string; status?: string; body?: string; recipientCount?: number; recipientType?: string; recipientRole?: string; sentAt?: string | Date };
+  const history: EmailHistoryEntry[] = Array.isArray(rawHistory) ? (rawHistory as EmailHistoryEntry[]) : [];
   const sendMutation = trpc.emailNotifications.send.useMutation();
 
   const handleSend = async () => {
@@ -178,14 +180,14 @@ export default function EmailNotifications() {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground line-clamp-2">
-                      {email.body.replace(/<[^>]*>/g, "").substring(0, 150)}...
+                      {(email.body ?? "").replace(/<[^>]*>/g, "").substring(0, 150)}...
                     </p>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span>
                         Sent to: {email.recipientCount} {email.recipientType === "all" ? "users" : `${email.recipientRole}s`}
                       </span>
                       <span>•</span>
-                      <span>{new Date(email.sentAt).toLocaleString()}</span>
+                      <span>{email.sentAt != null ? new Date(email.sentAt).toLocaleString() : "—"}</span>
                     </div>
                   </div>
                 </div>

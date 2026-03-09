@@ -18,7 +18,9 @@ export default function Sites() {
   const [editingSiteId, setEditingSiteId] = useState<number | null>(null);
   const [editData, setEditData] = useState<any>({});
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const { data: sites, isLoading, refetch } = trpc.sites.list.useQuery();
+  const { data: rawSites, isLoading, refetch } = trpc.sites.list.useQuery();
+  type SiteRow = { id: number; name?: string; address?: string; city?: string; state?: string; contactPerson?: string; contactPhone?: string; contactEmail?: string; isActive?: boolean };
+  const sites: SiteRow[] = Array.isArray(rawSites) ? (rawSites as SiteRow[]) : [];
 
   const createSiteMutation = trpc.sites.create.useMutation({
     onSuccess: () => {
@@ -54,7 +56,7 @@ export default function Sites() {
     createSiteMutation.mutate(newSite);
   };
 
-  const handleStartEdit = (site: any) => {
+  const handleStartEdit = (site: SiteRow) => {
     setEditingSiteId(site.id);
     setEditData({
       name: site.name,

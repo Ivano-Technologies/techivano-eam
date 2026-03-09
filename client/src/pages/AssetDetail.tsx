@@ -25,6 +25,41 @@ import { RefreshCw } from "lucide-react";
 const MULTIPART_THRESHOLD_BYTES = 10 * 1024 * 1024;
 const MULTIPART_PART_SIZE_BYTES = 8 * 1024 * 1024;
 
+interface AssetDetailShape {
+  id: number;
+  name?: string;
+  description?: string;
+  status?: string;
+  manufacturer?: string;
+  model?: string;
+  serialNumber?: string;
+  location?: string;
+  notes?: string;
+  assetTag?: string;
+  itemType?: string;
+  branchCode?: string;
+  itemCategoryCode?: string;
+  subCategory?: string;
+  methodOfAcquisition?: string;
+  projectReference?: string;
+  yearAcquired?: number | null;
+  acquiredCondition?: string;
+  department?: string;
+  lastPhysicalCheckDate?: Date | string | null;
+  checkConductedBy?: string;
+  acquisitionCost?: string | number | null;
+  currentDepreciatedValue?: string | number | null;
+  residualValue?: string | number | null;
+  usefulLifeYears?: number | null;
+  depreciationMethod?: string;
+  depreciationStartDate?: Date | string | null;
+  warrantyExpiry?: Date | string | null;
+  acquisitionDate?: Date | string | null;
+  currentValue?: string | number | null;
+  depreciationRate?: string | number | null;
+  qrCode?: string | null;
+}
+
 export default function AssetDetail() {
   const [, params] = useRoute("/assets/:id");
   const [, setLocation] = useLocation();
@@ -38,7 +73,8 @@ export default function AssetDetail() {
   const [photoCaption, setPhotoCaption] = useState('');
 
   const assetId = params?.id ? Number(params.id) : 0;
-  const { data: asset, isLoading, refetch } = trpc.assets.getById.useQuery({ id: assetId });
+  const { data: rawAsset, isLoading, refetch } = trpc.assets.getById.useQuery({ id: assetId });
+  const asset = rawAsset as AssetDetailShape | undefined;
   const isMobile = useIsMobile();
   const [isQuickUpdateOpen, setIsQuickUpdateOpen] = useState(false);
   const { data: photos, refetch: refetchPhotos } = trpc.photos.listByAsset.useQuery({ assetId }, { enabled: !!assetId });
@@ -408,9 +444,9 @@ export default function AssetDetail() {
   const handleEdit = () => {
     if (asset) {
       setEditForm({
-        name: asset.name,
+        name: asset.name ?? "",
         description: asset.description || "",
-        status: asset.status,
+        status: asset.status ?? "",
         manufacturer: asset.manufacturer || "",
         model: asset.model || "",
         serialNumber: asset.serialNumber || "",
@@ -429,9 +465,9 @@ export default function AssetDetail() {
         physicalCheckDate: asset.lastPhysicalCheckDate ? new Date(asset.lastPhysicalCheckDate) : null,
         physicalCheckConductedBy: asset.checkConductedBy || "",
         // Financial Fields
-        acquisitionCost: asset.acquisitionCost || "",
-        currentDepreciatedValue: asset.currentDepreciatedValue || "",
-        residualValue: asset.residualValue || "",
+        acquisitionCost: asset.acquisitionCost != null ? String(asset.acquisitionCost) : "",
+        currentDepreciatedValue: asset.currentDepreciatedValue != null ? String(asset.currentDepreciatedValue) : "",
+        residualValue: asset.residualValue != null ? String(asset.residualValue) : "",
         usefulLifeYears: asset.usefulLifeYears || null,
         depreciationMethod: asset.depreciationMethod || "",
         depreciationStartDate: asset.depreciationStartDate ? new Date(asset.depreciationStartDate) : null,
@@ -519,7 +555,7 @@ export default function AssetDetail() {
             <h1 className="text-3xl font-bold tracking-tight">{asset.name}</h1>
             <p className="text-muted-foreground mt-1">{asset.assetTag}</p>
           </div>
-          <Badge className={getStatusColor(asset.status)}>{asset.status}</Badge>
+          <Badge className={getStatusColor(asset.status ?? "")}>{asset.status ?? ""}</Badge>
         </div>
         {canEdit && (
           <Button onClick={handleEdit}>
@@ -532,9 +568,9 @@ export default function AssetDetail() {
       {/* Quick Actions Sheet - Mobile Only */}
       <QuickActionsSheet
         assetId={asset.id}
-        assetName={asset.name}
-        assetTag={asset.assetTag}
-        currentStatus={asset.status}
+        assetName={asset.name ?? ""}
+        assetTag={asset.assetTag ?? ""}
+        currentStatus={asset.status ?? ""}
       />
 
       <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
@@ -559,7 +595,7 @@ export default function AssetDetail() {
             )}
             <div>
               <p className="text-sm font-medium text-muted-foreground">Status</p>
-              <Badge className={getStatusColor(asset.status)}>{asset.status}</Badge>
+              <Badge className={getStatusColor(asset.status ?? "")}>{asset.status ?? ""}</Badge>
             </div>
           </CardContent>
         </Card>
@@ -618,7 +654,7 @@ export default function AssetDetail() {
                 <p className="text-sm font-medium text-muted-foreground">Acquisition Cost</p>
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-base">₦{parseFloat(asset.acquisitionCost).toLocaleString()}</p>
+                  <p className="text-base">₦{parseFloat(String(asset.acquisitionCost ?? 0)).toLocaleString()}</p>
                 </div>
               </div>
             )}
@@ -627,14 +663,14 @@ export default function AssetDetail() {
                 <p className="text-sm font-medium text-muted-foreground">Current Value</p>
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-base">₦{parseFloat(asset.currentValue).toLocaleString()}</p>
+                  <p className="text-base">₦{parseFloat(String(asset.currentValue ?? 0)).toLocaleString()}</p>
                 </div>
               </div>
             )}
             {asset.depreciationRate && (
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Depreciation Rate</p>
-                <p className="text-base">{asset.depreciationRate}% per year</p>
+                <p className="text-base">{asset.depreciationRate != null ? String(asset.depreciationRate) : ""}% per year</p>
               </div>
             )}
             {asset.warrantyExpiry && (

@@ -8,14 +8,49 @@ interface AssetEditHistoryTimelineProps {
   assetId: number;
 }
 
+interface HistoryEntry {
+  id: number | string;
+  fieldName: string;
+  oldValue: unknown;
+  newValue: unknown;
+  userName?: string | null;
+  changedAt: string | Date;
+}
+
 export function AssetEditHistoryTimeline({ assetId }: AssetEditHistoryTimelineProps) {
   const { data: history, isLoading } = trpc.assets.getEditHistory.useQuery({ assetId });
+
+  const historyEntries: HistoryEntry[] = Array.isArray(history)
+    ? (history as unknown[]).filter(
+        (entry): entry is HistoryEntry =>
+          typeof (entry as { id?: unknown }).id !== "undefined" &&
+          typeof (entry as { fieldName?: unknown }).fieldName === "string" &&
+          typeof (entry as { changedAt?: unknown }).changedAt !== "undefined"
+      )
+    : [];
 
   const formatFieldName = (field: string) => {
     return field
       .replace(/([A-Z])/g, ' $1')
       .replace(/^./, (str) => str.toUpperCase())
       .trim();
+  };
+
+  const formatEntryValue = (value: unknown): string => {
+    if (value === null || value === undefined || value === "") {
+      return "empty";
+    }
+    if (typeof value === "string") {
+      return value;
+    }
+    if (typeof value === "number" || typeof value === "boolean") {
+      return String(value);
+    }
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
   };
 
   if (isLoading) {
@@ -32,7 +67,7 @@ export function AssetEditHistoryTimeline({ assetId }: AssetEditHistoryTimelinePr
     );
   }
 
-  if (!history || history.length === 0) {
+  if (historyEntries.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -64,11 +99,11 @@ export function AssetEditHistoryTimeline({ assetId }: AssetEditHistoryTimelinePr
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {history.map((entry, index) => (
+          {historyEntries.map((entry, index) => (
             <div
               key={entry.id}
               className={`relative pl-8 pb-4 ${
-                index !== history.length - 1 ? 'border-l-2 border-muted ml-2' : ''
+                index !== historyEntries.length - 1 ? 'border-l-2 border-muted ml-2' : ''
               }`}
             >
               <div className="absolute left-0 top-0 -ml-2 h-4 w-4 rounded-full bg-primary" />
@@ -86,13 +121,13 @@ export function AssetEditHistoryTimeline({ assetId }: AssetEditHistoryTimelinePr
                       <div>
                         <p className="text-muted-foreground text-xs mb-1">Previous Value</p>
                         <p className="font-mono text-xs bg-muted px-2 py-1 rounded">
-                          {entry.oldValue || <span className="italic text-muted-foreground">empty</span>}
+                          {formatEntryValue(entry.oldValue)}
                         </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground text-xs mb-1">New Value</p>
                         <p className="font-mono text-xs bg-muted px-2 py-1 rounded">
-                          {entry.newValue || <span className="italic text-muted-foreground">empty</span>}
+                          {formatEntryValue(entry.newValue)}
                         </p>
                       </div>
                     </div>

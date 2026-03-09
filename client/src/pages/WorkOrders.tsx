@@ -23,9 +23,11 @@ export default function WorkOrders() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const { data: workOrders, isLoading, refetch } = trpc.workOrders.list.useQuery({
+  const { data: rawWorkOrders, isLoading, refetch } = trpc.workOrders.list.useQuery({
     status: statusFilter !== "all" ? statusFilter : undefined,
   });
+  type WorkOrderRow = { id: number; title?: string; workOrderNumber?: string; status?: string; priority?: string; type?: string; scheduledStart?: string | Date };
+  const workOrders: WorkOrderRow[] = Array.isArray(rawWorkOrders) ? (rawWorkOrders as WorkOrderRow[]) : [];
 
   // Pull-to-refresh for mobile
   const { pullDistance, isRefreshing } = usePullToRefresh({
@@ -36,11 +38,14 @@ export default function WorkOrders() {
     enabled: true,
   });
 
-  const { data: assets } = trpc.assets.list.useQuery();
-  const { data: sites } = trpc.sites.list.useQuery();
-  const { data: users } = trpc.users.list.useQuery(undefined, {
+  const { data: rawAssets } = trpc.assets.list.useQuery();
+  const { data: rawSites } = trpc.sites.list.useQuery();
+  const { data: rawUsers } = trpc.users.list.useQuery(undefined, {
     enabled: user?.role === "admin",
   });
+  const assets: { id: number; name?: string; assetTag?: string }[] = Array.isArray(rawAssets) ? (rawAssets as { id: number; name?: string; assetTag?: string }[]) : [];
+  const sites: { id: number; name?: string }[] = Array.isArray(rawSites) ? (rawSites as { id: number; name?: string }[]) : [];
+  const users: { id: number; name?: string; email?: string }[] = Array.isArray(rawUsers) ? (rawUsers as { id: number; name?: string; email?: string }[]) : [];
 
   const createWorkOrderMutation = trpc.workOrders.create.useMutation({
     onSuccess: () => {
@@ -179,7 +184,7 @@ export default function WorkOrders() {
                       <SelectValue placeholder="Select asset" />
                     </SelectTrigger>
                     <SelectContent>
-                      {assets?.map((asset) => (
+                      {assets.map((asset) => (
                         <SelectItem key={asset.id} value={asset.id.toString()}>
                           {asset.name} ({asset.assetTag})
                         </SelectItem>
@@ -194,7 +199,7 @@ export default function WorkOrders() {
                       <SelectValue placeholder="Select site" />
                     </SelectTrigger>
                     <SelectContent>
-                      {sites?.map((site) => (
+                      {sites.map((site) => (
                         <SelectItem key={site.id} value={site.id.toString()}>
                           {site.name}
                         </SelectItem>
@@ -233,7 +238,7 @@ export default function WorkOrders() {
                   </Select>
                 </div>
               </div>
-              {user?.role === "admin" && users && (
+              {user?.role === "admin" && users.length > 0 && (
                 <div className="space-y-2">
                   <Label htmlFor="assignedTo">Assign To</Label>
                   <Select value={newWorkOrder.assignedTo} onValueChange={(value) => setNewWorkOrder({ ...newWorkOrder, assignedTo: value })}>
@@ -297,7 +302,7 @@ export default function WorkOrders() {
 
       {isLoading ? (
         <ShimmerLoader type="card" count={6} />
-      ) : workOrders && workOrders.length > 0 ? (
+      ) : workOrders.length > 0 ? (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {workOrders.map((wo) => (
             <Link key={wo.id} href={`/work-orders/${wo.id}`}>
@@ -314,11 +319,11 @@ export default function WorkOrders() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <Badge className={getStatusColor(wo.status)}>
-                        {wo.status.replace("_", " ")}
+                      <Badge className={getStatusColor(wo.status ?? "")}>
+                        {(wo.status ?? "").replace("_", " ")}
                       </Badge>
-                      <Badge className={getPriorityColor(wo.priority)}>
-                        {wo.priority}
+                      <Badge className={getPriorityColor(wo.priority ?? "")}>
+                        {wo.priority ?? ""}
                       </Badge>
                     </div>
                   </div>
@@ -326,9 +331,9 @@ export default function WorkOrders() {
                 <CardContent>
                   <div className="space-y-2 text-sm">
                     <p className="text-muted-foreground">
-                      <span className="font-medium">Type:</span> {wo.type}
+                      <span className="font-medium">Type:</span> {wo.type ?? ""}
                     </p>
-                    {wo.scheduledStart && (
+                    {wo.scheduledStart != null && (
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <Calendar className="h-3 w-3" />
                         <span>{new Date(wo.scheduledStart).toLocaleDateString()}</span>

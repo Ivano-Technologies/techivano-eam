@@ -16,6 +16,8 @@ export default function ExecutiveDashboard() {
   const utils = trpc.useUtils();
   const metricsQuery = trpc.executiveV1.metrics.useQuery();
   const trendsQuery = trpc.executiveV1.kpiTrends.useQuery({ limit: 50 });
+  const metrics = metricsQuery.data as Record<string, unknown> | undefined;
+  const trends = trendsQuery.data as { id?: number; metricName?: string; metricValue?: number; trendDirection?: string }[] | undefined;
   const computeMutation = trpc.executiveV1.compute.useMutation({
     onSuccess: () => {
       toast.success("Executive metrics computation queued");
@@ -48,39 +50,39 @@ export default function ExecutiveDashboard() {
         <CardContent>
           {metricsQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading executive snapshot...</p>
-          ) : metricsQuery.data ? (
+          ) : metrics ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <div className="text-4xl font-bold">{Number(metricsQuery.data.overallOperationsIndex).toFixed(1)}</div>
+                <div className="text-4xl font-bold">{Number(metrics.overallOperationsIndex ?? 0).toFixed(1)}</div>
                 <Badge className={statusTone(
-                  Number(metricsQuery.data.overallOperationsIndex) >= 90
+                  Number(metrics.overallOperationsIndex ?? 0) >= 90
                     ? "Optimal"
-                    : Number(metricsQuery.data.overallOperationsIndex) >= 75
+                    : Number(metrics.overallOperationsIndex ?? 0) >= 75
                       ? "Stable"
-                      : Number(metricsQuery.data.overallOperationsIndex) >= 60
+                      : Number(metrics.overallOperationsIndex ?? 0) >= 60
                         ? "Watch"
-                        : Number(metricsQuery.data.overallOperationsIndex) >= 40
+                        : Number(metrics.overallOperationsIndex ?? 0) >= 40
                           ? "Risk"
                           : "Critical",
                 )}>
-                  {Number(metricsQuery.data.overallOperationsIndex) >= 90
+                  {Number(metrics.overallOperationsIndex ?? 0) >= 90
                     ? "Optimal"
-                    : Number(metricsQuery.data.overallOperationsIndex) >= 75
+                    : Number(metrics.overallOperationsIndex ?? 0) >= 75
                       ? "Stable"
-                      : Number(metricsQuery.data.overallOperationsIndex) >= 60
+                      : Number(metrics.overallOperationsIndex ?? 0) >= 60
                         ? "Watch"
-                        : Number(metricsQuery.data.overallOperationsIndex) >= 40
+                        : Number(metrics.overallOperationsIndex ?? 0) >= 40
                           ? "Risk"
                           : "Critical"}
                 </Badge>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                <div>Asset health: {Number(metricsQuery.data.assetHealthIndex).toFixed(3)}</div>
-                <div>Maintenance projection: {Number(metricsQuery.data.maintenanceCostProjection).toFixed(3)}</div>
-                <div>Inventory pressure: {Number(metricsQuery.data.inventoryPressureIndex).toFixed(3)}</div>
-                <div>Vendor risk: {Number(metricsQuery.data.vendorRiskIndex).toFixed(3)}</div>
-                <div>Supply chain risk: {Number(metricsQuery.data.supplyChainRiskIndex).toFixed(3)}</div>
-                <div>Fleet utilization: {Number(metricsQuery.data.fleetUtilizationRate).toFixed(3)}</div>
+                <div>Asset health: {Number(metrics.assetHealthIndex ?? 0).toFixed(3)}</div>
+                <div>Maintenance projection: {Number(metrics.maintenanceCostProjection ?? 0).toFixed(3)}</div>
+                <div>Inventory pressure: {Number(metrics.inventoryPressureIndex ?? 0).toFixed(3)}</div>
+                <div>Vendor risk: {Number(metrics.vendorRiskIndex ?? 0).toFixed(3)}</div>
+                <div>Supply chain risk: {Number(metrics.supplyChainRiskIndex ?? 0).toFixed(3)}</div>
+                <div>Fleet utilization: {Number(metrics.fleetUtilizationRate ?? 0).toFixed(3)}</div>
               </div>
             </div>
           ) : (
@@ -97,15 +99,15 @@ export default function ExecutiveDashboard() {
         <CardContent>
           {trendsQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading KPI trends...</p>
-          ) : trendsQuery.data && trendsQuery.data.length > 0 ? (
+          ) : trends && trends.length > 0 ? (
             <div className="space-y-2">
-              {trendsQuery.data.map((row) => (
-                <div key={row.id} className="rounded-md border p-3 flex items-center justify-between">
+              {trends.map((row) => (
+                <div key={row.id ?? 0} className="rounded-md border p-3 flex items-center justify-between">
                   <div className="text-sm">
                     <div className="font-medium">{row.metricName}</div>
-                    <div className="text-muted-foreground">Value {Number(row.metricValue).toFixed(3)}</div>
+                    <div className="text-muted-foreground">Value {Number(row.metricValue ?? 0).toFixed(3)}</div>
                   </div>
-                  <Badge>{row.trendDirection}</Badge>
+                  <Badge>{row.trendDirection ?? ""}</Badge>
                 </div>
               ))}
             </div>

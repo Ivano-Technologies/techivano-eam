@@ -7,6 +7,30 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Navigation } from "lucide-react";
 
+interface SiteMapEntry {
+  id?: number;
+  name?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  contactPerson?: string;
+  contactPhone?: string;
+  latitude?: string | number;
+  longitude?: string | number;
+}
+
+interface AssetMapEntry {
+  id: number;
+  name?: string;
+  assetTag?: string;
+  status?: string;
+  location?: string;
+  siteId?: number;
+  categoryId?: number;
+  latitude?: string | number;
+  longitude?: string | number;
+}
+
 export default function AssetMap() {
   const [selectedSite, setSelectedSite] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -14,9 +38,12 @@ export default function AssetMap() {
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
   const [siteMarkers, setSiteMarkers] = useState<google.maps.Marker[]>([]);
 
-  const { data: assets, isLoading } = trpc.assets.list.useQuery({});
-  const { data: sites } = trpc.sites.list.useQuery();
+  const { data: rawAssets, isLoading } = trpc.assets.list.useQuery({});
+  const { data: rawSites } = trpc.sites.list.useQuery();
   const { data: categories } = trpc.assetCategories.list.useQuery();
+
+  const sites: SiteMapEntry[] = Array.isArray(rawSites) ? (rawSites as SiteMapEntry[]) : [];
+  const assets: AssetMapEntry[] = Array.isArray(rawAssets) ? (rawAssets as AssetMapEntry[]) : [];
 
   const handleMapReady = (googleMap: google.maps.Map) => {
     setMap(googleMap);
@@ -29,11 +56,11 @@ export default function AssetMap() {
 
     // Add site markers first
     const newSiteMarkers: google.maps.Marker[] = [];
-    if (sites) {
-      sites.forEach(site => {
+    if (sites.length > 0) {
+      sites.forEach((site: SiteMapEntry) => {
         // Use default Nigeria coordinates if site doesn't have specific location
-        const lat = site.latitude ? parseFloat(site.latitude) : 9.0820 + (Math.random() - 0.5) * 2;
-        const lng = site.longitude ? parseFloat(site.longitude) : 8.6753 + (Math.random() - 0.5) * 2;
+        const lat = site.latitude != null ? parseFloat(String(site.latitude)) : 9.0820 + (Math.random() - 0.5) * 2;
+        const lng = site.longitude != null ? parseFloat(String(site.longitude)) : 8.6753 + (Math.random() - 0.5) * 2;
         const position = { lat, lng };
 
         const siteMarker = new google.maps.Marker({
@@ -83,13 +110,13 @@ export default function AssetMap() {
     }
     setSiteMarkers(newSiteMarkers);
 
-    if (!assets || assets.length === 0) return;
+    if (assets.length === 0) return;
 
     // Filter assets based on selection
-    const filteredAssets = assets.filter(asset => {
-      const siteMatch = selectedSite === "all" || asset.siteId === parseInt(selectedSite);
-      const categoryMatch = selectedCategory === "all" || asset.categoryId === parseInt(selectedCategory);
-      return siteMatch && categoryMatch && asset.latitude && asset.longitude;
+    const filteredAssets = assets.filter((asset: AssetMapEntry) => {
+      const siteMatch = selectedSite === "all" || asset.siteId === parseInt(selectedSite, 10);
+      const categoryMatch = selectedCategory === "all" || asset.categoryId === parseInt(selectedCategory, 10);
+      return siteMatch && categoryMatch && asset.latitude != null && asset.longitude != null;
     });
 
     if (filteredAssets.length === 0) {
@@ -108,11 +135,11 @@ export default function AssetMap() {
       if (pos) bounds.extend(pos);
     });
 
-    filteredAssets.forEach(asset => {
-      if (!asset.latitude || !asset.longitude) return;
+    filteredAssets.forEach((asset: AssetMapEntry) => {
+      if (asset.latitude == null || asset.longitude == null) return;
 
-      const lat = parseFloat(asset.latitude);
-      const lng = parseFloat(asset.longitude);
+      const lat = parseFloat(String(asset.latitude));
+      const lng = parseFloat(String(asset.longitude));
       const position = { lat, lng };
 
       const marker = new google.maps.Marker({
@@ -232,8 +259,8 @@ export default function AssetMap() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Sites</SelectItem>
-                {sites?.map((site) => (
-                  <SelectItem key={site.id} value={site.id.toString()}>
+                {sites.map((site) => (
+                  <SelectItem key={site.id ?? 0} value={String(site.id ?? "")}>
                     {site.name}
                   </SelectItem>
                 ))}
@@ -249,11 +276,11 @@ export default function AssetMap() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {categories?.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id.toString()}>
+                {Array.isArray(categories) ? (categories as { id: number; name?: string }[]).map((cat) => (
+                  <SelectItem key={cat.id} value={String(cat.id)}>
                     {cat.name}
                   </SelectItem>
-                ))}
+                )) : null}
               </SelectContent>
             </Select>
           </div>

@@ -7,32 +7,55 @@ interface AssetMaintenanceTimelineProps {
   assetId: number;
 }
 
+interface WorkOrderItem {
+  id: number;
+  assetId: number;
+  title: string;
+  description: string | null;
+  createdAt: string | Date;
+  status: string;
+}
+
+interface MaintenanceScheduleItem {
+  id: number;
+  assetId: number;
+  maintenanceType?: string | null;
+  description?: string | null;
+  nextDueDate?: string | Date | null;
+  nextDue?: string | Date | null;
+  status: string;
+}
+
 export function AssetMaintenanceTimeline({ assetId }: AssetMaintenanceTimelineProps) {
   const { data: allWorkOrders, isLoading } = trpc.workOrders.list.useQuery({});
   const { data: allSchedules } = trpc.maintenance.list.useQuery({});
-  
-  const workOrders = allWorkOrders?.filter(wo => wo.assetId === assetId) || [];
-  const schedules = allSchedules?.filter(s => s.assetId === assetId) || [];
+
+  const workOrders: WorkOrderItem[] = Array.isArray(allWorkOrders)
+    ? (allWorkOrders as WorkOrderItem[]).filter((wo) => wo.assetId === assetId)
+    : [];
+  const schedules: MaintenanceScheduleItem[] = Array.isArray(allSchedules)
+    ? (allSchedules as MaintenanceScheduleItem[]).filter((s) => s.assetId === assetId)
+    : [];
 
   if (isLoading) {
     return <div className="animate-pulse h-64 bg-muted rounded-lg"></div>;
   }
 
   const timelineEvents = [
-    ...(workOrders || []).map((wo: any) => ({
+    ...workOrders.map((wo) => ({
       id: `wo-${wo.id}`,
       type: "work_order" as const,
       title: wo.title,
-      description: wo.description,
+      description: wo.description ?? "",
       date: new Date(wo.createdAt),
       status: wo.status,
     })),
-    ...(schedules || []).map((schedule: any) => ({
+    ...schedules.map((schedule) => ({
       id: `schedule-${schedule.id}`,
       type: "maintenance" as const,
-      title: `${schedule.maintenanceType} Maintenance`,
+      title: `${schedule.maintenanceType ?? "Scheduled"} Maintenance`,
       description: schedule.description || "",
-      date: new Date(schedule.nextDueDate),
+      date: new Date(schedule.nextDueDate ?? schedule.nextDue ?? new Date()),
       status: schedule.status,
     })),
   ].sort((a, b) => b.date.getTime() - a.date.getTime());

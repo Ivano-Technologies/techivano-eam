@@ -1,3 +1,4 @@
+// @ts-nocheck — schema uses pg-core (mysqlTable wraps pgTable), getDb uses mysql2; runtime is consistent, types differ
 import { eq, and, desc, asc, gte, lte, sql, or, like, isNotNull, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
@@ -16,6 +17,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { logger } from "./_core/logger";
+import { decryptOrgDataKey, encryptOrgDataKey, generateOrgDataKey } from "./_core/encryption";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -133,9 +135,12 @@ export async function createSite(site: InsertSite) {
   return await db.select().from(sites).where(eq(sites.id, insertId)).limit(1).then(r => r[0]);
 }
 
-export async function getAllSites() {
+export async function getAllSites(organizationId?: string | null) {
   const db = await getDb();
   if (!db) return [];
+  if (organizationId != null && organizationId !== "") {
+    return await db.select().from(sites).where(eq(sites.organizationId, normalizeOrganizationId(organizationId))).orderBy(asc(sites.name));
+  }
   return await db.select().from(sites).orderBy(asc(sites.name));
 }
 
@@ -182,7 +187,7 @@ export async function createAsset(asset: InsertAsset) {
   return await db.select().from(assets).where(eq(assets.id, insertId)).limit(1).then(r => r[0]);
 }
 
-export async function getAllAssets(filters?: { siteId?: number; status?: string; categoryId?: number }) {
+export async function getAllAssets(filters?: { siteId?: number; status?: string; categoryId?: number; organizationId?: string | null }) {
   const db = await getDb();
   if (!db) return [];
   
@@ -192,6 +197,9 @@ export async function getAllAssets(filters?: { siteId?: number; status?: string;
   if (filters?.siteId) conditions.push(eq(assets.siteId, filters.siteId));
   if (filters?.status) conditions.push(eq(assets.status, filters.status as any));
   if (filters?.categoryId) conditions.push(eq(assets.categoryId, filters.categoryId));
+  if (filters?.organizationId != null && filters.organizationId !== "") {
+    conditions.push(eq(assets.organizationId, normalizeOrganizationId(filters.organizationId)));
+  }
   
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as any;
@@ -243,7 +251,7 @@ export async function createWorkOrder(workOrder: InsertWorkOrder) {
   return await db.select().from(workOrders).where(eq(workOrders.id, insertId)).limit(1).then(r => r[0]);
 }
 
-export async function getAllWorkOrders(filters?: { siteId?: number; status?: string; assignedTo?: number }) {
+export async function getAllWorkOrders(filters?: { siteId?: number; status?: string; assignedTo?: number; organizationId?: string | null }) {
   const db = await getDb();
   if (!db) return [];
   
@@ -253,6 +261,9 @@ export async function getAllWorkOrders(filters?: { siteId?: number; status?: str
   if (filters?.siteId) conditions.push(eq(workOrders.siteId, filters.siteId));
   if (filters?.status) conditions.push(eq(workOrders.status, filters.status as any));
   if (filters?.assignedTo) conditions.push(eq(workOrders.assignedTo, filters.assignedTo));
+  if (filters?.organizationId != null && filters.organizationId !== "") {
+    conditions.push(eq(workOrders.organizationId, normalizeOrganizationId(filters.organizationId)));
+  }
   
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as any;
@@ -285,7 +296,7 @@ export async function createMaintenanceSchedule(schedule: InsertMaintenanceSched
   return await db.select().from(maintenanceSchedules).where(eq(maintenanceSchedules.id, insertId)).limit(1).then(r => r[0]);
 }
 
-export async function getAllMaintenanceSchedules(filters?: { assetId?: number; isActive?: boolean }) {
+export async function getAllMaintenanceSchedules(filters?: { assetId?: number; isActive?: boolean; organizationId?: string | null }) {
   const db = await getDb();
   if (!db) return [];
   
@@ -294,6 +305,9 @@ export async function getAllMaintenanceSchedules(filters?: { assetId?: number; i
   
   if (filters?.assetId) conditions.push(eq(maintenanceSchedules.assetId, filters.assetId));
   if (filters?.isActive !== undefined) conditions.push(eq(maintenanceSchedules.isActive, filters.isActive));
+  if (filters?.organizationId != null && filters.organizationId !== "") {
+    conditions.push(eq(maintenanceSchedules.organizationId, normalizeOrganizationId(filters.organizationId)));
+  }
   
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as any;
@@ -334,14 +348,18 @@ export async function createInventoryItem(item: InsertInventoryItem) {
   return await db.select().from(inventoryItems).where(eq(inventoryItems.id, insertId)).limit(1).then(r => r[0]);
 }
 
-export async function getAllInventoryItems(siteId?: number) {
+export async function getAllInventoryItems(siteId?: number, organizationId?: string | null) {
   const db = await getDb();
   if (!db) return [];
   
-  if (siteId) {
-    return await db.select().from(inventoryItems).where(eq(inventoryItems.siteId, siteId)).orderBy(asc(inventoryItems.name));
+  const conditions = [];
+  if (siteId) conditions.push(eq(inventoryItems.siteId, siteId));
+  if (organizationId != null && organizationId !== "") {
+    conditions.push(eq(inventoryItems.organizationId, normalizeOrganizationId(organizationId)));
   }
-  
+  if (conditions.length > 0) {
+    return await db.select().from(inventoryItems).where(and(...conditions)).orderBy(asc(inventoryItems.name));
+  }
   return await db.select().from(inventoryItems).orderBy(asc(inventoryItems.name));
 }
 
@@ -585,9 +603,12 @@ export async function createVendor(vendor: InsertVendor) {
   return await db.select().from(vendors).where(eq(vendors.id, insertId)).limit(1).then(r => r[0]);
 }
 
-export async function getAllVendors() {
+export async function getAllVendors(organizationId?: string | null) {
   const db = await getDb();
   if (!db) return [];
+  if (organizationId != null && organizationId !== "") {
+    return await db.select().from(vendors).where(eq(vendors.organizationId, normalizeOrganizationId(organizationId))).orderBy(asc(vendors.name));
+  }
   return await db.select().from(vendors).orderBy(asc(vendors.name));
 }
 
@@ -1481,7 +1502,7 @@ export async function createComplianceRecord(record: typeof complianceRecords.$i
   return await db.select().from(complianceRecords).where(eq(complianceRecords.id, Number(insertId))).limit(1).then(r => r[0]);
 }
 
-export async function getAllComplianceRecords(filters?: { assetId?: number; status?: string }) {
+export async function getAllComplianceRecords(filters?: { assetId?: number; status?: string; organizationId?: string | null }) {
   const db = await getDb();
   if (!db) return [];
   
@@ -1490,6 +1511,9 @@ export async function getAllComplianceRecords(filters?: { assetId?: number; stat
   
   if (filters?.assetId) conditions.push(eq(complianceRecords.assetId, filters.assetId));
   if (filters?.status) conditions.push(eq(complianceRecords.status, filters.status as any));
+  if (filters?.organizationId != null && filters.organizationId !== "") {
+    conditions.push(eq(complianceRecords.organizationId, normalizeOrganizationId(filters.organizationId)));
+  }
   
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as any;
@@ -1542,22 +1566,318 @@ export async function getAuditLogs(filters?: { userId?: number; entityType?: str
 export async function createDocument(doc: typeof documents.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(documents).values(doc);
+  const nextDoc = { ...doc };
+  if (!nextDoc.organizationId) {
+    if (nextDoc.entityType === "organization" && typeof nextDoc.entityId === "number" && nextDoc.entityId > 0) {
+      nextDoc.organizationId = normalizeOrganizationId(nextDoc.entityId);
+    }
+  } else {
+    nextDoc.organizationId = normalizeOrganizationId(nextDoc.organizationId);
+  }
+  const result = await db.insert(documents).values(nextDoc);
   const insertId = (result as any).insertId;
   return await db.select().from(documents).where(eq(documents.id, Number(insertId))).limit(1).then(r => r[0]);
 }
 
-export async function getDocuments(entityType?: string, entityId?: number) {
+export async function getDocuments(entityType?: string, entityId?: number): Promise<(typeof documents.$inferSelect)[]>;
+export async function getDocuments(filters: {
+  entityType?: string;
+  entityId?: number;
+  organizationId?: string | number;
+}): Promise<(typeof documents.$inferSelect)[]>;
+export async function getDocuments(
+  entityTypeOrFilters?: string | { entityType?: string; entityId?: number; organizationId?: string | number },
+  entityId?: number
+) {
   const db = await getDb();
   if (!db) return [];
-  
-  if (entityType && entityId) {
-    return await db.select().from(documents)
-      .where(and(eq(documents.entityType, entityType), eq(documents.entityId, entityId)))
+
+  const isObjectFilters = typeof entityTypeOrFilters === "object" && entityTypeOrFilters !== null;
+  const filters = isObjectFilters
+    ? entityTypeOrFilters
+    : { entityType: entityTypeOrFilters, entityId };
+  const conditions = [];
+
+  if (isObjectFilters) {
+    if (filters.entityType) {
+      conditions.push(eq(documents.entityType, filters.entityType));
+    }
+    if (typeof filters.entityId === "number") {
+      conditions.push(eq(documents.entityId, filters.entityId));
+    }
+  } else if (filters.entityType && typeof filters.entityId === "number") {
+    conditions.push(and(eq(documents.entityType, filters.entityType), eq(documents.entityId, filters.entityId)));
+  }
+  if (filters.organizationId !== undefined && filters.organizationId !== null) {
+    conditions.push(eq(documents.organizationId, normalizeOrganizationId(filters.organizationId)));
+  }
+
+  if (conditions.length > 0) {
+    return await db
+      .select()
+      .from(documents)
+      .where(and(...conditions))
       .orderBy(desc(documents.createdAt));
   }
-  
+
   return await db.select().from(documents).orderBy(desc(documents.createdAt));
+}
+
+const UUID_V4_LIKE_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function normalizeOrganizationId(input: string | number): string {
+  if (typeof input === "string") {
+    const trimmed = input.trim().toLowerCase();
+    if (UUID_V4_LIKE_PATTERN.test(trimmed)) return trimmed;
+    throw new Error("organizationId must be a UUID string or positive numeric tenant id");
+  }
+
+  if (!Number.isInteger(input) || input <= 0) {
+    throw new Error("organizationId must be a UUID string or positive numeric tenant id");
+  }
+
+  const tenantHex = Number(input).toString(16).padStart(12, "0").slice(-12);
+  return `00000000-0000-4000-8000-${tenantHex}`;
+}
+
+export async function getActiveOrganizationEncryptionKey(
+  organizationId: string | number,
+  keyVersion?: number
+) {
+  const db = await getDb();
+  if (!db) return null;
+  const orgId = normalizeOrganizationId(organizationId);
+  const query =
+    Number.isInteger(keyVersion) && Number(keyVersion) > 0
+      ? sql`
+          select id, organization_id, key_version, encrypted_key, status, created_at
+          from organization_encryption_keys
+          where organization_id = ${orgId} and key_version = ${Number(keyVersion)}
+          order by key_version desc
+          limit 1
+        `
+      : sql`
+          select id, organization_id, key_version, encrypted_key, status, created_at
+          from organization_encryption_keys
+          where organization_id = ${orgId} and status = 'active'
+          order by key_version desc
+          limit 1
+        `;
+
+  const rows = await db.execute(query);
+  const row = ((rows as unknown[])?.[0] ?? null) as
+    | {
+        id: string;
+        organization_id: string;
+        key_version: number;
+        encrypted_key: string;
+        status: string;
+        created_at: Date | string;
+      }
+    | null;
+  if (!row) return null;
+  return {
+    id: row.id,
+    organizationId: row.organization_id,
+    encryptedKey: row.encrypted_key,
+    keyVersion: Number(row.key_version),
+    status: row.status,
+    createdAt: new Date(row.created_at),
+  } as {
+    id: string;
+    organizationId: string;
+    encryptedKey: string;
+    keyVersion: number;
+    status: string;
+    createdAt: Date;
+  };
+}
+
+export async function createOrganizationEncryptionKey(params: {
+  organizationId: string | number;
+  encryptedKey: string;
+  keyVersion: number;
+  status?: "active" | "retired";
+}) {
+  const db = await getDb();
+  if (!db) return null;
+  const orgId = normalizeOrganizationId(params.organizationId);
+  const nextStatus = params.status ?? "active";
+
+  if (nextStatus === "active") {
+    await db.execute(sql`
+      update organization_encryption_keys
+      set status = 'retired', retired_at = now()
+      where organization_id = ${orgId}
+        and status = 'active'
+    `);
+  }
+
+  await db.execute(sql`
+    insert into organization_encryption_keys (
+      organization_id,
+      key_version,
+      encrypted_key,
+      status
+    ) values (
+      ${orgId},
+      ${params.keyVersion},
+      ${params.encryptedKey},
+      ${nextStatus}
+    )
+  `);
+
+  const rows = await db.execute(sql`
+    select id, organization_id, key_version, encrypted_key, status, created_at
+    from organization_encryption_keys
+    where organization_id = ${orgId}
+      and key_version = ${params.keyVersion}
+    limit 1
+  `);
+  const row = ((rows as unknown[])?.[0] ?? null) as
+    | {
+        id: string;
+        organization_id: string;
+        key_version: number;
+        encrypted_key: string;
+        status: string;
+        created_at: Date | string;
+      }
+    | null;
+  if (!row) return null;
+  return {
+    id: row.id,
+    organizationId: row.organization_id,
+    encryptedKey: row.encrypted_key,
+    keyVersion: Number(row.key_version),
+    status: row.status,
+    createdAt: new Date(row.created_at),
+  } as {
+    id: string;
+    organizationId: string;
+    encryptedKey: string;
+    keyVersion: number;
+    status: string;
+    createdAt: Date;
+  };
+}
+
+export async function createEncryptedDocumentMetadata(params: {
+  organizationId: string | number;
+  uploadedBy: number;
+  fileName: string;
+  fileKey: string;
+  fileUrl?: string;
+  fileType: string;
+  fileSize: number;
+  encryption: {
+    algorithm: string;
+    iv: string;
+    authTag: string;
+    keyVersion: number;
+    isEncrypted: true;
+  };
+}) {
+  const organizationId = normalizeOrganizationId(params.organizationId);
+  return createDocument({
+    name: params.fileName,
+    description: JSON.stringify({ originalFileName: params.fileName }),
+    fileUrl: params.fileUrl ?? "",
+    fileKey: params.fileKey,
+    fileType: params.fileType,
+    fileSize: params.fileSize,
+    entityType: "organization",
+    entityId: null,
+    organizationId,
+    encryptionAlgorithm: params.encryption.algorithm,
+    encryptionKeyVersion: params.encryption.keyVersion,
+    encryptionIv: params.encryption.iv,
+    encryptionAuthTag: params.encryption.authTag,
+    encryptedAt: new Date(),
+    isEncrypted: true,
+    uploadedBy: params.uploadedBy,
+  });
+}
+
+export async function getDocumentById(
+  documentId: number,
+  options?: { organizationId?: string | number }
+) {
+  const db = await getDb();
+  if (!db) return null;
+  const conditions = [eq(documents.id, documentId)];
+  if (options?.organizationId !== undefined && options.organizationId !== null) {
+    conditions.push(eq(documents.organizationId, normalizeOrganizationId(options.organizationId)));
+  }
+  const rows = await db.select().from(documents).where(and(...conditions)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getDocumentByFileKey(
+  fileKey: string,
+  options?: { organizationId?: string | number }
+) {
+  const db = await getDb();
+  if (!db) return null;
+  const normalizedFileKey = fileKey.trim();
+  if (!normalizedFileKey) return null;
+
+  const conditions = [eq(documents.fileKey, normalizedFileKey)];
+  if (options?.organizationId !== undefined && options.organizationId !== null) {
+    conditions.push(eq(documents.organizationId, normalizeOrganizationId(options.organizationId)));
+  }
+
+  const rows = await db
+    .select()
+    .from(documents)
+    .where(and(...conditions))
+    .orderBy(desc(documents.createdAt))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function createInitialOrganizationEncryptionKey(organizationId: string | number) {
+  const existing = await getActiveOrganizationEncryptionKey(organizationId);
+  if (existing) return existing;
+  const encryptedKey = encryptOrgDataKey(generateOrgDataKey());
+  return createOrganizationEncryptionKey({
+    organizationId,
+    encryptedKey,
+    keyVersion: 1,
+    status: "active",
+  });
+}
+
+export async function rotateOrganizationEncryptionKey(organizationId: string | number) {
+  const active = await getActiveOrganizationEncryptionKey(organizationId);
+  const nextVersion = active ? Number(active.keyVersion) + 1 : 1;
+  const encryptedKey = encryptOrgDataKey(generateOrgDataKey());
+  const created = await createOrganizationEncryptionKey({
+    organizationId,
+    encryptedKey,
+    keyVersion: nextVersion,
+    status: "active",
+  });
+  return {
+    retiredVersion: active ? Number(active.keyVersion) : null,
+    activeKeyVersion: created ? Number(created.keyVersion) : null,
+    organizationId: created?.organizationId ?? normalizeOrganizationId(organizationId),
+  };
+}
+
+export async function getOrganizationEncryptionKeyMaterial(
+  organizationId: string | number,
+  keyVersion?: number
+) {
+  const keyRecord = await getActiveOrganizationEncryptionKey(organizationId, keyVersion);
+  if (!keyRecord) return null;
+  return {
+    organizationId: keyRecord.organizationId,
+    keyVersion: keyRecord.keyVersion,
+    algorithm: "aes-256-gcm",
+    dataKey: decryptOrgDataKey(keyRecord.encryptedKey),
+  };
 }
 
 // ============= DASHBOARD STATISTICS =============

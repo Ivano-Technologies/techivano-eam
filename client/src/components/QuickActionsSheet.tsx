@@ -38,8 +38,9 @@ export function QuickActionsSheet({ assetId, assetName, assetTag, currentStatus 
       toast.success("Work order created successfully");
       resetForm();
       setIsOpen(false);
-      if (data) {
-        setLocation(`/work-orders/${data.id}`);
+      const created = data as { id?: number } | undefined;
+      if (created?.id != null) {
+        setLocation(`/work-orders/${created.id}`);
       }
     },
     onError: (error) => {

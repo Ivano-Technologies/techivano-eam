@@ -29,7 +29,9 @@ export default function Vendors() {
   });
 
   const utils = trpc.useUtils();
-  const { data: vendors, isLoading } = trpc.vendors.list.useQuery();
+  const { data: rawVendors, isLoading } = trpc.vendors.list.useQuery();
+  type VendorRow = { id: number; name?: string; vendorCode?: string; isActive?: boolean; contactPerson?: string; email?: string; phone?: string };
+  const vendors: VendorRow[] = Array.isArray(rawVendors) ? (rawVendors as VendorRow[]) : [];
 
   const createMutation = trpc.vendors.create.useMutation({
     onSuccess: () => {
@@ -231,7 +233,7 @@ export default function Vendors() {
       </div>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {vendors?.map((vendor) => (
+        {vendors.map((vendor) => (
           <Card key={vendor.id}>
             <CardHeader>
               <div className="flex items-start justify-between">

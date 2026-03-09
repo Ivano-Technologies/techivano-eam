@@ -22,12 +22,15 @@ export default function Profile() {
   });
 
   // Fetch user stats
-  const { data: assets } = trpc.assets.list.useQuery({});
-  const { data: workOrders } = trpc.workOrders.list.useQuery({});
-  
-  const myAssets = assets?.filter(a => a.assignedTo === user?.id) || [];
-  const myWorkOrders = workOrders?.filter(wo => wo.assignedTo === user?.id) || [];
-  const activeWorkOrders = myWorkOrders.filter(wo => wo.status === 'in_progress' || wo.status === 'assigned');
+  const { data: rawAssets } = trpc.assets.list.useQuery({});
+  const { data: rawWorkOrders } = trpc.workOrders.list.useQuery({});
+  type AssetRow = { id: number; assignedTo?: number };
+  type WorkOrderRow = { id: number; assignedTo?: number; status?: string };
+  const assets: AssetRow[] = Array.isArray(rawAssets) ? (rawAssets as AssetRow[]) : [];
+  const workOrders: WorkOrderRow[] = Array.isArray(rawWorkOrders) ? (rawWorkOrders as WorkOrderRow[]) : [];
+  const myAssets = assets.filter((a) => a.assignedTo === user?.id);
+  const myWorkOrders = workOrders.filter((wo) => wo.assignedTo === user?.id);
+  const activeWorkOrders = myWorkOrders.filter((wo) => wo.status === "in_progress" || wo.status === "assigned");
 
   if (!user) {
     return (

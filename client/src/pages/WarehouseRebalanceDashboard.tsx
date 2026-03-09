@@ -33,6 +33,8 @@ export default function WarehouseRebalanceDashboard() {
     stockItemId: parsedStockItemId,
     limit: 50,
   });
+  type RecRow = { id?: number; sourceWarehouseId?: number; targetWarehouseId?: number; stockItemId?: number; transferQuantity?: number; transferPriority?: string };
+  const recommendations: RecRow[] = Array.isArray(recommendationsQuery.data) ? (recommendationsQuery.data as RecRow[]) : [];
 
   const rebalanceMutation = trpc.warehouseV1.rebalance.useMutation({
     onSuccess: () => {
@@ -89,11 +91,11 @@ export default function WarehouseRebalanceDashboard() {
         <CardContent>
           {recommendationsQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading recommendations...</p>
-          ) : recommendationsQuery.data && recommendationsQuery.data.length > 0 ? (
+          ) : recommendations.length > 0 ? (
             <div className="space-y-3">
-              {recommendationsQuery.data.map((row) => (
+              {recommendations.map((row, idx) => (
                 <div
-                  key={row.id}
+                  key={row.id ?? idx}
                   className="rounded-md border p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="space-y-1">
@@ -106,8 +108,8 @@ export default function WarehouseRebalanceDashboard() {
                       Stock item #{row.stockItemId} | transfer {row.transferQuantity} units
                     </p>
                   </div>
-                  <Badge variant={badgeVariant(row.transferPriority)} className={priorityTone(row.transferPriority)}>
-                    {row.transferPriority}
+                  <Badge variant={badgeVariant(row.transferPriority ?? "")} className={priorityTone(row.transferPriority ?? "")}>
+                    {row.transferPriority ?? ""}
                   </Badge>
                 </div>
               ))}

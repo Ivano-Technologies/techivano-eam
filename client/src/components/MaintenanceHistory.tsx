@@ -12,11 +12,27 @@ interface MaintenanceHistoryProps {
   assetId: number;
 }
 
+interface WorkOrderEntry {
+  id: number;
+  status?: string;
+  type?: string;
+  title?: string;
+  description?: string;
+  priority?: string;
+  scheduledStart?: Date | string | null;
+  actualStart?: Date | string | null;
+  actualEnd?: Date | string | null;
+  workOrderNumber?: string;
+}
+
 export function MaintenanceHistory({ assetId }: MaintenanceHistoryProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
-  const { data: workOrders, isLoading } = trpc.workOrders.getByAssetId.useQuery({ assetId });
+  const { data: rawWorkOrders, isLoading } = trpc.workOrders.getByAssetId.useQuery({ assetId });
+  const workOrders: WorkOrderEntry[] = Array.isArray(rawWorkOrders)
+    ? (rawWorkOrders as WorkOrderEntry[])
+    : [];
 
   if (isLoading) {
     return (
@@ -85,7 +101,7 @@ export function MaintenanceHistory({ assetId }: MaintenanceHistoryProps) {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | undefined) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       completed: "default",
       in_progress: "secondary",
@@ -95,13 +111,13 @@ export function MaintenanceHistory({ assetId }: MaintenanceHistoryProps) {
       on_hold: "outline",
     };
     return (
-      <Badge variant={variants[status] || "outline"} className="capitalize">
-        {status.replace("_", " ")}
+      <Badge variant={variants[status ?? ""] || "outline"} className="capitalize">
+        {(status ?? "").replace("_", " ")}
       </Badge>
     );
   };
 
-  const getTypeBadge = (type: string) => {
+  const getTypeBadge = (type: string | undefined) => {
     const colors: Record<string, string> = {
       corrective: "bg-red-100 text-red-800 border-red-200",
       preventive: "bg-green-100 text-green-800 border-green-200",
@@ -109,13 +125,13 @@ export function MaintenanceHistory({ assetId }: MaintenanceHistoryProps) {
       emergency: "bg-orange-100 text-orange-800 border-orange-200",
     };
     return (
-      <Badge variant="outline" className={`capitalize ${colors[type] || ""}`}>
-        {type}
+      <Badge variant="outline" className={`capitalize ${colors[type ?? ""] || ""}`}>
+        {type ?? ""}
       </Badge>
     );
   };
 
-  const getPriorityBadge = (priority: string) => {
+  const getPriorityBadge = (priority: string | undefined) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       critical: "destructive",
       high: "destructive",
@@ -123,13 +139,13 @@ export function MaintenanceHistory({ assetId }: MaintenanceHistoryProps) {
       low: "outline",
     };
     return (
-      <Badge variant={variants[priority] || "outline"} className="capitalize">
-        {priority}
+      <Badge variant={variants[priority ?? ""] || "outline"} className="capitalize">
+        {priority ?? ""}
       </Badge>
     );
   };
 
-  const formatDate = (date: Date | string | null) => {
+  const formatDate = (date: Date | string | null | undefined) => {
     if (!date) return "N/A";
     return new Date(date).toLocaleDateString("en-US", {
       year: "numeric",
@@ -210,7 +226,7 @@ export function MaintenanceHistory({ assetId }: MaintenanceHistoryProps) {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        {getStatusIcon(workOrder.status)}
+                        {getStatusIcon(workOrder.status ?? "")}
                         <h4 className="font-semibold">{workOrder.title}</h4>
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-2">
@@ -218,9 +234,9 @@ export function MaintenanceHistory({ assetId }: MaintenanceHistoryProps) {
                       </p>
                     </div>
                     <div className="flex flex-col gap-2 items-end ml-4">
-                      {getStatusBadge(workOrder.status)}
-                      {getTypeBadge(workOrder.type)}
-                      {getPriorityBadge(workOrder.priority)}
+                      {getStatusBadge(workOrder.status ?? "")}
+                      {getTypeBadge(workOrder.type ?? undefined)}
+                      {getPriorityBadge(workOrder.priority ?? undefined)}
                     </div>
                   </div>
 
@@ -230,7 +246,7 @@ export function MaintenanceHistory({ assetId }: MaintenanceHistoryProps) {
                       <div>
                         <div className="text-xs">Scheduled</div>
                         <div className="font-medium text-foreground">
-                          {formatDate(workOrder.scheduledStart)}
+                          {formatDate(workOrder.scheduledStart ?? null)}
                         </div>
                       </div>
                     </div>
@@ -241,7 +257,7 @@ export function MaintenanceHistory({ assetId }: MaintenanceHistoryProps) {
                         <div>
                           <div className="text-xs">Started</div>
                           <div className="font-medium text-foreground">
-                            {formatDate(workOrder.actualStart)}
+                            {formatDate(workOrder.actualStart ?? null)}
                           </div>
                         </div>
                       </div>
@@ -253,7 +269,7 @@ export function MaintenanceHistory({ assetId }: MaintenanceHistoryProps) {
                         <div>
                           <div className="text-xs">Completed</div>
                           <div className="font-medium text-foreground">
-                            {formatDate(workOrder.actualEnd)}
+                            {formatDate(workOrder.actualEnd ?? null)}
                           </div>
                         </div>
                       </div>

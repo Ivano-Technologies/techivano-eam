@@ -41,9 +41,15 @@ export default function Home() {
   const isMobile = useIsMobile();
   const utils = trpc.useUtils();
   const { data: stats, isLoading } = trpc.dashboard.stats.useQuery();
-  const { data: upcomingMaintenance } = trpc.maintenance.upcoming.useQuery({ days: 7 });
-  const { data: lowStockItems } = trpc.inventory.lowStock.useQuery();
-  
+  const { data: rawUpcoming } = trpc.maintenance.upcoming.useQuery({ days: 7 });
+  const { data: rawLowStock } = trpc.inventory.lowStock.useQuery();
+  const upcomingMaintenance: { id: number; name?: string; nextDue?: string | Date }[] = Array.isArray(rawUpcoming)
+    ? (rawUpcoming as { id: number; name?: string; nextDue?: string | Date }[])
+    : [];
+  const lowStockItems: { id: number; name?: string; currentStock?: number; unitOfMeasure?: string }[] = Array.isArray(rawLowStock)
+    ? (rawLowStock as { id: number; name?: string; currentStock?: number; unitOfMeasure?: string }[])
+    : [];
+
   const handleRefresh = async () => {
     await Promise.all([
       utils.dashboard.stats.invalidate(),
@@ -151,7 +157,7 @@ export default function Home() {
                     <div className="flex-1">
                       <p className="font-medium text-sm">{schedule.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        Due: {new Date(schedule.nextDue).toLocaleDateString()}
+                        Due: {schedule.nextDue != null ? new Date(schedule.nextDue).toLocaleDateString() : "—"}
                       </p>
                     </div>
                   </div>

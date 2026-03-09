@@ -6,21 +6,31 @@ import { FileText, Search, Calendar } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
 
+interface AuditLogEntry {
+  id: number;
+  action?: string;
+  entityType?: string;
+  changes?: string;
+  timestamp?: string | Date;
+  userId?: number;
+}
+
 export default function AuditTrail() {
   const [entityType, setEntityType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   
-  const { data: logs, isLoading } = trpc.auditLogs.list.useQuery({
+  const { data: rawLogs, isLoading } = trpc.auditLogs.list.useQuery({
     entityType: entityType === "all" ? undefined : entityType,
   });
+  const logs: AuditLogEntry[] = Array.isArray(rawLogs) ? (rawLogs as AuditLogEntry[]) : [];
 
-  const filteredLogs = logs?.filter((log: any) => {
+  const filteredLogs = logs.filter((log) => {
     if (!searchQuery) return true;
     const searchLower = searchQuery.toLowerCase();
     return (
-      log.action.toLowerCase().includes(searchLower) ||
-      (log.entityType && log.entityType.toLowerCase().includes(searchLower)) ||
-      (log.changes && log.changes.toLowerCase().includes(searchLower))
+      (log.action ?? "").toLowerCase().includes(searchLower) ||
+      (log.entityType ?? "").toLowerCase().includes(searchLower) ||
+      (log.changes ?? "").toLowerCase().includes(searchLower)
     );
   });
 
@@ -111,7 +121,7 @@ export default function AuditTrail() {
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {format(new Date(log.timestamp), 'PPpp')}
+                          {log.timestamp != null ? format(new Date(log.timestamp), "PPpp") : "—"}
                         </span>
                         <span>User ID: {log.userId}</span>
                       </div>

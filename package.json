@@ -15,6 +15,7 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
+    "test:tenant-isolation:staging": "tsx scripts/tests/tenant-isolation-staging.ts",
     "test:phase4": "vitest run \"server/**/*.phase4.test.ts\" --passWithNoTests",
     "test:workers": "vitest run \"server/jobs/**/*.test.ts\" --passWithNoTests",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",

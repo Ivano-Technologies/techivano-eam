@@ -22,22 +22,23 @@ export interface LifecycleCostAnalysis {
 /**
  * Calculate lifecycle costs for a single asset
  */
+type AssetForLifecycle = { id: number; assetTag?: string; name?: string; acquisitionCost?: string | number; acquisitionDate?: string | Date; status?: string };
 export async function calculateAssetLifecycleCost(assetId: number): Promise<LifecycleCostAnalysis | null> {
-  const asset = await db.getAssetById(assetId);
+  const asset = (await db.getAssetById(assetId)) as AssetForLifecycle | null;
   if (!asset) return null;
   
   // Purchase cost
-  const purchaseCost = parseFloat(asset.acquisitionCost?.toString() || '0');
+  const purchaseCost = parseFloat(String(asset.acquisitionCost ?? "0"));
   
   // Maintenance costs from work orders
   const workOrders = await db.getAssetWorkOrders(assetId);
-  const maintenanceCosts = workOrders.reduce((sum: number, wo: any) => {
+  const maintenanceCosts = workOrders.reduce((sum: number, wo: { actualCost?: unknown; estimatedCost?: unknown }) => {
     return sum + parseFloat(wo.actualCost?.toString() || wo.estimatedCost?.toString() || '0');
   }, 0);
   
   // Downtime costs (estimated at $100/hour for operational assets)
-  const downtimeHours = workOrders.reduce((sum: number, wo: any) => {
-    if (wo.actualStart && wo.actualEnd) {
+  const downtimeHours = workOrders.reduce((sum: number, wo: { actualStart?: string | Date; actualEnd?: string | Date }) => {
+    if (wo.actualStart != null && wo.actualEnd != null) {
       const hours = (new Date(wo.actualEnd).getTime() - new Date(wo.actualStart).getTime()) / (1000 * 60 * 60);
       return sum + hours;
     }
@@ -46,7 +47,7 @@ export async function calculateAssetLifecycleCost(assetId: number): Promise<Life
   const downtimeCosts = downtimeHours * 100; // $100/hour downtime cost
   
   // Disposal costs (estimated at 5% of purchase cost for retired assets)
-  const disposalCosts = asset.status === 'disposed' || asset.status === 'retired' 
+  const disposalCosts = (asset.status ?? "") === "disposed" || (asset.status ?? "") === "retired" 
     ? purchaseCost * 0.05 
     : 0;
   
@@ -63,8 +64,8 @@ export async function calculateAssetLifecycleCost(assetId: number): Promise<Life
   
   return {
     assetId: asset.id,
-    assetTag: asset.assetTag,
-    assetName: asset.name,
+    assetTag: asset.assetTag ?? "",
+    assetName: asset.name ?? "",
     purchaseCost,
     maintenanceCosts,
     downtimeCosts,
@@ -81,7 +82,8 @@ export async function calculateAssetLifecycleCost(assetId: number): Promise<Life
  * Calculate lifecycle costs for all assets in a category
  */
 export async function calculateCategoryLifecycleCosts(categoryId: number): Promise<LifecycleCostAnalysis[]> {
-  const assets = await db.getAllAssets({ categoryId });
+  const rawAssets = await db.getAllAssets({ categoryId });
+  const assets = rawAssets as AssetForLifecycle[];
   const analyses: LifecycleCostAnalysis[] = [];
   
   for (const asset of assets) {
@@ -108,8 +110,10 @@ export interface CategoryCostSummary {
   averageCostPerDay: number;
 }
 
+type CategoryRow = { id: number; name?: string };
 export async function getCategoryCostSummary(): Promise<CategoryCostSummary[]> {
-  const categories = await db.getAllAssetCategories();
+  const rawCategories = await db.getAllAssetCategories();
+  const categories = rawCategories as CategoryRow[];
   const summaries: CategoryCostSummary[] = [];
   
   for (const category of categories) {
@@ -123,7 +127,7 @@ export async function getCategoryCostSummary(): Promise<CategoryCostSummary[]> {
       
       summaries.push({
         categoryId: category.id,
-        categoryName: category.name,
+        categoryName: category.name ?? "",
         assetCount: analyses.length,
         totalTCO,
         averageTCO: totalTCO / analyses.length,
@@ -152,7 +156,8 @@ export interface CostOptimizationRecommendation {
 }
 
 export async function getCostOptimizationRecommendations(): Promise<CostOptimizationRecommendation[]> {
-  const assets = await db.getAllAssets();
+  const rawAssets = await db.getAllAssets();
+  const assets = rawAssets as AssetForLifecycle[];
   const recommendations: CostOptimizationRecommendation[] = [];
   
   for (const asset of assets) {
@@ -163,8 +168,8 @@ export async function getCostOptimizationRecommendations(): Promise<CostOptimiza
     if (analysis.maintenanceCosts > analysis.purchaseCost * 0.5) {
       recommendations.push({
         assetId: asset.id,
-        assetTag: asset.assetTag,
-        assetName: asset.name,
+        assetTag: asset.assetTag ?? "",
+        assetName: asset.name ?? "",
         issue: `Maintenance costs (${analysis.maintenanceCosts.toFixed(2)}) exceed 50% of purchase cost`,
         recommendation: 'Consider replacing this asset with a newer model to reduce ongoing maintenance expenses',
         potentialSavings: analysis.maintenanceCosts * 0.3, // Estimated 30% savings
@@ -176,8 +181,8 @@ export async function getCostOptimizationRecommendations(): Promise<CostOptimiza
     if (analysis.downtimeHours > 100) {
       recommendations.push({
         assetId: asset.id,
-        assetTag: asset.assetTag,
-        assetName: asset.name,
+        assetTag: asset.assetTag ?? "",
+        assetName: asset.name ?? "",
         issue: `Excessive downtime (${analysis.downtimeHours.toFixed(1)} hours)`,
         recommendation: 'Implement predictive maintenance or consider backup equipment to minimize operational disruption',
         potentialSavings: analysis.downtimeCosts * 0.4, // Estimated 40% reduction in downtime
@@ -189,8 +194,8 @@ export async function getCostOptimizationRecommendations(): Promise<CostOptimiza
     if (analysis.ageInDays > 1825 && analysis.costPerDay > 50) { // 5+ years old
       recommendations.push({
         assetId: asset.id,
-        assetTag: asset.assetTag,
-        assetName: asset.name,
+        assetTag: asset.assetTag ?? "",
+        assetName: asset.name ?? "",
         issue: `Asset is ${Math.floor(analysis.ageInDays / 365)} years old with high daily cost (${analysis.costPerDay.toFixed(2)}/day)`,
         recommendation: 'Evaluate replacement with modern equipment that may have better efficiency and lower operating costs',
         potentialSavings: analysis.costPerDay * 365 * 0.25, // Estimated 25% annual savings

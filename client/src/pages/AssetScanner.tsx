@@ -58,15 +58,14 @@ export default function AssetScanner() {
 
     try {
       const result = await searchAsset();
-      if (result.data) {
-        setScannedAsset(result.data);
-        // Pre-fill location with GPS coordinates if available
-        const locationText = coordinates 
-          ? `${result.data.location || ''} (GPS: ${formatCoordinates(coordinates.latitude, coordinates.longitude)})`
-          : result.data.location || "";
-        
+      const data = result.data as { location?: string; status?: string } | undefined;
+      if (data) {
+        setScannedAsset(data);
+        const locationText = coordinates
+          ? `${data.location ?? ""} (GPS: ${formatCoordinates(coordinates.latitude, coordinates.longitude)})`
+          : data.location ?? "";
         setUpdateForm({
-          status: result.data.status || "",
+          status: data.status ?? "",
           location: locationText,
           notes: "",
         });

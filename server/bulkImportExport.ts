@@ -15,14 +15,18 @@ export interface ImportResult {
 export interface ExportOptions {
   format: 'excel' | 'csv';
   includeHeaders: boolean;
+  /** Scope export to this organization (Phase 3). */
+  organizationId?: string | null;
 }
 
 /**
  * Export assets to Excel/CSV
  */
+type AssetExportRow = { assetTag?: string; name?: string; description?: string; categoryId?: number; siteId?: number; status?: string; manufacturer?: string; model?: string; serialNumber?: string; acquisitionDate?: string | Date; acquisitionCost?: string | number; currentValue?: string | number; depreciationRate?: string | number; warrantyExpiry?: string | Date; location?: string; notes?: string };
 export async function exportAssets(options: ExportOptions = { format: 'excel', includeHeaders: true }): Promise<Buffer> {
-  const assets = await db.getAllAssets();
-  
+  const rawAssets = await db.getAllAssets({ organizationId: options.organizationId ?? undefined });
+  const assets: AssetExportRow[] = Array.isArray(rawAssets) ? (rawAssets as AssetExportRow[]) : [];
+
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Assets');
   
@@ -49,22 +53,22 @@ export async function exportAssets(options: ExportOptions = { format: 'excel', i
   // Add data
   assets.forEach(asset => {
     worksheet.addRow({
-      assetTag: asset.assetTag,
-      name: asset.name,
-      description: asset.description,
-      categoryId: asset.categoryId,
-      siteId: asset.siteId,
-      status: asset.status,
-      manufacturer: asset.manufacturer,
-      model: asset.model,
-      serialNumber: asset.serialNumber,
-      acquisitionDate: asset.acquisitionDate ? new Date(asset.acquisitionDate).toISOString().split('T')[0] : '',
-      acquisitionCost: asset.acquisitionCost,
-      currentValue: asset.currentValue,
-      depreciationRate: asset.depreciationRate,
-      warrantyExpiry: asset.warrantyExpiry ? new Date(asset.warrantyExpiry).toISOString().split('T')[0] : '',
-      location: asset.location,
-      notes: asset.notes,
+      assetTag: asset.assetTag ?? "",
+      name: asset.name ?? "",
+      description: asset.description ?? "",
+      categoryId: asset.categoryId ?? 0,
+      siteId: asset.siteId ?? 0,
+      status: asset.status ?? "",
+      manufacturer: asset.manufacturer ?? "",
+      model: asset.model ?? "",
+      serialNumber: asset.serialNumber ?? "",
+      acquisitionDate: asset.acquisitionDate != null ? new Date(asset.acquisitionDate).toISOString().split('T')[0] : '',
+      acquisitionCost: asset.acquisitionCost ?? 0,
+      currentValue: asset.currentValue ?? 0,
+      depreciationRate: asset.depreciationRate ?? 0,
+      warrantyExpiry: asset.warrantyExpiry != null ? new Date(asset.warrantyExpiry).toISOString().split('T')[0] : '',
+      location: asset.location ?? "",
+      notes: asset.notes ?? "",
     });
   });
   
@@ -163,12 +167,14 @@ export async function importAssets(fileBuffer: any, userId: number): Promise<Imp
   };
 }
 
+type WorkOrderExportRow = { workOrderNumber?: string; title?: string; assetId?: number; siteId?: number; type?: string; priority?: string; status?: string; assignedTo?: number; scheduledStart?: string | Date; scheduledEnd?: string | Date; estimatedCost?: number | string; actualCost?: number | string };
 /**
  * Export work orders
  */
 export async function exportWorkOrders(): Promise<Buffer> {
-  const workOrders = await db.getAllWorkOrders();
-  
+  const rawWorkOrders = await db.getAllWorkOrders();
+  const workOrders: WorkOrderExportRow[] = Array.isArray(rawWorkOrders) ? (rawWorkOrders as WorkOrderExportRow[]) : [];
+
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Work Orders');
   
@@ -189,18 +195,18 @@ export async function exportWorkOrders(): Promise<Buffer> {
   
   workOrders.forEach(wo => {
     worksheet.addRow({
-      workOrderNumber: wo.workOrderNumber,
-      title: wo.title,
-      assetId: wo.assetId,
-      siteId: wo.siteId,
-      type: wo.type,
-      priority: wo.priority,
-      status: wo.status,
-      assignedTo: wo.assignedTo,
-      scheduledStart: wo.scheduledStart ? new Date(wo.scheduledStart).toISOString().split('T')[0] : '',
-      scheduledEnd: wo.scheduledEnd ? new Date(wo.scheduledEnd).toISOString().split('T')[0] : '',
-      estimatedCost: wo.estimatedCost,
-      actualCost: wo.actualCost,
+      workOrderNumber: wo.workOrderNumber ?? "",
+      title: wo.title ?? "",
+      assetId: wo.assetId ?? 0,
+      siteId: wo.siteId ?? 0,
+      type: wo.type ?? "",
+      priority: wo.priority ?? "",
+      status: wo.status ?? "",
+      assignedTo: wo.assignedTo ?? 0,
+      scheduledStart: wo.scheduledStart != null ? new Date(wo.scheduledStart).toISOString().split('T')[0] : '',
+      scheduledEnd: wo.scheduledEnd != null ? new Date(wo.scheduledEnd).toISOString().split('T')[0] : '',
+      estimatedCost: wo.estimatedCost ?? 0,
+      actualCost: wo.actualCost ?? 0,
     });
   });
   
@@ -216,12 +222,14 @@ export async function exportWorkOrders(): Promise<Buffer> {
   return Buffer.from(buffer);
 }
 
+type InventoryExportRow = { itemCode?: string; name?: string; category?: string; currentStock?: number; minStockLevel?: number; reorderPoint?: number; location?: string };
 /**
  * Export inventory items
  */
 export async function exportInventory(): Promise<Buffer> {
-  const items = await db.getAllInventoryItems();
-  
+  const rawItems = await db.getAllInventoryItems();
+  const items: InventoryExportRow[] = Array.isArray(rawItems) ? (rawItems as InventoryExportRow[]) : [];
+
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Inventory');
   
@@ -238,14 +246,14 @@ export async function exportInventory(): Promise<Buffer> {
   
   items.forEach(item => {
     worksheet.addRow({
-      itemCode: item.itemCode,
-      name: item.name,
-      category: item.category,
-      currentStock: item.currentStock,
-      minimumStock: item.minStockLevel,
-      reorderPoint: item.reorderPoint,
+      itemCode: item.itemCode ?? "",
+      name: item.name ?? "",
+      category: item.category ?? "",
+      currentStock: item.currentStock ?? 0,
+      minimumStock: item.minStockLevel ?? 0,
+      reorderPoint: item.reorderPoint ?? 0,
       unitPrice: 0, // Not in schema
-      location: item.location,
+      location: item.location ?? "",
     });
   });
   
@@ -340,18 +348,20 @@ export async function exportSites(): Promise<Buffer> {
     { header: 'Longitude', key: 'longitude', width: 15 },
   ];
   
-  sites.forEach(site => {
+  type SiteExportRow = { name?: string; address?: string; city?: string; state?: string; country?: string; contactPerson?: string; contactPhone?: string; contactEmail?: string; latitude?: number; longitude?: number };
+  const sitesTyped: SiteExportRow[] = Array.isArray(sites) ? (sites as SiteExportRow[]) : [];
+  sitesTyped.forEach(site => {
     worksheet.addRow({
-      name: site.name,
-      address: site.address,
-      city: site.city,
-      state: site.state,
-      country: site.country,
-      contactPerson: site.contactPerson,
-      contactPhone: site.contactPhone,
-      contactEmail: site.contactEmail,
-      latitude: site.latitude,
-      longitude: site.longitude,
+      name: site.name ?? "",
+      address: site.address ?? "",
+      city: site.city ?? "",
+      state: site.state ?? "",
+      country: site.country ?? "",
+      contactPerson: site.contactPerson ?? "",
+      contactPhone: site.contactPhone ?? "",
+      contactEmail: site.contactEmail ?? "",
+      latitude: site.latitude ?? 0,
+      longitude: site.longitude ?? 0,
     });
   });
   

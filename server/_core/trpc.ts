@@ -27,6 +27,27 @@ const requireUser = t.middleware(async opts => {
 
 export const protectedProcedure = t.procedure.use(requireUser);
 
+const requireOrganizationContext = t.middleware(async opts => {
+  const { ctx, next } = opts;
+
+  if (!ctx.organizationId) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Organization context is required",
+    });
+  }
+
+  return next({
+    ctx: {
+      ...ctx,
+      organizationId: ctx.organizationId,
+      tenantId: ctx.tenantId,
+    },
+  });
+});
+
+export const protectedOrgProcedure = protectedProcedure.use(requireOrganizationContext);
+
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;

@@ -44,9 +44,14 @@ export default function Inventory() {
   });
 
   const utils = trpc.useUtils();
-  const { data: items, isLoading, refetch } = trpc.inventory.list.useQuery();
-  const { data: lowStock } = trpc.inventory.lowStock.useQuery();
-  const { data: sites } = trpc.sites.list.useQuery();
+  const { data: rawItems, isLoading, refetch } = trpc.inventory.list.useQuery();
+  const { data: rawLowStock } = trpc.inventory.lowStock.useQuery();
+  const { data: rawSites } = trpc.sites.list.useQuery();
+  type InventoryItem = { id: number; name?: string; itemCode?: string; currentStock?: number; unitOfMeasure?: string; reorderPoint?: number; unitCost?: string | number };
+  type SiteOption = { id: number; name?: string };
+  const items: InventoryItem[] = Array.isArray(rawItems) ? (rawItems as InventoryItem[]) : [];
+  const lowStock: InventoryItem[] = Array.isArray(rawLowStock) ? (rawLowStock as InventoryItem[]) : [];
+  const sites: SiteOption[] = Array.isArray(rawSites) ? (rawSites as SiteOption[]) : [];
 
   const createMutation = trpc.inventory.create.useMutation({
     onSuccess: () => {
@@ -172,7 +177,7 @@ export default function Inventory() {
                       <SelectValue placeholder="Select site" />
                     </SelectTrigger>
                     <SelectContent>
-                      {sites?.map((site) => (
+                      {sites.map((site) => (
                         <SelectItem key={site.id} value={site.id.toString()}>
                           {site.name}
                         </SelectItem>
@@ -287,7 +292,7 @@ export default function Inventory() {
       )}
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {items?.map((item) => (
+        {items.map((item) => (
           <Card key={item.id}>
             <CardHeader>
               <div className="flex items-center gap-2">

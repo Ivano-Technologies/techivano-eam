@@ -24,6 +24,8 @@ export default function FleetOperationsDashboard() {
 
   const utils = trpc.useUtils();
   const assignmentsQuery = trpc.dispatchV1.assignments.useQuery({ limit: 50 });
+  type AssignmentRow = { id?: number; workOrderId?: number; technicianId?: number; fleetUnitId?: number; estimatedTravelTime?: number; routeDistance?: number; dispatchPriority?: string };
+  const assignments: AssignmentRow[] = Array.isArray(assignmentsQuery.data) ? (assignmentsQuery.data as AssignmentRow[]) : [];
   const optimizeMutation = trpc.dispatchV1.optimize.useMutation({
     onSuccess: () => {
       toast.success("Dispatch optimization queued");
@@ -82,19 +84,19 @@ export default function FleetOperationsDashboard() {
         <CardContent>
           {assignmentsQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading assignments...</p>
-          ) : assignmentsQuery.data && assignmentsQuery.data.length > 0 ? (
+          ) : assignments.length > 0 ? (
             <div className="space-y-3">
-              {assignmentsQuery.data.map((row) => (
-                <div key={row.id} className="rounded-md border p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              {assignments.map((row) => (
+                <div key={row.id ?? 0} className="rounded-md border p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-1">
                     <p className="text-sm">
                       Work order #{row.workOrderId} | Technician #{row.technicianId} | Fleet #{row.fleetUnitId}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Travel {Number(row.estimatedTravelTime).toFixed(1)} min | Distance {Number(row.routeDistance).toFixed(1)} km
+                      Travel {Number(row.estimatedTravelTime ?? 0).toFixed(1)} min | Distance {Number(row.routeDistance ?? 0).toFixed(1)} km
                     </p>
                   </div>
-                  <Badge className={priorityTone(row.dispatchPriority)}>{row.dispatchPriority}</Badge>
+                  <Badge className={priorityTone(row.dispatchPriority ?? "")}>{row.dispatchPriority ?? ""}</Badge>
                 </div>
               ))}
             </div>
