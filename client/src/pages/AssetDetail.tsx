@@ -28,6 +28,7 @@ export default function AssetDetail() {
   const { user } = useAuth();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -106,25 +107,86 @@ export default function AssetDetail() {
   const handleUploadWithCaption = async () => {
     if (pendingFiles.length === 0) return;
 
-    setUploadingPhoto(true);
-    try {
-      for (const file of pendingFiles) {
-        const formData = new FormData();
-        formData.append('file', file);
+    const uploadViaSignedUrl = (
+      file: File,
+      uploadUrl: string,
+      onProgress: (progressPercent: number) => void
+    ) =>
+      new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", uploadUrl);
+        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            onProgress((event.loaded / event.total) * 100);
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+            return;
+          }
+          reject(new Error(`Direct upload failed with status ${xhr.status}`));
+        };
+        xhr.onerror = () => reject(new Error("Direct upload failed"));
+        xhr.send(file);
+      });
 
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
+    setUploadingPhoto(true);
+    setUploadProgress(0);
+    try {
+      for (let index = 0; index < pendingFiles.length; index++) {
+        const file = pendingFiles[index]!;
+        const signResponse = await fetch("/api/uploads/signed-url", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            uploadType: "assets",
+          }),
+        });
+        if (!signResponse.ok) {
+          const message = await signResponse.text();
+          throw new Error(`Failed to request signed URL for ${file.name}: ${message}`);
+        }
+        const { uploadUrl, fileKey } = await signResponse.json();
+
+        await uploadViaSignedUrl(file, uploadUrl, (singleFileProgress) => {
+          const totalProgress =
+            ((index + singleFileProgress / 100) / pendingFiles.length) * 100;
+          setUploadProgress(Math.round(totalProgress));
         });
 
-        if (!response.ok) throw new Error(`Upload failed for ${file.name}`);
-
-        const { url, key } = await response.json();
+        const completeResponse = await fetch("/api/uploads/complete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fileKey,
+            fileType: file.type,
+            uploadType: "assets",
+          }),
+        });
+        if (!completeResponse.ok) {
+          const message = await completeResponse.text();
+          throw new Error(`Upload completion failed for ${file.name}: ${message}`);
+        }
+        const { fileUrl } = await completeResponse.json();
+        if (!fileUrl) {
+          throw new Error(
+            "Upload completed, but public asset URL is unavailable. Set R2_PUBLIC_BASE_URL."
+          );
+        }
 
         await createPhotoMutation.mutateAsync({
           assetId,
-          photoUrl: url,
-          photoKey: key,
+          photoUrl: fileUrl,
+          photoKey: fileKey,
           caption: photoCaption || undefined,
         });
       }
@@ -136,6 +198,7 @@ export default function AssetDetail() {
       toast.error(`Upload failed: ${error.message}`);
     } finally {
       setUploadingPhoto(false);
+      setUploadProgress(0);
     }
   };
 
@@ -521,7 +584,7 @@ export default function AssetDetail() {
                   disabled={uploadingPhoto}
                 >
                   <Upload className="mr-2 h-4 w-4" />
-                  {uploadingPhoto ? 'Uploading...' : 'Upload Photo'}
+                  {uploadingPhoto ? `Uploading... ${uploadProgress}%` : 'Upload Photo'}
                 </Button>
               </div>
             )}
@@ -646,7 +709,9 @@ export default function AssetDetail() {
               Cancel
             </Button>
             <Button onClick={handleUploadWithCaption} disabled={uploadingPhoto}>
-              {uploadingPhoto ? 'Uploading...' : `Upload ${pendingFiles.length} Photo(s)`}
+              {uploadingPhoto
+                ? `Uploading... ${uploadProgress}%`
+                : `Upload ${pendingFiles.length} Photo(s)`}
             </Button>
           </DialogFooter>
         </DialogContent>
