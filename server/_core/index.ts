@@ -6,6 +6,8 @@ initSentry();
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
@@ -17,7 +19,17 @@ import { serveStatic, setupVite } from "./vite";
 import { getBackgroundQueue } from "../jobs/queue";
 import { sdk } from "./sdk";
 import { enqueueWarehouseRebalanceJob } from "../jobs/queue";
+import {
+  buildFileKey,
+  getR2Client,
+  getR2Config,
+  getSignedUploadTtlSeconds,
+  resolvePublicUrl,
+  validateUploadRequest,
+  type UploadCategory,
+} from "./r2";
 import { listWarehouseTransferRecommendations } from "../db";
+import { enqueueUploadedDocumentForOcr } from "../jobs/ocrUploadQueue";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -74,6 +86,134 @@ async function startServer() {
     } catch (error) {
       return res.status(401).json({ error: "Unauthorized" });
     }
+  });
+
+  app.post("/api/uploads/signed-url", async (req, res) => {
+    try {
+      await sdk.authenticateRequest(req);
+    } catch {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const body = req.body as {
+      fileName?: unknown;
+      fileType?: unknown;
+      fileSize?: unknown;
+      uploadType?: unknown;
+    };
+
+    const fileName = typeof body.fileName === "string" ? body.fileName : "";
+    const fileType = typeof body.fileType === "string" ? body.fileType : "";
+    const fileSize = Number(body.fileSize);
+    const uploadType =
+      typeof body.uploadType === "string" ? (body.uploadType as UploadCategory) : "assets";
+
+    if (!fileName || !fileType || !Number.isFinite(fileSize)) {
+      return res.status(400).json({
+        error: "fileName, fileType and fileSize are required",
+      });
+    }
+
+    const allowedCategories: UploadCategory[] = [
+      "assets",
+      "inspection-images",
+      "documents",
+      "ocr",
+    ];
+    if (!allowedCategories.includes(uploadType)) {
+      return res.status(400).json({
+        error: `uploadType must be one of: ${allowedCategories.join(", ")}`,
+      });
+    }
+
+    try {
+      validateUploadRequest({
+        category: uploadType,
+        fileType,
+        fileSize,
+      });
+    } catch (error) {
+      return res.status(400).json({
+        error: error instanceof Error ? error.message : "Invalid upload payload",
+      });
+    }
+
+    try {
+      const fileKey = buildFileKey(uploadType, fileName);
+      const r2Config = getR2Config();
+      const putCommand = new PutObjectCommand({
+        Bucket: r2Config.bucketName,
+        Key: fileKey,
+        ContentType: fileType,
+      });
+      const uploadUrl = await getSignedUrl(getR2Client(), putCommand, {
+        expiresIn: getSignedUploadTtlSeconds(),
+      });
+
+      return res.json({
+        uploadUrl,
+        fileKey,
+        expiresInSeconds: getSignedUploadTtlSeconds(),
+      });
+    } catch (error) {
+      console.error("Failed to create signed upload URL", error);
+      return res.status(500).json({
+        error: "Failed to create signed upload URL",
+      });
+    }
+  });
+
+  app.post("/api/uploads/complete", async (req, res) => {
+    let user;
+    try {
+      user = await sdk.authenticateRequest(req);
+    } catch {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const body = req.body as {
+      fileKey?: unknown;
+      fileType?: unknown;
+      uploadType?: unknown;
+      tenantId?: unknown;
+    };
+    const fileKey = typeof body.fileKey === "string" ? body.fileKey : "";
+    const fileType = typeof body.fileType === "string" ? body.fileType : "";
+    const uploadType =
+      typeof body.uploadType === "string" ? (body.uploadType as UploadCategory) : "assets";
+
+    if (!fileKey || !fileType) {
+      return res.status(400).json({ error: "fileKey and fileType are required" });
+    }
+
+    const fileUrl = resolvePublicUrl(fileKey);
+
+    let queuedForOcr = false;
+    if ((uploadType === "documents" || uploadType === "ocr") && process.env.REDIS_URL) {
+      const tenantId = Number(body.tenantId ?? req.headers["x-tenant-id"]);
+      if (Number.isInteger(tenantId) && tenantId > 0) {
+        try {
+          await enqueueUploadedDocumentForOcr({
+            tenantId,
+            requestedBy: user.id ?? null,
+            fileKey,
+            fileType,
+            fileUrl,
+            uploadedAt: new Date().toISOString(),
+          });
+          queuedForOcr = true;
+        } catch (error) {
+          console.error("Failed to enqueue OCR upload job", error);
+          return res.status(500).json({ error: "Failed to enqueue OCR job" });
+        }
+      }
+    }
+
+    return res.json({
+      fileKey,
+      fileUrl,
+      queuedForOcr,
+    });
   });
 
   app.get("/warehouse/recommendations", async (req, res) => {
