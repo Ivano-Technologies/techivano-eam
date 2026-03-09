@@ -15,6 +15,8 @@ export interface ImportResult {
 export interface ExportOptions {
   format: 'excel' | 'csv';
   includeHeaders: boolean;
+  /** Scope export to this organization (Phase 3). */
+  organizationId?: string | null;
 }
 
 /**
@@ -22,7 +24,7 @@ export interface ExportOptions {
  */
 type AssetExportRow = { assetTag?: string; name?: string; description?: string; categoryId?: number; siteId?: number; status?: string; manufacturer?: string; model?: string; serialNumber?: string; acquisitionDate?: string | Date; acquisitionCost?: string | number; currentValue?: string | number; depreciationRate?: string | number; warrantyExpiry?: string | Date; location?: string; notes?: string };
 export async function exportAssets(options: ExportOptions = { format: 'excel', includeHeaders: true }): Promise<Buffer> {
-  const rawAssets = await db.getAllAssets();
+  const rawAssets = await db.getAllAssets({ organizationId: options.organizationId ?? undefined });
   const assets: AssetExportRow[] = Array.isArray(rawAssets) ? (rawAssets as AssetExportRow[]) : [];
 
   const workbook = new ExcelJS.Workbook();

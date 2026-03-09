@@ -135,9 +135,12 @@ export async function createSite(site: InsertSite) {
   return await db.select().from(sites).where(eq(sites.id, insertId)).limit(1).then(r => r[0]);
 }
 
-export async function getAllSites() {
+export async function getAllSites(organizationId?: string | null) {
   const db = await getDb();
   if (!db) return [];
+  if (organizationId != null && organizationId !== "") {
+    return await db.select().from(sites).where(eq(sites.organizationId, normalizeOrganizationId(organizationId))).orderBy(asc(sites.name));
+  }
   return await db.select().from(sites).orderBy(asc(sites.name));
 }
 
@@ -184,7 +187,7 @@ export async function createAsset(asset: InsertAsset) {
   return await db.select().from(assets).where(eq(assets.id, insertId)).limit(1).then(r => r[0]);
 }
 
-export async function getAllAssets(filters?: { siteId?: number; status?: string; categoryId?: number }) {
+export async function getAllAssets(filters?: { siteId?: number; status?: string; categoryId?: number; organizationId?: string | null }) {
   const db = await getDb();
   if (!db) return [];
   
@@ -194,6 +197,9 @@ export async function getAllAssets(filters?: { siteId?: number; status?: string;
   if (filters?.siteId) conditions.push(eq(assets.siteId, filters.siteId));
   if (filters?.status) conditions.push(eq(assets.status, filters.status as any));
   if (filters?.categoryId) conditions.push(eq(assets.categoryId, filters.categoryId));
+  if (filters?.organizationId != null && filters.organizationId !== "") {
+    conditions.push(eq(assets.organizationId, normalizeOrganizationId(filters.organizationId)));
+  }
   
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as any;
@@ -245,7 +251,7 @@ export async function createWorkOrder(workOrder: InsertWorkOrder) {
   return await db.select().from(workOrders).where(eq(workOrders.id, insertId)).limit(1).then(r => r[0]);
 }
 
-export async function getAllWorkOrders(filters?: { siteId?: number; status?: string; assignedTo?: number }) {
+export async function getAllWorkOrders(filters?: { siteId?: number; status?: string; assignedTo?: number; organizationId?: string | null }) {
   const db = await getDb();
   if (!db) return [];
   
@@ -255,6 +261,9 @@ export async function getAllWorkOrders(filters?: { siteId?: number; status?: str
   if (filters?.siteId) conditions.push(eq(workOrders.siteId, filters.siteId));
   if (filters?.status) conditions.push(eq(workOrders.status, filters.status as any));
   if (filters?.assignedTo) conditions.push(eq(workOrders.assignedTo, filters.assignedTo));
+  if (filters?.organizationId != null && filters.organizationId !== "") {
+    conditions.push(eq(workOrders.organizationId, normalizeOrganizationId(filters.organizationId)));
+  }
   
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as any;
@@ -287,7 +296,7 @@ export async function createMaintenanceSchedule(schedule: InsertMaintenanceSched
   return await db.select().from(maintenanceSchedules).where(eq(maintenanceSchedules.id, insertId)).limit(1).then(r => r[0]);
 }
 
-export async function getAllMaintenanceSchedules(filters?: { assetId?: number; isActive?: boolean }) {
+export async function getAllMaintenanceSchedules(filters?: { assetId?: number; isActive?: boolean; organizationId?: string | null }) {
   const db = await getDb();
   if (!db) return [];
   
@@ -296,6 +305,9 @@ export async function getAllMaintenanceSchedules(filters?: { assetId?: number; i
   
   if (filters?.assetId) conditions.push(eq(maintenanceSchedules.assetId, filters.assetId));
   if (filters?.isActive !== undefined) conditions.push(eq(maintenanceSchedules.isActive, filters.isActive));
+  if (filters?.organizationId != null && filters.organizationId !== "") {
+    conditions.push(eq(maintenanceSchedules.organizationId, normalizeOrganizationId(filters.organizationId)));
+  }
   
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as any;
@@ -336,14 +348,18 @@ export async function createInventoryItem(item: InsertInventoryItem) {
   return await db.select().from(inventoryItems).where(eq(inventoryItems.id, insertId)).limit(1).then(r => r[0]);
 }
 
-export async function getAllInventoryItems(siteId?: number) {
+export async function getAllInventoryItems(siteId?: number, organizationId?: string | null) {
   const db = await getDb();
   if (!db) return [];
   
-  if (siteId) {
-    return await db.select().from(inventoryItems).where(eq(inventoryItems.siteId, siteId)).orderBy(asc(inventoryItems.name));
+  const conditions = [];
+  if (siteId) conditions.push(eq(inventoryItems.siteId, siteId));
+  if (organizationId != null && organizationId !== "") {
+    conditions.push(eq(inventoryItems.organizationId, normalizeOrganizationId(organizationId)));
   }
-  
+  if (conditions.length > 0) {
+    return await db.select().from(inventoryItems).where(and(...conditions)).orderBy(asc(inventoryItems.name));
+  }
   return await db.select().from(inventoryItems).orderBy(asc(inventoryItems.name));
 }
 
@@ -587,9 +603,12 @@ export async function createVendor(vendor: InsertVendor) {
   return await db.select().from(vendors).where(eq(vendors.id, insertId)).limit(1).then(r => r[0]);
 }
 
-export async function getAllVendors() {
+export async function getAllVendors(organizationId?: string | null) {
   const db = await getDb();
   if (!db) return [];
+  if (organizationId != null && organizationId !== "") {
+    return await db.select().from(vendors).where(eq(vendors.organizationId, normalizeOrganizationId(organizationId))).orderBy(asc(vendors.name));
+  }
   return await db.select().from(vendors).orderBy(asc(vendors.name));
 }
 
@@ -1483,7 +1502,7 @@ export async function createComplianceRecord(record: typeof complianceRecords.$i
   return await db.select().from(complianceRecords).where(eq(complianceRecords.id, Number(insertId))).limit(1).then(r => r[0]);
 }
 
-export async function getAllComplianceRecords(filters?: { assetId?: number; status?: string }) {
+export async function getAllComplianceRecords(filters?: { assetId?: number; status?: string; organizationId?: string | null }) {
   const db = await getDb();
   if (!db) return [];
   
@@ -1492,6 +1511,9 @@ export async function getAllComplianceRecords(filters?: { assetId?: number; stat
   
   if (filters?.assetId) conditions.push(eq(complianceRecords.assetId, filters.assetId));
   if (filters?.status) conditions.push(eq(complianceRecords.status, filters.status as any));
+  if (filters?.organizationId != null && filters.organizationId !== "") {
+    conditions.push(eq(complianceRecords.organizationId, normalizeOrganizationId(filters.organizationId)));
+  }
   
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as any;

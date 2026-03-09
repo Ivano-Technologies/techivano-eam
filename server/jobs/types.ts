@@ -17,7 +17,10 @@ export type ReportJobType =
   | "asset-utilization";
 
 export interface BaseBackgroundJobPayload {
+  /** Legacy; prefer organizationId for tenant isolation (Phase 3). */
   tenantId: number;
+  /** Canonical tenant (UUID). Workers must use this when writing tenant-scoped data. */
+  organizationId?: string | null;
   requestedBy: number | null;
   runId: number | null;
   requestedAt: string;

@@ -253,8 +253,8 @@ export const appRouter = router({
 
   // ============= SITES MANAGEMENT =============
   sites: router({
-    list: protectedOrgProcedure.query(async () => {
-      return await db.getAllSites();
+    list: protectedOrgProcedure.query(async ({ ctx }) => {
+      return await db.getAllSites(ctx.organizationId ?? undefined);
     }),
     
     getById: protectedOrgProcedure
@@ -274,8 +274,8 @@ export const appRouter = router({
         contactPhone: z.string().optional(),
         contactEmail: z.string().email().optional(),
       }))
-      .mutation(async ({ input }) => {
-        return await db.createSite(input);
+      .mutation(async ({ input, ctx }) => {
+        return await db.createSite({ ...input, organizationId: ctx.organizationId ?? undefined });
       }),
     
     update: managerOrAdminProcedure
@@ -336,8 +336,8 @@ export const appRouter = router({
 
     export: protectedOrgProcedure
       .input(z.object({ format: z.enum(['csv', 'excel']) }))
-      .query(async ({ input }) => {
-        const sites = await db.getAllSites();
+      .query(async ({ ctx }) => {
+        const sites = await db.getAllSites(ctx.organizationId ?? undefined);
         const formatted = formatSitesForExport(sites);
         const data = input.format === 'csv' ? exportToCSV(formatted) : exportToExcel(formatted, 'Sites');
         return { data, format: input.format, filename: `sites_export.${input.format === 'csv' ? 'csv' : 'xlsx'}` };
@@ -393,8 +393,8 @@ export const appRouter = router({
         year: z.number().optional(),
         categoryCode: z.string().optional(),
       }).optional())
-      .query(async ({ input }) => {
-        const assets = await db.getAllAssets();
+      .query(async ({ input, ctx }) => {
+        const assets = await db.getAllAssets({ organizationId: ctx.organizationId ?? undefined });
         const categoryCodes = await db.getAllCategoryCodes();
         const branchCodes = await db.getAllBranchCodes();
         
@@ -509,8 +509,8 @@ export const appRouter = router({
         };
       }),
     
-    getAssetsByCategory: protectedOrgProcedure.query(async () => {
-      const assets = await db.getAllAssets();
+    getAssetsByCategory: protectedOrgProcedure.query(async ({ ctx }) => {
+      const assets = await db.getAllAssets({ organizationId: ctx.organizationId ?? undefined });
       const categoryCodes = await db.getAllCategoryCodes();
       
       const result: any = {};
@@ -541,8 +541,8 @@ export const appRouter = router({
         status: z.string().optional(),
         categoryId: z.number().optional(),
       }).optional())
-      .query(async ({ input }) => {
-        return await db.getAllAssets(input);
+      .query(async ({ input, ctx }) => {
+        return await db.getAllAssets({ ...input, organizationId: ctx.organizationId ?? undefined });
       }),
     
     getById: protectedOrgProcedure
@@ -605,8 +605,8 @@ export const appRouter = router({
         checkConductedBy: z.string().optional(),
         remarks: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
-        return await db.createAsset(input);
+      .mutation(async ({ input, ctx }) => {
+        return await db.createAsset({ ...input, organizationId: ctx.organizationId ?? undefined });
       }),
     
     generateQRCode: protectedOrgProcedure
@@ -895,8 +895,8 @@ export const appRouter = router({
 
     export: protectedOrgProcedure
       .input(z.object({ format: z.enum(['csv', 'excel']) }))
-      .query(async ({ input }) => {
-        const assets = await db.getAllAssets();
+      .query(async ({ input, ctx }) => {
+        const assets = await db.getAllAssets({ organizationId: ctx.organizationId ?? undefined });
         const formatted = formatAssetsForExport(assets);
         const data = input.format === 'csv' ? exportToCSV(formatted) : exportToExcel(formatted, 'Assets');
         return { data, format: input.format, filename: `assets_export.${input.format === 'csv' ? 'csv' : 'xlsx'}` };
@@ -917,8 +917,8 @@ export const appRouter = router({
         status: z.string().optional(),
         assignedTo: z.number().optional(),
       }).optional())
-      .query(async ({ input }) => {
-        return await db.getAllWorkOrders(input);
+      .query(async ({ input, ctx }) => {
+        return await db.getAllWorkOrders({ ...input, organizationId: ctx.organizationId ?? undefined });
       }),
     
     getById: protectedOrgProcedure
@@ -951,6 +951,7 @@ export const appRouter = router({
         const workOrder = await db.createWorkOrder({
           ...input,
           requestedBy: ctx.user.id,
+          organizationId: ctx.organizationId ?? undefined,
         });
         await db.createAuditLog({
           userId: ctx.user.id,
@@ -1034,8 +1035,8 @@ export const appRouter = router({
         assetId: z.number().optional(),
         isActive: z.boolean().optional(),
       }).optional())
-      .query(async ({ input }) => {
-        return await db.getAllMaintenanceSchedules(input);
+      .query(async ({ input, ctx }) => {
+        return await db.getAllMaintenanceSchedules({ ...input, organizationId: ctx.organizationId ?? undefined });
       }),
     
     upcoming: protectedOrgProcedure
@@ -1057,7 +1058,7 @@ export const appRouter = router({
         estimatedDuration: z.number().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        const schedule = await db.createMaintenanceSchedule(input);
+        const schedule = await db.createMaintenanceSchedule({ ...input, organizationId: ctx.organizationId ?? undefined });
         await db.createAuditLog({
           userId: ctx.user.id,
           action: "create_maintenance_schedule",
@@ -1149,8 +1150,8 @@ export const appRouter = router({
   inventory: router({
     list: protectedOrgProcedure
       .input(z.object({ siteId: z.number().optional() }).optional())
-      .query(async ({ input }) => {
-        return await db.getAllInventoryItems(input?.siteId);
+      .query(async ({ input, ctx }) => {
+        return await db.getAllInventoryItems(input?.siteId, ctx.organizationId ?? undefined);
       }),
     
     lowStock: protectedOrgProcedure
@@ -1181,8 +1182,8 @@ export const appRouter = router({
         vendorId: z.number().optional(),
         location: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
-        return await db.createInventoryItem(input);
+      .mutation(async ({ input, ctx }) => {
+        return await db.createInventoryItem({ ...input, organizationId: ctx.organizationId ?? undefined });
       }),
     
     update: managerOrAdminProcedure
@@ -1224,7 +1225,7 @@ export const appRouter = router({
         });
         
         // Update inventory stock
-        const item = await db.getAllInventoryItems().then(items => items.find(i => i.id === input.itemId));
+        const item = await db.getAllInventoryItems(undefined, ctx.organizationId ?? undefined).then(items => items.find(i => i.id === input.itemId));
         if (item) {
           let newStock = item.currentStock;
           if (input.type === "in") newStock += input.quantity;
@@ -1461,8 +1462,8 @@ export const appRouter = router({
 
   // ============= VENDORS =============
   vendors: router({
-    list: protectedOrgProcedure.query(async () => {
-      return await db.getAllVendors();
+    list: protectedOrgProcedure.query(async ({ ctx }) => {
+      return await db.getAllVendors(ctx.organizationId ?? undefined);
     }),
     
     create: managerOrAdminProcedure
@@ -1479,8 +1480,8 @@ export const appRouter = router({
         website: z.string().optional(),
         notes: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
-        return await db.createVendor(input);
+      .mutation(async ({ input, ctx }) => {
+        return await db.createVendor({ ...input, organizationId: ctx.organizationId ?? undefined });
       }),
     
     update: managerOrAdminProcedure
@@ -1523,8 +1524,8 @@ export const appRouter = router({
 
     export: protectedOrgProcedure
       .input(z.object({ format: z.enum(['csv', 'excel']) }))
-      .query(async ({ input }) => {
-        const vendors = await db.getAllVendors();
+      .query(async ({ input, ctx }) => {
+        const vendors = await db.getAllVendors(ctx.organizationId ?? undefined);
         const formatted = formatVendorsForExport(vendors);
         const data = input.format === 'csv' ? exportToCSV(formatted) : exportToExcel(formatted, 'Vendors');
         return { data, format: input.format, filename: `vendors_export.${input.format === 'csv' ? 'csv' : 'xlsx'}` };
@@ -1647,8 +1648,8 @@ export const appRouter = router({
         assetId: z.number().optional(),
         status: z.string().optional(),
       }).optional())
-      .query(async ({ input }) => {
-        return await db.getAllComplianceRecords(input);
+      .query(async ({ input, ctx }) => {
+        return await db.getAllComplianceRecords({ ...input, organizationId: ctx.organizationId ?? undefined });
       }),
     
     create: managerOrAdminProcedure
@@ -1666,8 +1667,8 @@ export const appRouter = router({
         documentUrl: z.string().optional(),
         notes: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
-        return await db.createComplianceRecord(input);
+      .mutation(async ({ input, ctx }) => {
+        return await db.createComplianceRecord({ ...input, organizationId: ctx.organizationId ?? undefined });
       }),
     
     update: managerOrAdminProcedure
@@ -1943,7 +1944,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         resolveTenantIdFromContext(ctx);
-        const assets = await db.getAllAssets();
+        const assets = await db.getAllAssets({ organizationId: ctx.organizationId ?? undefined });
 
         const columns = [
           { header: 'Asset Tag', key: 'assetTag', width: 15 },
@@ -1985,7 +1986,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         resolveTenantIdFromContext(ctx);
-        const schedules = await db.getAllMaintenanceSchedules();
+        const schedules = await db.getAllMaintenanceSchedules({ organizationId: ctx.organizationId ?? undefined });
 
         const columns = [
           { header: 'Schedule Name', key: 'scheduleName', width: 25 },
@@ -2028,7 +2029,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         resolveTenantIdFromContext(ctx);
-        const workOrders = await db.getAllWorkOrders();
+        const workOrders = await db.getAllWorkOrders({ organizationId: ctx.organizationId ?? undefined });
 
         const columns = [
           { header: 'WO Number', key: 'workOrderNumber', width: 15 },
@@ -2110,7 +2111,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         resolveTenantIdFromContext(ctx);
-        const records = await db.getAllComplianceRecords();
+        const records = await db.getAllComplianceRecords({ organizationId: ctx.organizationId ?? undefined });
 
         const columns = [
           { header: 'Asset', key: 'assetName', width: 20 },
@@ -2156,6 +2157,7 @@ export const appRouter = router({
         const photoId = await db.createAssetPhoto({
           ...input,
           uploadedBy: ctx.user.id,
+          organizationId: ctx.organizationId ?? undefined,
         });
         return { id: photoId };
       }),
@@ -2240,7 +2242,7 @@ export const appRouter = router({
       .query(async ({ ctx }) => {
         resolveTenantIdFromContext(ctx);
         const { exportAssets } = await import('./bulkImportExport');
-        const buffer = await exportAssets();
+        const buffer = await exportAssets({ format: 'excel', includeHeaders: true, organizationId: ctx.organizationId ?? undefined });
         return {
           data: buffer.toString('base64'),
           filename: `assets_export_${Date.now()}.xlsx`,
@@ -2643,9 +2645,9 @@ export const appRouter = router({
         });
       }),
     
-    summary: protectedOrgProcedure.query(async () => {
+    summary: protectedOrgProcedure.query(async ({ ctx }) => {
       const { calculateDepreciation } = require('./depreciation');
-      const assets = await db.getAllAssets();
+      const assets = await db.getAllAssets({ organizationId: ctx.organizationId ?? undefined });
       
       let totalAcquisitionCost = 0;
       let totalCurrentValue = 0;
@@ -2811,8 +2813,8 @@ export const appRouter = router({
       }),
     
     exportAssets: protectedOrgProcedure
-      .query(async () => {
-        const assets = await db.getAllAssets();
+      .query(async ({ ctx }) => {
+        const assets = await db.getAllAssets({ organizationId: ctx.organizationId ?? undefined });
         const { exportAssetsToNRCSFormat } = await import('./nrcsExcelTemplate');
         const buffer = await exportAssetsToNRCSFormat(assets);
         return {
