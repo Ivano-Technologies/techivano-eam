@@ -21,6 +21,15 @@ const CATEGORY_MAX_BYTES: Record<UploadCategory, number> = {
 };
 
 const SIGNED_UPLOAD_TTL_SECONDS = 60 * 5;
+export const MULTIPART_PART_SIZE_BYTES = 8 * 1024 * 1024; // 8MB
+export const MULTIPART_MAX_PARTS = 1000;
+export const MULTIPART_MAX_FILE_SIZE_BYTES = MULTIPART_PART_SIZE_BYTES * MULTIPART_MAX_PARTS;
+
+const MULTIPART_ALLOWED_CONTENT_TYPES = new Set([
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+]);
 
 let cachedClient: S3Client | null = null;
 
@@ -97,6 +106,32 @@ export function validateUploadRequest(input: {
 
 export function getSignedUploadTtlSeconds() {
   return SIGNED_UPLOAD_TTL_SECONDS;
+}
+
+export function normalizeContentType(fileType: string) {
+  const normalized = fileType.toLowerCase().trim();
+  if (normalized === "image/jpg") {
+    return "image/jpeg";
+  }
+  return normalized;
+}
+
+export function validateMultipartStartRequest(input: {
+  fileType: string;
+  fileSize: number;
+}) {
+  const normalizedType = normalizeContentType(input.fileType);
+  if (!MULTIPART_ALLOWED_CONTENT_TYPES.has(normalizedType)) {
+    throw new Error("Unsupported multipart file type. Allowed: pdf, png, jpg, jpeg");
+  }
+
+  if (input.fileSize <= 0 || input.fileSize > MULTIPART_MAX_FILE_SIZE_BYTES) {
+    throw new Error(
+      `Invalid multipart file size. Maximum allowed: ${Math.floor(
+        MULTIPART_MAX_FILE_SIZE_BYTES / (1024 * 1024)
+      )}MB`
+    );
+  }
 }
 
 export function resolvePublicUrl(fileKey: string) {
