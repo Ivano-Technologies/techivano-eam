@@ -36,7 +36,13 @@ export function parseFileData(fileContent: string, fileType: 'csv' | 'excel'): a
 /**
  * Bulk import assets
  */
-export async function bulkImportAssets(data: any[], userId: number, fileName: string, fileType: 'csv' | 'excel'): Promise<ImportResult> {
+export async function bulkImportAssets(
+  data: any[],
+  userId: number,
+  fileName: string,
+  fileType: 'csv' | 'excel',
+  organizationId?: string | null
+): Promise<ImportResult> {
   const result: ImportResult = {
     success: true,
     imported: 0,
@@ -69,6 +75,7 @@ export async function bulkImportAssets(data: any[], userId: number, fileName: st
         acquisitionCost: row.acquisitionCost ? String(row.acquisitionCost) : undefined,
         currentValue: row.currentValue ? String(row.currentValue) : undefined,
         warrantyExpiry: row.warrantyExpiry ? new Date(row.warrantyExpiry) : undefined,
+        ...(organizationId != null && organizationId !== '' ? { organizationId } : {}),
       });
 
       result.imported++;
@@ -109,7 +116,13 @@ export async function bulkImportAssets(data: any[], userId: number, fileName: st
 /**
  * Bulk import sites
  */
-export async function bulkImportSites(data: any[], userId: number, fileName: string, fileType: 'csv' | 'excel'): Promise<ImportResult> {
+export async function bulkImportSites(
+  data: any[],
+  userId: number,
+  fileName: string,
+  fileType: 'csv' | 'excel',
+  organizationId?: string | null
+): Promise<ImportResult> {
   const result: ImportResult = {
     success: true,
     imported: 0,
@@ -139,6 +152,7 @@ export async function bulkImportSites(data: any[], userId: number, fileName: str
         contactEmail: row.contactEmail ? String(row.contactEmail) : undefined,
         latitude: row.latitude ? String(row.latitude) : undefined,
         longitude: row.longitude ? String(row.longitude) : undefined,
+        ...(organizationId != null && organizationId !== '' ? { organizationId } : {}),
       });
 
       result.imported++;
@@ -158,7 +172,13 @@ export async function bulkImportSites(data: any[], userId: number, fileName: str
 /**
  * Bulk import vendors
  */
-export async function bulkImportVendors(data: any[], userId: number, fileName: string, fileType: 'csv' | 'excel'): Promise<ImportResult> {
+export async function bulkImportVendors(
+  data: any[],
+  userId: number,
+  fileName: string,
+  fileType: 'csv' | 'excel',
+  organizationId?: string | null
+): Promise<ImportResult> {
   const result: ImportResult = {
     success: true,
     imported: 0,
@@ -188,6 +208,7 @@ export async function bulkImportVendors(data: any[], userId: number, fileName: s
         country: row.country ? String(row.country) : undefined,
         website: row.website ? String(row.website) : undefined,
         notes: row.notes ? String(row.notes) : undefined,
+        ...(organizationId != null && organizationId !== '' ? { organizationId } : {}),
       });
 
       result.imported++;

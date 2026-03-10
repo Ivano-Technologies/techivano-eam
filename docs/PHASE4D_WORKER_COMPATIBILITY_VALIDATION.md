@@ -41,7 +41,7 @@ Workers that write to **core EAM tables** (e.g. documents) must set `organizatio
 ## 2. Validation checklist
 
 - [ ] **OCR queue:** Producer (_core/index.ts, document upload) includes `organizationId` in the payload when enqueueing. **Verified:** getOrganizationIdFromRequest used; payload includes organizationId when available.
-- [ ] **OCR worker:** Consumer reads `organizationId` and stores document metadata with that `organization_id`. (Implement in worker if not already.)
+- [x] **OCR worker:** In-repo consumer at `server/jobs/ocrWorker.ts` (processes `ocr-processing` queue). Run via `pnpm build:ocr-worker && pnpm start:ocr-worker` (or deploy alongside main worker). Processor uses `resolveWorkerOcrPayloadContext` for org/tenant; document metadata updates can be added when schema supports it.
 - [ ] **Job run store:** background_job_runs still uses tenantId; organization_id not yet on that table. No change for Phase 4.
 - [ ] **Analytics workers:** Continue using tenantId for warehouse/vendor/procurement/etc. tables until those tables have organization_id.
 

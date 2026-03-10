@@ -324,7 +324,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const data = parseFileData(input.fileContent, input.fileType);
-        return await bulkImportSites(data, ctx.user.id, input.fileName, input.fileType);
+        return await bulkImportSites(data, ctx.user.id, input.fileName, input.fileType, ctx.organizationId ?? undefined);
       }),
 
     downloadTemplate: protectedOrgProcedure
@@ -883,7 +883,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const data = parseFileData(input.fileContent, input.fileType);
-        return await bulkImportAssets(data, ctx.user.id, input.fileName, input.fileType);
+        return await bulkImportAssets(data, ctx.user.id, input.fileName, input.fileType, ctx.organizationId ?? undefined);
       }),
 
     downloadTemplate: protectedOrgProcedure
@@ -1460,6 +1460,67 @@ export const appRouter = router({
       }),
   }),
 
+  // ============= TELEMETRY =============
+  telemetry: router({
+    ingest: protectedOrgProcedure
+      .input(z.object({
+        assetId: z.number(),
+        metric: z.string().min(1).max(64),
+        value: z.number(),
+        timestamp: z.string().datetime().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const tenantId = resolveTenantIdFromContext(ctx);
+        const asset = await db.getAssetById(input.assetId);
+        if (!asset) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found" });
+        }
+        const normalizedOrg = ctx.organizationId ? db.normalizeOrganizationId(ctx.organizationId) : null;
+        const assetOrg = (asset as { organizationId?: string | null }).organizationId;
+        if (normalizedOrg && assetOrg != null && assetOrg !== normalizedOrg) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Asset does not belong to your organization" });
+        }
+        const id = await db.createTelemetryPoint({
+          tenantId,
+          assetId: input.assetId,
+          metric: input.metric,
+          value: input.value,
+          timestamp: input.timestamp ? new Date(input.timestamp) : undefined,
+        });
+        return { id: id ?? 0, success: true };
+      }),
+
+    ingestBatch: protectedOrgProcedure
+      .input(z.object({
+        points: z.array(z.object({
+          assetId: z.number(),
+          metric: z.string().min(1).max(64),
+          value: z.number(),
+          timestamp: z.string().datetime().optional(),
+        })).min(1).max(100),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const tenantId = resolveTenantIdFromContext(ctx);
+        const normalizedOrg = ctx.organizationId ? db.normalizeOrganizationId(ctx.organizationId) : null;
+        const created: number[] = [];
+        for (const p of input.points) {
+          const asset = await db.getAssetById(p.assetId);
+          if (!asset) continue;
+          const assetOrg = (asset as { organizationId?: string | null }).organizationId;
+          if (normalizedOrg && assetOrg != null && assetOrg !== normalizedOrg) continue;
+          const id = await db.createTelemetryPoint({
+            tenantId,
+            assetId: p.assetId,
+            metric: p.metric,
+            value: p.value,
+            timestamp: p.timestamp ? new Date(p.timestamp) : undefined,
+          });
+          if (id != null) created.push(id);
+        }
+        return { created: created.length, ids: created };
+      }),
+  }),
+
   // ============= VENDORS =============
   vendors: router({
     list: protectedOrgProcedure.query(async ({ ctx }) => {
@@ -1512,7 +1573,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const data = parseFileData(input.fileContent, input.fileType);
-        return await bulkImportVendors(data, ctx.user.id, input.fileName, input.fileType);
+        return await bulkImportVendors(data, ctx.user.id, input.fileName, input.fileType, ctx.organizationId ?? undefined);
       }),
 
     downloadTemplate: protectedOrgProcedure
@@ -2831,7 +2892,7 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const { parseAndValidateNRCSExcel } = await import('./nrcsExcelImporter');
         const buffer = Buffer.from(input.fileData, 'base64');
-        const result = await parseAndValidateNRCSExcel(buffer, ctx.user.id);
+        const result = await parseAndValidateNRCSExcel(buffer, ctx.user.id, ctx.organizationId ?? undefined);
         return result;
       }),
   }),

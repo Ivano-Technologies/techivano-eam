@@ -1,0 +1,4 @@
+-- P2: RLS policies audit — document server-only tables; add policies only where needed.
+-- Core tenant tables already have org-isolation policies from 20260309133000 and 20260309160000.
+-- Tables with RLS enabled but no policy are documented as server-only; see docs/RLS_SERVER_ONLY_TABLES.md.
+-- No policy or schema changes in this migration; idempotent no-op.

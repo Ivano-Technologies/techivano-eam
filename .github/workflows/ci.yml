@@ -1,10 +1,12 @@
+# Deployment safety: build, lint, typecheck must pass before merge.
+# See docs/DEPLOYMENT_AND_BRANCH_STRATEGY.md
 name: CI
 
 on:
   push:
-    branches: ["main", "staging"]
+    branches: ["main", "staging", "develop"]
   pull_request:
-    branches: ["main", "staging"]
+    branches: ["main", "staging", "develop"]
 
 jobs:
   validate:
@@ -25,6 +27,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
 
       - name: Lint
         run: pnpm lint

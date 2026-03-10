@@ -20,10 +20,12 @@ interface ImportResult {
 
 /**
  * Parse and validate NRCS Excel file for asset import
+ * @param organizationId - When provided, created assets are scoped to this organization (multi-tenant).
  */
 export async function parseAndValidateNRCSExcel(
   buffer: Buffer,
-  userId: number
+  userId: number,
+  organizationId?: string | null
 ): Promise<ImportResult> {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer as any);
@@ -207,6 +209,7 @@ export async function parseAndValidateNRCSExcel(
         lastPhysicalCheckDate: rowData.lastPhysicalCheckDate || undefined,
         checkConductedBy: rowData.checkConductedBy || undefined,
         remarks: rowData.remarks || undefined,
+        ...(organizationId != null && organizationId !== '' ? { organizationId } : {}),
       });
 
       createdAssets.push(asset);
