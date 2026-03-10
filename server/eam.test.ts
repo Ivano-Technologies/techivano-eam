@@ -204,13 +204,17 @@ describe("Maintenance Schedules", () => {
 });
 
 describe("Financial Tracking", () => {
-  it("should list financial transactions", async () => {
+  it("should list financial transactions with precomputed summary", async () => {
     const ctx = createTestContext("admin");
     const caller = appRouter.createCaller(ctx);
 
-    const transactions = await caller.financial.list();
+    const result = await caller.financial.list();
 
-    expect(Array.isArray(transactions)).toBe(true);
+    expect(result).toHaveProperty("transactions");
+    expect(result).toHaveProperty("summary");
+    expect(Array.isArray(result.transactions)).toBe(true);
+    expect(typeof result.summary.totalRevenue).toBe("number");
+    expect(typeof result.summary.totalExpenses).toBe("number");
   });
 });
 

@@ -13,9 +13,10 @@ import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function Financial() {
   const { user } = useAuth();
-  const { data: rawTransactions, isLoading, refetch } = trpc.financial.list.useQuery();
+  const { data: listData, isLoading, refetch } = trpc.financial.list.useQuery();
   type TxEntry = { id: number; transactionType?: string; amount?: string | number; description?: string; transactionDate?: string; receiptNumber?: string; currency?: string };
-  const transactions: TxEntry[] = Array.isArray(rawTransactions) ? (rawTransactions as TxEntry[]) : [];
+  const transactions: TxEntry[] = Array.isArray(listData?.transactions) ? (listData.transactions as TxEntry[]) : [];
+  const summary = listData?.summary ?? { totalRevenue: 0, totalExpenses: 0 };
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<number | null>(null);
   const [editData, setEditData] = useState<any>({});
@@ -126,13 +127,13 @@ export default function Financial() {
     return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
   }
 
-  // Separate revenue and expenses
-  const revenueTransactions = transactions?.filter(t => t.transactionType === "revenue") || [];
-  const expenseTransactions = transactions?.filter(t => t.transactionType !== "revenue") || [];
-  
-  const totalRevenue = revenueTransactions.reduce((sum, t) => sum + Number(t.amount ?? 0), 0);
-  const totalExpenses = expenseTransactions.reduce((sum, t) => sum + Number(t.amount ?? 0), 0);
+  // Use server-precomputed totals (no client-side reduce)
+  const totalRevenue = Number(summary.totalRevenue ?? 0);
+  const totalExpenses = Number(summary.totalExpenses ?? 0);
   const netProfit = totalRevenue - totalExpenses;
+  // Filter for display only (no aggregation)
+  const revenueTransactions = transactions?.filter((t: TxEntry) => t.transactionType === "revenue") ?? [];
+  const expenseTransactions = transactions?.filter((t: TxEntry) => t.transactionType !== "revenue") ?? [];
 
   const canManageFinancial = user?.role === "admin" || user?.role === "manager";
 

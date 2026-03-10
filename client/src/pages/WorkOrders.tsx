@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
 import { ShimmerLoader } from "@/components/ShimmerLoader";
 import { CheckAnimation } from "@/components/CheckAnimation";
 
-export default function WorkOrders() {
+function WorkOrders() {
   const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -357,3 +357,5 @@ export default function WorkOrders() {
     </>
   );
 }
+
+export default memo(WorkOrders);

@@ -930,7 +930,11 @@ export const appRouter = router({
     getByAssetId: protectedOrgProcedure
       .input(z.object({ assetId: z.number() }))
       .query(async ({ input }) => {
-        return await db.getWorkOrdersByAssetId(input.assetId);
+        const [workOrders, summary] = await Promise.all([
+          db.getWorkOrdersByAssetId(input.assetId),
+          db.getMaintenanceSummary(input.assetId),
+        ]);
+        return { workOrders, summary };
       }),
     
     create: protectedOrgProcedure
@@ -1633,7 +1637,11 @@ export const appRouter = router({
         endDate: z.date().optional(),
       }).optional())
       .query(async ({ input }) => {
-        return await db.getFinancialTransactions(input);
+        const [transactions, summary] = await Promise.all([
+          db.getFinancialTransactions(input),
+          db.getFinancialSummary(input),
+        ]);
+        return { transactions, summary };
       }),
     
     create: managerOrAdminProcedure

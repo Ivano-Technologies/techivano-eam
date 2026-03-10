@@ -1,79 +1,60 @@
-// Initialize Sentry first for error tracking
+// Initialize Sentry first for error tracking (keep in main chunk — small)
 import { initSentry } from "@/lib/sentry";
 initSentry();
 
-import { trpc } from "@/lib/trpc";
-import { UNAUTHED_ERR_MSG } from '@shared/const';
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { httpBatchLink, TRPCClientError } from "@trpc/client";
+// Load Umami analytics only when env vars are set (no build-time placeholders)
+const analyticsEndpoint = import.meta.env.VITE_ANALYTICS_ENDPOINT;
+const analyticsWebsiteId = import.meta.env.VITE_ANALYTICS_WEBSITE_ID;
+if (
+  typeof analyticsEndpoint === "string" &&
+  analyticsEndpoint.length > 0 &&
+  typeof analyticsWebsiteId === "string" &&
+  analyticsWebsiteId.length > 0
+) {
+  const script = document.createElement("script");
+  script.defer = true;
+  script.src = `${analyticsEndpoint.replace(/\/$/, "")}/umami`;
+  script.setAttribute("data-website-id", analyticsWebsiteId);
+  document.head.appendChild(script);
+}
+
+import { lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import superjson from "superjson";
-import App from "./App";
-import { getLoginUrl } from "./const";
 import "./index.css";
 
-const queryClient = new QueryClient();
+const AppProviders = lazy(() => import("./providers/AppProviders"));
 
-const redirectToLoginIfUnauthorized = (error: unknown) => {
-  if (!(error instanceof TRPCClientError)) return;
-  if (typeof window === "undefined") return;
-
-  const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
-
-  if (!isUnauthorized) return;
-
-  window.location.href = getLoginUrl();
-};
-
-queryClient.getQueryCache().subscribe(event => {
-  if (event.type === "updated" && event.action.type === "error") {
-    const error = event.query.state.error;
-    redirectToLoginIfUnauthorized(error);
-    console.error("[API Query Error]", error);
-  }
-});
-
-queryClient.getMutationCache().subscribe(event => {
-  if (event.type === "updated" && event.action.type === "error") {
-    const error = event.mutation.state.error;
-    redirectToLoginIfUnauthorized(error);
-    console.error("[API Mutation Error]", error);
-  }
-});
-
-const trpcClient = trpc.createClient({
-  links: [
-    httpBatchLink({
-      url: "/api/trpc",
-      transformer: superjson,
-      fetch(input, init) {
-        return globalThis.fetch(input, {
-          ...(init ?? {}),
-          credentials: "include",
-        });
-      },
-    }),
-  ],
-});
+function AppLoader() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    </div>
+  );
+}
 
 // Register service worker for offline support
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register('/sw.js')
-      .then((registration) => {
-        console.log('Service Worker registered:', registration.scope);
-      })
-      .catch((error) => {
-        console.log('Service Worker registration failed:', error);
-      });
+      .register("/sw.js")
+      .then((reg) => console.log("Service Worker registered:", reg.scope))
+      .catch((err) => console.log("Service Worker registration failed:", err));
   });
 }
 
 createRoot(document.getElementById("root")!).render(
-  <trpc.Provider client={trpcClient} queryClient={queryClient}>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
-  </trpc.Provider>
+  <Suspense fallback={<AppLoader />}>
+    <AppProviders />
+  </Suspense>
 );
+
+// Report Web Vitals (LCP, CLS, INP) — e.g. to analytics or console
+import("web-vitals").then(({ onCLS, onINP, onLCP }) => {
+  const report = (metric: { name: string; value: number; delta: number }) => {
+    if (import.meta.env.DEV) console.log(`[vitals] ${metric.name}:`, metric.value);
+    // Optional: send to analytics — e.g. sendToAnalytics(metric)
+  };
+  onCLS(report);
+  onINP(report);
+  onLCP(report);
+});

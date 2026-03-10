@@ -1,60 +1,71 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
-import Signup from "./pages/Signup";
-import Login from "./pages/Login";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import VerifyMagicLink from "./pages/VerifyMagicLink";
-import Welcome from "@/pages/Welcome";
-import PendingUsers from "./pages/PendingUsers";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import DashboardLayout from "./components/DashboardLayout";
-import Home from "./pages/Home";
-import Assets from "./pages/Assets";
-import AssetDetail from "./pages/AssetDetail";
-import AssetScanner from "./pages/AssetScanner";
-import OfflineQueue from "./pages/OfflineQueue";
-import AssetMap from "./pages/AssetMap";
-import WorkOrders from "./pages/WorkOrders";
-import WorkOrderDetail from "./pages/WorkOrderDetail";
-import Maintenance from "./pages/Maintenance";
-import Inventory from "./pages/Inventory";
-import Vendors from "./pages/Vendors";
-import Financial from "./pages/Financial";
-import Compliance from "./pages/Compliance";
-import Sites from "./pages/Sites";
-import Users from "./pages/Users";
-import NotificationPreferences from "./pages/NotificationPreferences";
-import Reports from "./pages/Reports";
-import QuickBooksSettings from "./pages/QuickBooksSettings";
-import QuickBooksCallback from "./pages/QuickBooksCallback";
-import EmailNotifications from "./pages/EmailNotifications";
-import DashboardSettings from "./pages/DashboardSettings";
-import WorkOrderTemplates from "./pages/WorkOrderTemplates";
-import ReportScheduling from "./pages/ReportScheduling";
-import MobileWorkOrders from "./pages/MobileWorkOrders";
-import MobileWorkOrderDetail from "./pages/MobileWorkOrderDetail";
-import WarrantyAlerts from "./pages/WarrantyAlerts";
-import CostAnalytics from "./pages/CostAnalytics";
-import AuditTrail from "./pages/AuditTrail";
-import ActivityLog from "./pages/ActivityLog";
-import TermsOfService from "./pages/TermsOfService";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import ThemeSettings from "./pages/ThemeSettings";
-import Profile from "./pages/Profile";
-import SmartScanner from "./pages/SmartScanner";
-import BiometricSetup from "./pages/BiometricSetup";
-import DepreciationDashboard from "./pages/DepreciationDashboard";
-import WarehouseRebalanceDashboard from "@/pages/WarehouseRebalanceDashboard";
-import VendorIntelligenceDashboard from "./pages/VendorIntelligenceDashboard";
-import ProcurementDashboard from "@/pages/ProcurementDashboard";
-import SupplyChainRiskDashboard from "@/pages/SupplyChainRiskDashboard";
-import FleetOperationsDashboard from "@/pages/FleetOperationsDashboard";
-import ExecutiveDashboard from "@/pages/ExecutiveDashboard";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
+
+const DashboardLayout = lazy(() => import("./components/DashboardLayout"));
+
+const NotFound = lazy(() => import("@/pages/NotFound"));
+const Signup = lazy(() => import("./pages/Signup"));
+const Login = lazy(() => import("./pages/Login"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const VerifyMagicLink = lazy(() => import("./pages/VerifyMagicLink"));
+const Welcome = lazy(() => import("@/pages/Welcome"));
+const PendingUsers = lazy(() => import("./pages/PendingUsers"));
+const Home = lazy(() => import("./pages/Home"));
+const Assets = lazy(() => import("./pages/Assets"));
+const AssetDetail = lazy(() => import("./pages/AssetDetail"));
+const AssetScanner = lazy(() => import("./pages/AssetScanner"));
+const OfflineQueue = lazy(() => import("./pages/OfflineQueue"));
+const AssetMap = lazy(() => import("./pages/AssetMap"));
+const WorkOrders = lazy(() => import("./pages/WorkOrders"));
+const WorkOrderDetail = lazy(() => import("./pages/WorkOrderDetail"));
+const Maintenance = lazy(() => import("./pages/Maintenance"));
+const Inventory = lazy(() => import("./pages/Inventory"));
+const Vendors = lazy(() => import("./pages/Vendors"));
+const Financial = lazy(() => import("./pages/Financial"));
+const Compliance = lazy(() => import("./pages/Compliance"));
+const Sites = lazy(() => import("./pages/Sites"));
+const Users = lazy(() => import("./pages/Users"));
+const NotificationPreferences = lazy(() => import("./pages/NotificationPreferences"));
+const Reports = lazy(() => import("./pages/Reports"));
+const QuickBooksSettings = lazy(() => import("./pages/QuickBooksSettings"));
+const QuickBooksCallback = lazy(() => import("./pages/QuickBooksCallback"));
+const EmailNotifications = lazy(() => import("./pages/EmailNotifications"));
+const DashboardSettings = lazy(() => import("./pages/DashboardSettings"));
+const WorkOrderTemplates = lazy(() => import("./pages/WorkOrderTemplates"));
+const ReportScheduling = lazy(() => import("./pages/ReportScheduling"));
+const MobileWorkOrders = lazy(() => import("./pages/MobileWorkOrders"));
+const MobileWorkOrderDetail = lazy(() => import("./pages/MobileWorkOrderDetail"));
+const WarrantyAlerts = lazy(() => import("./pages/WarrantyAlerts"));
+const CostAnalytics = lazy(() => import("./pages/CostAnalytics"));
+const AuditTrail = lazy(() => import("./pages/AuditTrail"));
+const ActivityLog = lazy(() => import("./pages/ActivityLog"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const ThemeSettings = lazy(() => import("./pages/ThemeSettings"));
+const Profile = lazy(() => import("./pages/Profile"));
+const SmartScanner = lazy(() => import("./pages/SmartScanner"));
+const BiometricSetup = lazy(() => import("./pages/BiometricSetup"));
+const DepreciationDashboard = lazy(() => import("./pages/DepreciationDashboard"));
+const WarehouseRebalanceDashboard = lazy(() => import("@/pages/WarehouseRebalanceDashboard"));
+const VendorIntelligenceDashboard = lazy(() => import("./pages/VendorIntelligenceDashboard"));
+const ProcurementDashboard = lazy(() => import("@/pages/ProcurementDashboard"));
+const SupplyChainRiskDashboard = lazy(() => import("@/pages/SupplyChainRiskDashboard"));
+const FleetOperationsDashboard = lazy(() => import("@/pages/FleetOperationsDashboard"));
+const ExecutiveDashboard = lazy(() => import("./pages/ExecutiveDashboard"));
+
+function PageFallback() {
+  return (
+    <div className="flex min-h-[200px] items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    </div>
+  );
+}
 
 function Router() {
   return (
@@ -121,9 +132,13 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <PWAInstallPrompt />
-          <DashboardLayout>
-            <Router />
-          </DashboardLayout>
+          <Suspense fallback={<PageFallback />}>
+            <DashboardLayout>
+              <Suspense fallback={<PageFallback />}>
+                <Router />
+              </Suspense>
+            </DashboardLayout>
+          </Suspense>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

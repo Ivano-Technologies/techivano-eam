@@ -1492,6 +1492,38 @@ export async function getFinancialTransactions(filters?: { assetId?: number; wor
   return await query.orderBy(desc(financialTransactions.transactionDate));
 }
 
+/** Precomputed financial totals (revenue vs expenses). No client-side reduce. */
+export async function getFinancialSummary(filters?: { startDate?: Date; endDate?: Date }) {
+  const db = await getDb();
+  if (!db) return { totalRevenue: 0, totalExpenses: 0 };
+
+  const conditions = [];
+  if (filters?.startDate) conditions.push(gte(financialTransactions.transactionDate, filters.startDate));
+  if (filters?.endDate) conditions.push(lte(financialTransactions.transactionDate, filters.endDate));
+
+  const baseQuery = db
+    .select({
+      transactionType: financialTransactions.transactionType,
+      total: sql<number>`COALESCE(SUM(CAST(${financialTransactions.amount} AS DECIMAL(15,2))), 0)`.as("total"),
+    })
+    .from(financialTransactions);
+
+  const rows =
+    conditions.length > 0
+      ? await baseQuery.where(and(...conditions)).groupBy(financialTransactions.transactionType)
+      : await baseQuery.groupBy(financialTransactions.transactionType);
+  const revenueTypes = ["revenue"];
+  const expenseTypes = ["acquisition", "maintenance", "repair", "disposal", "depreciation", "other"];
+  let totalRevenue = 0;
+  let totalExpenses = 0;
+  for (const row of rows) {
+    const t = Number(row.total);
+    if (revenueTypes.includes(row.transactionType)) totalRevenue += t;
+    if (expenseTypes.includes(row.transactionType)) totalExpenses += t;
+  }
+  return { totalRevenue, totalExpenses };
+}
+
 // ============= COMPLIANCE =============
 
 export async function createComplianceRecord(record: typeof complianceRecords.$inferInsert) {
@@ -2113,6 +2145,43 @@ export async function getWorkOrdersByAssetId(assetId: number) {
   return await getAssetWorkOrders(assetId);
 }
 
+/** Precomputed maintenance KPIs for an asset (counts, completion rate, avg duration). No client-side aggregation. */
+export async function getMaintenanceSummary(assetId: number): Promise<{
+  total: number;
+  completed: number;
+  completionRatePct: number;
+  avgDurationDays: number | null;
+}> {
+  const db = await getDb();
+  if (!db) return { total: 0, completed: 0, completionRatePct: 0, avgDurationDays: null };
+
+  const [countRow] = await db
+    .select({
+      total: sql<number>`COUNT(*)`.as("total"),
+      completed: sql<number>`SUM(CASE WHEN ${workOrders.status} = 'completed' THEN 1 ELSE 0 END)`.as("completed"),
+    })
+    .from(workOrders)
+    .where(eq(workOrders.assetId, assetId));
+
+  const total = Number(countRow?.total ?? 0);
+  const completed = Number(countRow?.completed ?? 0);
+  const completionRatePct = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  const [avgRow] = await db
+    .select({
+      avgDays: sql<number | null>`AVG(CASE
+        WHEN ${workOrders.actualStart} IS NOT NULL AND ${workOrders.actualEnd} IS NOT NULL
+        THEN DATEDIFF(${workOrders.actualEnd}, ${workOrders.actualStart})
+        ELSE NULL
+      END)`.as("avgDays"),
+    })
+    .from(workOrders)
+    .where(eq(workOrders.assetId, assetId));
+
+  const avgDurationDays = avgRow?.avgDays != null ? Number(Number(avgRow.avgDays).toFixed(1)) : null;
+
+  return { total, completed, completionRatePct, avgDurationDays };
+}
 
 // ============= ASSET TRANSFERS =============
 
@@ -2435,96 +2504,107 @@ export async function getAssetAuditHistory(assetId: number) {
 
 // ============= COST ANALYTICS =============
 
+/** Cost analytics: all aggregation done in the database (no fetch-then-reduce). */
 export async function getCostAnalytics(days: number) {
   const db = await getDb();
   if (!db) return null;
-  
+
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
-  
-  // Get all transactions in date range
-  const transactions = await db
-    .select()
+
+  // 1) Totals by transaction type (single aggregated query)
+  const typeRows = await db
+    .select({
+      transactionType: financialTransactions.transactionType,
+      total: sql<number>`COALESCE(SUM(CAST(${financialTransactions.amount} AS DECIMAL(15,2))), 0)`.as("total"),
+    })
     .from(financialTransactions)
-    .where(gte(financialTransactions.transactionDate, startDate));
-  
-  // Calculate totals
-  const totalCost = transactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
-  const maintenanceCost = transactions
-    .filter(t => t.transactionType === 'maintenance')
-    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-  const repairCost = transactions
-    .filter(t => t.transactionType === 'repair')
-    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-  
-  // Group by category
-  const assetIds = Array.from(new Set(transactions.map(t => t.assetId).filter(Boolean)));
-  const assetsList = await Promise.all(
-    assetIds.map(id => getAssetById(id!))
-  );
-  
-  const byCategory: Record<number, { categoryId: number; categoryName: string; total: number }> = {};
-  for (const transaction of transactions) {
-    if (transaction.assetId) {
-      const asset = assetsList.find(a => a?.id === transaction.assetId);
-      if (asset && asset.categoryId) {
-        if (!byCategory[asset.categoryId]) {
-          const category = await getAssetCategoryById(asset.categoryId);
-          byCategory[asset.categoryId] = {
-            categoryId: asset.categoryId,
-            categoryName: category?.name || 'Unknown',
-            total: 0,
-          };
-        }
-        byCategory[asset.categoryId].total += parseFloat(transaction.amount);
-      }
-    }
+    .where(gte(financialTransactions.transactionDate, startDate))
+    .groupBy(financialTransactions.transactionType);
+
+  let totalCost = 0;
+  let maintenanceCost = 0;
+  let repairCost = 0;
+  for (const row of typeRows) {
+    const t = Number(row.total);
+    totalCost += t;
+    if (row.transactionType === "maintenance") maintenanceCost = t;
+    if (row.transactionType === "repair") repairCost = t;
   }
-  
-  // Group by site
-  const bySite: Record<number, { siteId: number; siteName: string; total: number }> = {};
-  for (const transaction of transactions) {
-    if (transaction.assetId) {
-      const asset = assetsList.find(a => a?.id === transaction.assetId);
-      if (asset && asset.siteId) {
-        if (!bySite[asset.siteId]) {
-          const site = await getSiteById(asset.siteId);
-          bySite[asset.siteId] = {
-            siteId: asset.siteId,
-            siteName: site?.name || 'Unknown',
-            total: 0,
-          };
-        }
-        bySite[asset.siteId].total += parseFloat(transaction.amount);
-      }
-    }
-  }
-  
-  // Group by vendor
-  const byVendor: Record<number, { vendorId: number; vendorName: string; total: number; transactionCount: number }> = {};
-  for (const transaction of transactions) {
-    if (transaction.vendorId) {
-      if (!byVendor[transaction.vendorId]) {
-        const vendor = await getVendorById(transaction.vendorId);
-        byVendor[transaction.vendorId] = {
-          vendorId: transaction.vendorId,
-          vendorName: vendor?.name || 'Unknown',
-          total: 0,
-          transactionCount: 0,
-        };
-      }
-      byVendor[transaction.vendorId].total += parseFloat(transaction.amount);
-      byVendor[transaction.vendorId].transactionCount += 1;
-    }
-  }
-  
+
+  // 2) By category: JOIN assets + assetCategories, aggregate in DB
+  const byCategoryRows = await db
+    .select({
+      categoryId: assets.categoryId,
+      categoryName: sql<string>`COALESCE(${assetCategories.name}, 'Unknown')`.as("categoryName"),
+      total: sql<number>`SUM(CAST(${financialTransactions.amount} AS DECIMAL(15,2)))`.as("total"),
+    })
+    .from(financialTransactions)
+    .innerJoin(assets, eq(financialTransactions.assetId, assets.id))
+    .leftJoin(assetCategories, eq(assets.categoryId, assetCategories.id))
+    .where(gte(financialTransactions.transactionDate, startDate))
+    .groupBy(assets.categoryId, assetCategories.name);
+
+  const byCategory = byCategoryRows.map((r) => ({
+    categoryId: r.categoryId,
+    categoryName: String(r.categoryName),
+    total: Number(r.total),
+  }));
+
+  // 3) By site: JOIN assets + sites, aggregate in DB
+  const bySiteRows = await db
+    .select({
+      siteId: assets.siteId,
+      siteName: sql<string>`COALESCE(${sites.name}, 'Unknown')`.as("siteName"),
+      total: sql<number>`SUM(CAST(${financialTransactions.amount} AS DECIMAL(15,2)))`.as("total"),
+    })
+    .from(financialTransactions)
+    .innerJoin(assets, eq(financialTransactions.assetId, assets.id))
+    .leftJoin(sites, eq(assets.siteId, sites.id))
+    .where(gte(financialTransactions.transactionDate, startDate))
+    .groupBy(assets.siteId, sites.name);
+
+  const bySite = bySiteRows.map((r) => ({
+    siteId: r.siteId,
+    siteName: String(r.siteName),
+    total: Number(r.total),
+  }));
+
+  // 4) By vendor: JOIN vendors, aggregate in DB (top 10 by total)
+  const byVendorRows = await db
+    .select({
+      vendorId: financialTransactions.vendorId,
+      vendorName: sql<string>`COALESCE(${vendors.name}, 'Unknown')`.as("vendorName"),
+      total: sql<number>`SUM(CAST(${financialTransactions.amount} AS DECIMAL(15,2)))`.as("total"),
+      transactionCount: sql<number>`COUNT(*)`.as("transactionCount"),
+    })
+    .from(financialTransactions)
+    .leftJoin(vendors, eq(financialTransactions.vendorId, vendors.id))
+    .where(
+      and(
+        gte(financialTransactions.transactionDate, startDate),
+        isNotNull(financialTransactions.vendorId)
+      )
+    )
+    .groupBy(financialTransactions.vendorId, vendors.name);
+
+  const byVendor = byVendorRows
+    .map((r) => ({
+      vendorId: r.vendorId!,
+      vendorName: String(r.vendorName),
+      total: Number(r.total),
+      transactionCount: Number(r.transactionCount),
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10);
+
   return {
     totalCost,
     maintenanceCost,
     repairCost,
-    byCategory: Object.values(byCategory),
-    bySite: Object.values(bySite),
-    byVendor: Object.values(byVendor).sort((a, b) => b.total - a.total).slice(0, 10),
+    byCategory,
+    bySite,
+    byVendor,
   };
 }
 

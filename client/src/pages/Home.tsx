@@ -1,3 +1,4 @@
+import { memo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, Wrench, AlertTriangle, DollarSign, Calendar, TrendingUp } from "lucide-react";
@@ -36,11 +37,17 @@ function MetricCard({ metric, Icon }: { metric: any; Icon: any }) {
   );
 }
 
-export default function Home() {
+function Home() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const utils = trpc.useUtils();
   const { data: stats, isLoading } = trpc.dashboard.stats.useQuery();
+
+  // Prefetch common navigation targets (Assets, Work Orders) so navigation feels instant
+  useEffect(() => {
+    import("@/pages/Assets");
+    import("@/pages/WorkOrders");
+  }, []);
   const { data: rawUpcoming } = trpc.maintenance.upcoming.useQuery({ days: 7 });
   const { data: rawLowStock } = trpc.inventory.lowStock.useQuery();
   const upcomingMaintenance: { id: number; name?: string; nextDue?: string | Date }[] = Array.isArray(rawUpcoming)
@@ -356,3 +363,5 @@ export default function Home() {
   
   return content;
 }
+
+export default memo(Home);

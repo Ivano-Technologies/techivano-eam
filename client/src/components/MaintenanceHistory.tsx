@@ -29,10 +29,11 @@ export function MaintenanceHistory({ assetId }: MaintenanceHistoryProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
-  const { data: rawWorkOrders, isLoading } = trpc.workOrders.getByAssetId.useQuery({ assetId });
-  const workOrders: WorkOrderEntry[] = Array.isArray(rawWorkOrders)
-    ? (rawWorkOrders as WorkOrderEntry[])
+  const { data: byAssetData, isLoading } = trpc.workOrders.getByAssetId.useQuery({ assetId });
+  const workOrders: WorkOrderEntry[] = Array.isArray(byAssetData?.workOrders)
+    ? (byAssetData.workOrders as WorkOrderEntry[])
     : [];
+  const summary = byAssetData?.summary ?? { total: 0, completed: 0, completionRatePct: 0, avgDurationDays: null };
 
   if (isLoading) {
     return (
@@ -64,29 +65,18 @@ export function MaintenanceHistory({ assetId }: MaintenanceHistoryProps) {
     );
   }
 
-  // Filter work orders
+  // Filter work orders (UI-only; counts come from server summary)
   const filteredWorkOrders = workOrders.filter((wo) => {
     if (statusFilter !== "all" && wo.status !== statusFilter) return false;
     if (typeFilter !== "all" && wo.type !== typeFilter) return false;
     return true;
   });
 
-  // Calculate statistics
-  const totalWorkOrders = workOrders.length;
-  const completedWorkOrders = workOrders.filter((wo) => wo.status === "completed").length;
-  const completionRate = totalWorkOrders > 0 ? ((completedWorkOrders / totalWorkOrders) * 100).toFixed(0) : 0;
-  
-  const avgDuration = workOrders
-    .filter((wo) => wo.actualStart && wo.actualEnd)
-    .reduce((acc, wo) => {
-      const start = new Date(wo.actualStart!).getTime();
-      const end = new Date(wo.actualEnd!).getTime();
-      const durationDays = (end - start) / (1000 * 60 * 60 * 24);
-      return acc + durationDays;
-    }, 0);
-  const avgDurationDays = workOrders.filter((wo) => wo.actualStart && wo.actualEnd).length > 0
-    ? (avgDuration / workOrders.filter((wo) => wo.actualStart && wo.actualEnd).length).toFixed(1)
-    : 0;
+  // Use server-precomputed KPIs (no client-side aggregation)
+  const totalWorkOrders = summary.total;
+  const completedWorkOrders = summary.completed;
+  const completionRate = String(summary.completionRatePct);
+  const avgDurationDays = summary.avgDurationDays != null ? String(summary.avgDurationDays) : "0";
 
   const getStatusIcon = (status: string) => {
     switch (status) {
