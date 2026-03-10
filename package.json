@@ -12,6 +12,7 @@
     "build:ocr-worker": "esbuild server/jobs/ocrWorker.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start:ocr-worker": "cross-env NODE_ENV=production node dist/ocrWorker.js",
     "queue:loadtest": "cross-env NODE_ENV=development tsx scripts/load-test-workers.ts",
+    "queue:health": "node scripts/queue-health.js",
     "start": "cross-env NODE_ENV=production node dist/index.js",
     "start:worker": "cross-env NODE_ENV=production node dist/worker.js",
     "lint": "tsc --noEmit",
@@ -23,6 +24,7 @@
     "test:phase4": "vitest run \"server/**/*.phase4.test.ts\" --passWithNoTests",
     "test:workers": "vitest run \"server/jobs/**/*.test.ts\" --passWithNoTests",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
+    "db:migrate": "drizzle-kit migrate",
     "stack:up": "docker compose up --build",
     "stack:down": "docker compose down",
     "stack:logs": "docker compose logs -f"
