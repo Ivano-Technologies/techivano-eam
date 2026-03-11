@@ -6,6 +6,9 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
+import { AuthPageLayout, AuthIconCircle } from "@/components/AuthPageLayout";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 export default function AuthCallback() {
   const [, setLocation] = useLocation();
@@ -81,20 +84,31 @@ export default function AuthCallback() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="text-center">
-          <p className="text-destructive mb-4">{error}</p>
-          <a href="/login" className="text-primary underline">
-            Return to sign in
-          </a>
-        </div>
-      </div>
+      <AuthPageLayout
+        icon={<AuthIconCircle variant="error"><AlertCircle className="h-6 w-6" /></AuthIconCircle>}
+        title="Sign-in issue"
+        description={error}
+      >
+        <Button asChild className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white">
+          <a href="/login">Return to sign in</a>
+        </Button>
+      </AuthPageLayout>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-    </div>
+    <AuthPageLayout
+      icon={
+        <AuthIconCircle>
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </AuthIconCircle>
+      }
+      title="Completing sign-in..."
+      description="Please wait while we set up your session."
+    >
+      <div className="flex justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden />
+      </div>
+    </AuthPageLayout>
   );
 }
