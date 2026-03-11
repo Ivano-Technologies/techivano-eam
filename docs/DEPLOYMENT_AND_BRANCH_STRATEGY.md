@@ -192,7 +192,7 @@ Before merging into `main`:
    - `pnpm typecheck` (or rely on `pnpm lint` if it runs `tsc --noEmit`)
 2. Ensure staging has been tested and health check passes.
 
-CI is configured to run these on push and pull requests to `main`, `staging`, and `develop` so broken config or code is caught before merge.
+CI is configured to run these on push and pull requests to `main`, `staging`, `develop`, and `feature/**` so broken config or code is caught before merge. See [DEPLOYMENT_ARCHITECTURE.md](./DEPLOYMENT_ARCHITECTURE.md) for the full three-environment (Preview / Staging / Production) flow.
 
 ---
 
