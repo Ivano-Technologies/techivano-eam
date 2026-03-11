@@ -94,12 +94,16 @@ const PRESET_WIDTHS = {
   wide: 360,
 };
 
+const PUBLIC_AUTH_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/verify-magic-link", "/auth/callback"];
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const { loading, user } = useAuth();
+  const [location] = useLocation();
+  const isPublicAuthPath = PUBLIC_AUTH_PATHS.some((p) => location === p || location.startsWith(`${p}?`));
   const { data: userPrefs } = trpc.userPreferences.get.useQuery(undefined, { enabled: !!user });
   const isMobile = useIsMobile();
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -122,7 +126,7 @@ export default function DashboardLayout({
     return <DashboardLayoutSkeleton />
   }
 
-  if (!user) {
+  if (!user && !isPublicAuthPath) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-white via-blue-50 to-red-50">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full bg-white rounded-2xl shadow-2xl border border-border">
