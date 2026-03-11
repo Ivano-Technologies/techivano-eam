@@ -375,8 +375,19 @@ Use `authenticateRequest(req)` in tRPC `createContext` and in any API route that
 | 4 | Done | Supabase client; `/auth/callback` page; Login uses Supabase (password, OTP, OAuth) when `VITE_SUPABASE_URL` set. |
 | 5 | Done | Lazy migration: `getUserFromSupabaseToken` matches by email and sets `supabase_user_id`. |
 | 6 | Done | Manus callback removed (redirect to `/login`); `getLoginUrl()` returns `/login`. |
-| 7 | Pending | `src/app/api/*` routes still use `getSupabaseForRequest` + `supabase.auth.getUser()`. Align when `getSupabaseForRequest` reads same cookie/JWT. |
+| 7 | Pending | `src/app/api/*` routes still use `getSupabaseForRequest` + `supabase.auth.getUser()`. Align by having those routes call a shared auth helper that reads `app_session_id` / Bearer and uses `authenticateRequest`-style verification (see [Central auth helper](#central-auth-helper)). |
 | 8 | Pending | Add tests and rollout. |
+
+---
+
+## Deploy verification (Supabase Auth)
+
+After merging to `staging` or `main` and deploying:
+
+1. **Env:** Ensure `SUPABASE_JWT_SECRET`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` are set for the deployed environment.
+2. **Migration:** Run `pnpm run db:migrate` (or equivalent) so `users.supabase_user_id` exists.
+3. **Smoke test:** Open the app → sign in (email/password or OAuth if enabled) → confirm redirect to `/auth/callback` then home; confirm no auth errors in console.
+4. **Logs:** Check auth metrics (`auth_method=supabase` / `legacy` / `none`) to confirm Supabase path is used.
 
 ---
 

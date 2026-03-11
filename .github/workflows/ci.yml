@@ -11,6 +11,9 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    # Optional: set to true to use Node 24 (Actions default from June 2026). Leave false to keep Node 20 until ready.
+    # env:
+    #   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
