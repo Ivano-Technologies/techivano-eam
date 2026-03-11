@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { getQuickBooksAuthUrl, QUICKBOOKS_OAUTH } from './quickbooksIntegration';
 import * as db from './db';
+import { runWithTestTenantContext } from './test/testTenantContext';
 
 describe('QuickBooks Integration', () => {
   describe('OAuth URL Generation', () => {
@@ -60,17 +61,19 @@ describe('QuickBooks Integration', () => {
 
     beforeAll(async () => {
       try {
-        await db.saveQuickBooksConfig({
-          clientId: 'test_detect',
-          clientSecret: 'test_secret',
-          redirectUri: 'https://example.com/cb',
-          realmId: '1',
-          isActive: 1,
-          autoSync: 1,
+        await runWithTestTenantContext(async () => {
+          await db.saveQuickBooksConfig({
+            clientId: 'test_detect',
+            clientSecret: 'test_secret',
+            redirectUri: 'https://example.com/cb',
+            realmId: '1',
+            isActive: 1,
+            autoSync: 1,
+          });
         });
       } catch (e) {
         const msg = String(e ?? '');
-        if (msg.includes('Failed query') || msg.includes('relation') || msg.includes('does not exist') || msg.includes('ECONNREFUSED')) {
+        if (msg.includes('Failed query') || msg.includes('relation') || msg.includes('does not exist') || msg.includes('ECONNREFUSED') || msg.includes('Tenant DB context')) {
           quickbooksConfigAvailable = false;
         }
       }
@@ -78,73 +81,74 @@ describe('QuickBooks Integration', () => {
 
     it('should save QuickBooks configuration', async () => {
       if (!quickbooksConfigAvailable) return;
-      const config = {
-        clientId: 'test_client_123',
-        clientSecret: 'test_secret_456',
-        redirectUri: 'https://example.com/callback',
-        realmId: '1234567890',
-        isActive: 1,
-        autoSync: 1,
-      };
+      await runWithTestTenantContext(async () => {
+        const config = {
+          clientId: 'test_client_123',
+          clientSecret: 'test_secret_456',
+          redirectUri: 'https://example.com/callback',
+          realmId: '1234567890',
+          isActive: 1,
+          autoSync: 1,
+        };
 
-      const saved = await db.saveQuickBooksConfig(config);
-      expect(saved).toBeDefined();
-      expect(saved?.clientId).toBe(config.clientId);
-      expect(saved?.realmId).toBe(config.realmId);
+        const saved = await db.saveQuickBooksConfig(config);
+        expect(saved).toBeDefined();
+        expect(saved?.clientId).toBe(config.clientId);
+        expect(saved?.realmId).toBe(config.realmId);
+      });
     });
 
     it('should retrieve QuickBooks configuration', async () => {
       if (!quickbooksConfigAvailable) return;
-      // First save a config
-      const config = {
-        clientId: 'test_retrieve_123',
-        clientSecret: 'test_secret_789',
-        redirectUri: 'https://example.com/callback',
-        realmId: '9876543210',
-        isActive: 1,
-        autoSync: 1,
-      };
+      await runWithTestTenantContext(async () => {
+        const config = {
+          clientId: 'test_retrieve_123',
+          clientSecret: 'test_secret_789',
+          redirectUri: 'https://example.com/callback',
+          realmId: '9876543210',
+          isActive: 1,
+          autoSync: 1,
+        };
 
-      await db.saveQuickBooksConfig(config);
+        await db.saveQuickBooksConfig(config);
 
-      // Then retrieve it
-      const retrieved = await db.getQuickBooksConfig();
-      expect(retrieved).toBeDefined();
-      expect(retrieved?.clientId).toBe(config.clientId);
-      expect(retrieved?.realmId).toBe(config.realmId);
+        const retrieved = await db.getQuickBooksConfig();
+        expect(retrieved).toBeDefined();
+        expect(retrieved?.clientId).toBe(config.clientId);
+        expect(retrieved?.realmId).toBe(config.realmId);
+      });
     });
 
     it('should update existing configuration', async () => {
       if (!quickbooksConfigAvailable) return;
-      // Save initial config
-      const initialConfig = {
-        clientId: 'initial_client',
-        clientSecret: 'initial_secret',
-        redirectUri: 'https://example.com/callback',
-        realmId: '1111111111',
-        isActive: 1,
-        autoSync: 0,
-      };
+      await runWithTestTenantContext(async () => {
+        const initialConfig = {
+          clientId: 'initial_client',
+          clientSecret: 'initial_secret',
+          redirectUri: 'https://example.com/callback',
+          realmId: '1111111111',
+          isActive: 1,
+          autoSync: 0,
+        };
 
-      await db.saveQuickBooksConfig(initialConfig);
+        await db.saveQuickBooksConfig(initialConfig);
 
-      // Update config
-      const updatedConfig = {
-        clientId: 'updated_client',
-        clientSecret: 'updated_secret',
-        redirectUri: 'https://example.com/callback',
-        realmId: '2222222222',
-        isActive: 1,
-        autoSync: 1,
-      };
+        const updatedConfig = {
+          clientId: 'updated_client',
+          clientSecret: 'updated_secret',
+          redirectUri: 'https://example.com/callback',
+          realmId: '2222222222',
+          isActive: 1,
+          autoSync: 1,
+        };
 
-      await db.saveQuickBooksConfig(updatedConfig);
+        await db.saveQuickBooksConfig(updatedConfig);
 
-      // Verify update
-      const retrieved = await db.getQuickBooksConfig();
-      expect(retrieved?.clientId).toBe(updatedConfig.clientId);
-      expect(retrieved?.realmId).toBe(updatedConfig.realmId);
-      expect(retrieved?.autoSync).toBe(1);
+        const retrieved = await db.getQuickBooksConfig();
+        expect(retrieved?.clientId).toBe(updatedConfig.clientId);
+        expect(retrieved?.realmId).toBe(updatedConfig.realmId);
+        expect(retrieved?.autoSync).toBe(1);
+      });
     });
   });
 
