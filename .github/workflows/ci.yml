@@ -1,5 +1,6 @@
 # Deployment safety: build, lint, typecheck must pass before merge.
-# See docs/DEPLOYMENT_ARCHITECTURE.md and docs/DEPLOYMENT_AND_BRANCH_STRATEGY.md
+# Schema + tests: validate job runs pnpm test; migrations job runs supabase db reset
+# so schema and tests never drift. See docs/DEPLOYMENT_ARCHITECTURE.md.
 name: CI
 
 on:
@@ -51,6 +52,27 @@ jobs:
 
       - name: Build worker
         run: pnpm build:worker
+
+  migrations:
+    name: Supabase migrations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase (local)
+        run: supabase start -x studio -x realtime -x storage -x edge-runtime
+
+      - name: Lint migrations
+        run: supabase migration list
+
+      - name: Validate migrations (db reset)
+        run: supabase db reset
 
   e2e-auth:
     name: E2E Auth (optional)
