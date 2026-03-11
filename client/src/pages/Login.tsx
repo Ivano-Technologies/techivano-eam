@@ -3,11 +3,11 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { trpc } from "@/lib/trpc";
 import { ButtonLoader } from "@/components/ButtonLoader";
 import { supabase } from "@/lib/supabase";
+import { AuthPageLayout, AuthIconCircle } from "@/components/AuthPageLayout";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const useSupabaseAuth = typeof supabaseUrl === "string" && supabaseUrl.length > 0;
@@ -149,23 +149,22 @@ export default function Login() {
     setSessionMutation.isPending;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-[#1E3A8A] rounded-full flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">NRCS</span>
-            </div>
-          </div>
-          <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
-          <CardDescription>
-            Nigerian Red Cross Society
-            <br />
-            Enterprise Asset Management
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+    <AuthPageLayout
+      icon={
+        <AuthIconCircle>
+          <span className="text-lg font-bold text-white">NRCS</span>
+        </AuthIconCircle>
+      }
+      title="Sign In"
+      description={
+        <>
+          Nigerian Red Cross Society
+          <br />
+          Enterprise Asset Management
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
             {message && (
               <Alert variant={message.type === "error" ? "destructive" : "default"}>
                 <AlertDescription>{message.text}</AlertDescription>
@@ -202,7 +201,7 @@ export default function Login() {
 
             <Button
               type="submit"
-              className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
+              className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white"
               disabled={isPending}
             >
               {isPending ? (
@@ -256,35 +255,33 @@ export default function Login() {
                   setPassword("");
                   setMessage(null);
                 }}
-                className="text-sm text-[#1E3A8A] hover:underline"
+                className="text-sm text-[#DC2626] hover:underline"
               >
                 {usePassword ? "Use magic link instead" : "Use password instead"}
               </button>
               {usePassword && (
                 <Link href="/forgot-password">
-                  <button type="button" className="text-sm text-[#1E3A8A] hover:underline">
+                  <button type="button" className="text-sm text-[#DC2626] hover:underline">
                     Forgot password?
                   </button>
                 </Link>
               )}
             </div>
 
-            <div className="text-center text-sm text-gray-600">
+            <div className="text-center text-sm text-muted-foreground">
               Don't have an account?{" "}
-              <Link href="/signup" className="text-[#1E3A8A] hover:underline font-medium">
+              <Link href="/signup" className="text-[#DC2626] hover:underline font-medium">
                 Request Access
               </Link>
             </div>
           </form>
 
-          {!usePassword && !useSupabaseAuth && (
-            <div className="mt-6 pt-6 border-t text-center text-xs text-gray-500">
-              <p>We'll send a secure sign-in link to your email.</p>
-              <p className="mt-1">No password required.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+      {!usePassword && !useSupabaseAuth && (
+        <div className="mt-6 pt-6 border-t text-center text-xs text-muted-foreground">
+          <p>We'll send a secure sign-in link to your email.</p>
+          <p className="mt-1">No password required.</p>
+        </div>
+      )}
+    </AuthPageLayout>
   );
 }

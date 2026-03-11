@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Lock, CheckCircle, AlertCircle } from "lucide-react";
+import { AuthPageLayout, AuthIconCircle } from "@/components/AuthPageLayout";
 
 export default function ResetPassword() {
   const [, setLocation] = useLocation();
@@ -42,8 +42,8 @@ export default function ResetPassword() {
     e.preventDefault();
     setError("");
 
-    if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters long");
+    if (newPassword.length < 8) {
+      setError("Password must be at least 8 characters long");
       return;
     }
 
@@ -57,120 +57,93 @@ export default function ResetPassword() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4">
-        <Card className="w-full max-w-md border-2 border-[#DC2626] glass dark:glass-dark shadow-2xl">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 rounded-full bg-emerald-500/90 glass-icon flex items-center justify-center mb-4">
-              <CheckCircle className="h-6 w-6 text-white" />
-            </div>
-            <CardTitle className="text-2xl">Password Reset Successful</CardTitle>
-            <CardDescription>
-              Your password has been reset successfully. Redirecting to login...
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/login">
-              <Button className="w-full">Go to Login</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+      <AuthPageLayout
+        icon={<AuthIconCircle variant="success"><CheckCircle className="h-6 w-6" /></AuthIconCircle>}
+        title="Password Reset Successful"
+        description="Your password has been reset successfully. Redirecting to login..."
+      >
+        <Link href="/login">
+          <Button className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white">Go to Login</Button>
+        </Link>
+      </AuthPageLayout>
     );
   }
 
   if (!token || error.includes("Invalid reset link")) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4">
-        <Card className="w-full max-w-md border-2 border-[#DC2626] glass dark:glass-dark shadow-2xl">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 rounded-full bg-red-500/90 glass-icon flex items-center justify-center mb-4">
-              <AlertCircle className="h-6 w-6 text-white" />
-            </div>
-            <CardTitle className="text-2xl">Invalid Reset Link</CardTitle>
-            <CardDescription>
-              This password reset link is invalid or has expired.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Link href="/forgot-password">
-              <Button className="w-full">Request New Reset Link</Button>
-            </Link>
-            <Link href="/login">
-              <Button variant="outline" className="w-full">Back to Login</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+      <AuthPageLayout
+        icon={<AuthIconCircle variant="error"><AlertCircle className="h-6 w-6" /></AuthIconCircle>}
+        title="Invalid Reset Link"
+        description="This password reset link is invalid or has expired."
+      >
+        <div className="space-y-3">
+          <Link href="/forgot-password">
+            <Button className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white">Request New Reset Link</Button>
+          </Link>
+          <Link href="/login">
+            <Button variant="outline" className="w-full">Back to Login</Button>
+          </Link>
+        </div>
+      </AuthPageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <Card className="w-full max-w-md border-2 border-[#DC2626] glass dark:glass-dark shadow-2xl">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 rounded-full bg-blue-500/90 glass-icon flex items-center justify-center mb-4">
-            <Lock className="h-6 w-6 text-white" />
+    <AuthPageLayout
+      icon={<AuthIconCircle><Lock className="h-6 w-6" /></AuthIconCircle>}
+      title="Reset Your Password"
+      description="Enter your new password below (minimum 8 characters)."
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="newPassword">New Password</Label>
+          <Input
+            id="newPassword"
+            type="password"
+            placeholder="Enter new password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            required
+            minLength={8}
+            disabled={resetPassword.isPending}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword">Confirm Password</Label>
+          <Input
+            id="confirmPassword"
+            type="password"
+            placeholder="Confirm new password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            minLength={8}
+            disabled={resetPassword.isPending}
+          />
+        </div>
+
+        {error && (
+          <div className="text-sm text-destructive flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {error}
           </div>
-          <CardTitle className="text-2xl">Reset Your Password</CardTitle>
-          <CardDescription>
-            Enter your new password below (minimum 6 characters).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">New Password</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                placeholder="Enter new password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength={6}
-                disabled={resetPassword.isPending}
-              />
-            </div>
+        )}
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Confirm new password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={6}
-                disabled={resetPassword.isPending}
-              />
-            </div>
+        <Button
+          type="submit"
+          className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white"
+          disabled={resetPassword.isPending}
+        >
+          {resetPassword.isPending ? "Resetting..." : "Reset Password"}
+        </Button>
 
-            {error && (
-              <div className="text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                {error}
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={resetPassword.isPending}
-            >
-              {resetPassword.isPending ? "Resetting..." : "Reset Password"}
-            </Button>
-
-            <div className="text-center">
-              <Link href="/login">
-                <Button variant="link" className="text-sm">
-                  Back to Login
-                </Button>
-              </Link>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+        <div className="text-center">
+          <Link href="/login">
+            <Button variant="link" className="text-sm text-[#DC2626]">Back to Login</Button>
+          </Link>
+        </div>
+      </form>
+    </AuthPageLayout>
   );
 }

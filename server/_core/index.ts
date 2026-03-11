@@ -3,6 +3,13 @@ import "dotenv/config";
 import { initSentry } from "./sentry";
 initSentry();
 
+// In development, keep the server running when Redis (or other deps) fail so Supabase auth can be tested without Redis
+if (process.env.NODE_ENV === "development") {
+  process.on("unhandledRejection", (reason, promise) => {
+    console.error("[dev] Unhandled rejection (server will keep running):", reason);
+  });
+}
+
 import express from "express";
 import { createServer } from "http";
 import net from "net";
@@ -948,6 +955,17 @@ async function startServer() {
       return res.status(401).json({ error: "Unauthorized" });
     }
   });
+
+  // Rate limit tRPC (mitigates brute-force on auth procedures)
+  const rateLimit = (await import("express-rate-limit")).default;
+  const trpcLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { error: "Too many requests; try again later." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use("/api/trpc", trpcLimiter);
 
   // tRPC API
   app.use(

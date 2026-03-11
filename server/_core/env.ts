@@ -10,7 +10,17 @@ function booleanFromEnv(name: string, fallback: boolean) {
   return raw === "1" || raw.toLowerCase() === "true";
 }
 
+/** Public app URL for password reset links, magic links, QR codes (no trailing slash). */
+function appUrl(): string {
+  const raw =
+    process.env.VITE_APP_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  return raw.replace(/\/$/, "");
+}
+
 export const ENV = {
+  /** Base URL of the app (e.g. https://techivano.com). Used for reset links, magic links, QR. */
+  appUrl: appUrl(),
   appId: process.env.VITE_APP_ID ?? "",
   cookieSecret: process.env.JWT_SECRET ?? "",
   supabaseJwtSecret: process.env.SUPABASE_JWT_SECRET ?? "",

@@ -129,6 +129,10 @@ export default defineConfig({
   },
   server: {
     host: true,
+    // Avoid restarts when editing .env.local (e.g. adding SUPABASE_JWT_SECRET) so the login page doesn't reload while typing
+    watch: {
+      ignored: ["**/.env", "**/.env.local", "**/.env.*.local"],
+    },
     allowedHosts: [
       ".manuspre.computer",
       ".manus.computer",

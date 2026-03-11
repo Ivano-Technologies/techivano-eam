@@ -3,13 +3,12 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { trpc } from "@/lib/trpc";
 import { ButtonLoader } from "@/components/ButtonLoader";
-import { Textarea } from "@/components/ui/textarea";
+import { AuthPageLayout, AuthIconCircle } from "@/components/AuthPageLayout";
 
 const NIGERIAN_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
@@ -106,8 +105,8 @@ export default function Signup() {
       return;
     }
     
-    if (formData.password.length < 6) {
-      setMessage({ type: "error", text: "Password must be at least 6 characters" });
+    if (formData.password.length < 8) {
+      setMessage({ type: "error", text: "Password must be at least 8 characters" });
       return;
     }
     
@@ -138,25 +137,23 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4 py-8">
-      <Card className="w-full max-w-2xl">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-[#1E3A8A] rounded-full flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">NR</span>
-            </div>
-          </div>
-          <CardTitle className="text-2xl font-bold">Register for NRCS EAM</CardTitle>
-          <CardDescription>
-            Nigerian Red Cross Society Enterprise Asset Management System
-            <br />
-            <span className="text-xs mt-2 block">
-              Please complete this form to request access. Your registration will be reviewed by an administrator.
-            </span>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+    <AuthPageLayout
+      maxWidth="lg"
+      icon={
+        <AuthIconCircle>
+          <span className="text-sm font-bold text-white">NR</span>
+        </AuthIconCircle>
+      }
+      title="Register for NRCS EAM"
+      description={
+        <>
+          Nigerian Red Cross Society — Enterprise Asset Management
+          <br />
+          <span className="text-xs mt-1 block">Please complete this form to request access. Your registration will be reviewed by an administrator.</span>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
             {message && (
               <Alert variant={message.type === "error" ? "destructive" : "default"}>
                 <AlertDescription>{message.text}</AlertDescription>
@@ -258,12 +255,12 @@ export default function Signup() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="At least 6 characters"
+                  placeholder="At least 8 characters"
                   value={formData.password}
                   onChange={(e) => updateField("password", e.target.value)}
                   disabled={signupMutation.isPending}
                   required
-                  minLength={6}
+                  minLength={8}
                 />
               </div>
             </div>
@@ -396,11 +393,11 @@ export default function Signup() {
                 className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 I agree to the{" "}
-                <Link href="/legal/terms" className="text-[#1E3A8A] hover:underline">
+                <Link href="/legal/terms" className="text-[#DC2626] hover:underline">
                   Terms of Use
                 </Link>{" "}
                 and{" "}
-                <Link href="/legal/privacy" className="text-[#1E3A8A] hover:underline">
+                <Link href="/legal/privacy" className="text-[#DC2626] hover:underline">
                   Privacy Policy
                 </Link>
               </label>
@@ -418,7 +415,7 @@ export default function Signup() {
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
+                className="flex-1 bg-[#DC2626] hover:bg-[#DC2626]/90 text-white"
                 disabled={signupMutation.isPending}
               >
                 {signupMutation.isPending ? (
@@ -432,25 +429,21 @@ export default function Signup() {
               </Button>
             </div>
 
-            <div className="text-center text-sm text-gray-600 pt-2">
+            <div className="text-center text-sm text-muted-foreground pt-2">
               Already have an account?{" "}
-              <Link href="/login" className="text-[#1E3A8A] hover:underline font-medium">
+              <Link href="/login" className="text-[#DC2626] hover:underline font-medium">
                 Sign In
               </Link>
             </div>
           </form>
 
-          <div className="mt-6 pt-6 border-t text-center text-xs text-gray-500">
-            <p className="font-medium">📋 Registration Process</p>
-            <p className="mt-2">1. Submit your registration form</p>
-            <p>2. Admin reviews your request</p>
-            <p>3. You receive email notification of approval/rejection</p>
-            <p className="mt-2 text-gray-600">
-              Questions? Contact admin@nrcs.org.ng
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+      <div className="mt-6 pt-6 border-t text-center text-xs text-muted-foreground">
+        <p className="font-medium">📋 Registration Process</p>
+        <p className="mt-2">1. Submit your registration form</p>
+        <p>2. Admin reviews your request</p>
+        <p>3. You receive email notification of approval/rejection</p>
+        <p className="mt-2">Questions? Contact admin@nrcs.org.ng</p>
+      </div>
+    </AuthPageLayout>
   );
 }

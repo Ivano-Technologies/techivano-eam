@@ -4,6 +4,8 @@
 
 **Stack:** React 19 + Vite + Express 4 + tRPC 11 + Drizzle + Supabase (Postgres).
 
+**Quick reference:** [SUPABASE_AUTH_SETUP.md](./SUPABASE_AUTH_SETUP.md) — best-practice setup for Supabase Auth with Vite + React (env vars, session, redirect URLs, auth UI).
+
 ---
 
 ## Current State Summary
@@ -326,6 +328,36 @@ Before launch, in **Supabase Dashboard**:
 
 - Copy **JWT Secret** into server env as `SUPABASE_JWT_SECRET`.
 - Optional: set `SUPABASE_JWT_ISSUER` (e.g. `https://YOUR_REF.supabase.co/auth/v1`) and `SUPABASE_JWT_AUDIENCE` (e.g. `authenticated`) for stricter validation.
+
+---
+
+## Local development (Supabase login)
+
+For email/password login to complete, the **server** must verify the Supabase access token. Without `SUPABASE_JWT_SECRET` in `.env` or `.env.local`, `auth.setSession` will return "Invalid or expired session token" after Supabase accepts the password.
+
+### Quick local test checklist
+
+1. **Env (client + server)**  
+   In `.env.local` or `.env` ensure:
+   - `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (Supabase project URL and anon key; used by the client).
+   - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET` (server verification).  
+   Get **JWT Secret** from [Supabase Dashboard](https://supabase.com/dashboard) → your project → **Project Settings** → **API** → **JWT Settings**.
+   - Optional: `VITE_APP_URL=http://localhost:3000` (or the port you use). Server uses `PORT` (default 3000); if the port is different, set `VITE_APP_URL` to match (e.g. `http://localhost:3001`).
+
+2. **Supabase redirect URLs**  
+   In Supabase → **Authentication** → **URL Configuration** → **Redirect URLs**, add:
+   - `http://localhost:3000/**` (default port)
+   - If you run on another port (e.g. 3001), also add `http://localhost:3001/**`
+
+3. **App user in Supabase**  
+   Either create a user in Supabase **Authentication** → **Users** (email + password), or use **Sign up** on the app’s `/signup` page so the user exists in both Supabase Auth and your app’s `users` table (link by email on first login if you have lazy migration).
+
+4. **Run and test**
+   - From repo root: `pnpm dev`
+   - Open **http://localhost:3000/** (or the port printed in the terminal, e.g. 3001).
+   - Go to **/login**, sign in with email/password. You should be redirected to `/` with a session.
+
+**Note:** If Redis is not running locally, you may see `ECONNREFUSED 127.0.0.1:6379` in the logs; in development the server stays up so you can still test Supabase login. The `[OAuth] ERROR: OAUTH_SERVER_URL is not configured` message is safe to ignore when using Supabase auth only.
 
 ---
 

@@ -2,11 +2,12 @@
 import crypto from "crypto";
 import * as db from "./db";
 import { sendEmail } from "./emailService";
+import { ENV } from "./_core/env";
 import { authTokens, pendingUsers, users } from "../drizzle/schema";
 import { eq, and, gt } from "drizzle-orm";
 
 const MAGIC_LINK_EXPIRY_MINUTES = 15;
-const BASE_URL = process.env.VITE_APP_URL || "http://localhost:3000";
+const BASE_URL = ENV.appUrl;
 
 /**
  * Generate a secure random token
