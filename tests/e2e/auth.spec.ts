@@ -14,11 +14,11 @@ test.describe("Supabase auth", () => {
   });
 
   test("sign in with email/password and land on home", async ({ page }) => {
-    const base = process.env.E2E_BASE_URL ?? "https://techivano.com";
-    await page.goto(`${base}/login`, { waitUntil: "networkidle" });
+    const base = process.env.E2E_BASE_URL ?? "https://www.techivano.com";
+    await page.goto(`${base}/login`, { waitUntil: "domcontentloaded", timeout: 30000 });
 
     const emailInput = page.locator("#email").or(page.getByPlaceholder("your@email.com"));
-    await emailInput.waitFor({ state: "visible", timeout: 20000 });
+    await emailInput.waitFor({ state: "visible", timeout: 15000 });
     await emailInput.fill(email!);
 
     const passwordInput = page.locator("#password").or(page.getByPlaceholder("Enter your password"));
