@@ -1,16 +1,19 @@
 # Deployment safety: build, lint, typecheck must pass before merge.
-# See docs/DEPLOYMENT_AND_BRANCH_STRATEGY.md
+# See docs/DEPLOYMENT_ARCHITECTURE.md and docs/DEPLOYMENT_AND_BRANCH_STRATEGY.md
 name: CI
 
 on:
   push:
-    branches: ["main", "staging", "develop"]
+    branches: ["main", "staging", "develop", "feature/**"]
   pull_request:
-    branches: ["main", "staging", "develop"]
+    branches: ["main", "staging", "develop", "feature/**"]
 
 jobs:
   validate:
     runs-on: ubuntu-latest
+    # Optional: set to true to use Node 24 (Actions default from June 2026). Leave false to keep Node 20 until ready.
+    # env:
+    #   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
