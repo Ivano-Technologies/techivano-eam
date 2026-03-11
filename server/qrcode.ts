@@ -1,4 +1,5 @@
 import QRCode from 'qrcode';
+import { ENV } from './_core/env';
 
 /**
  * Generate QR code as data URL for an asset
@@ -7,8 +8,7 @@ import QRCode from 'qrcode';
  * @returns Promise<string> - Base64 data URL of the QR code
  */
 export async function generateAssetQRCode(assetId: number, assetTag: string): Promise<string> {
-  // Create URL that links to asset detail page
-  const baseUrl = process.env.VITE_APP_URL || 'https://your-app-url.com';
+  const baseUrl = ENV.appUrl;
   const assetUrl = `${baseUrl}/assets/${assetId}`;
   
   // Generate QR code with asset information
@@ -46,7 +46,7 @@ export async function generateAssetQRCode(assetId: number, assetTag: string): Pr
  * @returns Promise<Buffer> - PNG buffer of the QR code
  */
 export async function generateAssetQRCodeBuffer(assetId: number, assetTag: string): Promise<Buffer> {
-  const baseUrl = process.env.VITE_APP_URL || 'https://your-app-url.com';
+  const baseUrl = ENV.appUrl;
   const assetUrl = `${baseUrl}/assets/${assetId}`;
   
   const qrData = JSON.stringify({

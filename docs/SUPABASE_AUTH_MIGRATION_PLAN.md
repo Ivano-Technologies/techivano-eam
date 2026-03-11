@@ -329,6 +329,20 @@ Before launch, in **Supabase Dashboard**:
 
 ---
 
+## Local development (Supabase login)
+
+For email/password login to complete, the **server** must verify the Supabase access token. Without `SUPABASE_JWT_SECRET` in `.env` or `.env.local`, `auth.setSession` will return "Invalid or expired session token" after Supabase accepts the password.
+
+1. In [Supabase Dashboard](https://supabase.com/dashboard) → your project → **Project Settings** → **API** → **JWT Settings**, copy the **JWT Secret**.
+2. Add to `.env.local` (or `.env`):  
+   `SUPABASE_JWT_SECRET=<paste the secret>`  
+   Optional: `SUPABASE_JWT_ISSUER=https://YOUR_REF.supabase.co/auth/v1` and `SUPABASE_JWT_AUDIENCE=authenticated`.
+3. Restart the dev server (`pnpm dev`), then try signing in again.
+
+**Note:** If Redis is not running locally, you may see `ECONNREFUSED 127.0.0.1:6379` in the logs; in development the server stays up so you can still test Supabase login. The `[OAuth] ERROR: OAUTH_SERVER_URL is not configured` message is safe to ignore when using Supabase auth only.
+
+---
+
 ## Production deployment checklist
 
 - [ ] **Environment variables:** `SUPABASE_JWT_SECRET`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` set on server and build.

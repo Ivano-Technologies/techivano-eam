@@ -154,7 +154,7 @@ export const appRouter = router({
       .input(z.object({
         email: z.string().email(),
         name: z.string().min(1),
-        password: z.string().min(6, "Password must be at least 6 characters"),
+        password: z.string().min(8, "Password must be at least 8 characters"),
         jobTitle: z.string().optional(),
         phoneNumber: z.string().optional(),
         phoneCountryCode: z.string().optional(),
@@ -245,24 +245,32 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         const { generateResetToken } = await import("./passwordReset");
+        const { sendEmail } = await import("./emailService");
+        const { ENV } = await import("./_core/env");
+        const { logger } = await import("./_core/logger");
+
         const result = await generateResetToken(input.email);
-        
+
         if (!result) {
-          // Don't reveal if email exists - security best practice
           return { success: true, message: "If an account exists with this email, you will receive a password reset link." };
         }
-        
-        // TODO: Send email with reset link
-        // For now, return success (email integration pending)
-        const resetLink = `${process.env.VITE_OAUTH_PORTAL_URL || 'http://localhost:3000'}/reset-password?token=${result.token}`;
-        console.log(`[Password Reset] Link for ${input.email}: ${resetLink}`);
-        
+
+        const resetLink = `${ENV.appUrl}/reset-password?token=${result.token}`;
+        const sent = await sendEmail({
+          to: input.email,
+          subject: "Reset your NRCS EAM password",
+          html: `You requested a password reset. Click the link below to set a new password (link expires in 1 hour):<br><br><a href="${resetLink}">${resetLink}</a><br><br>If you did not request this, ignore this email.`,
+        });
+        if (!sent) {
+          logger.warn("Password reset email could not be sent; check email/Forge configuration", { to: input.email });
+        }
+
         return { success: true, message: "If an account exists with this email, you will receive a password reset link." };
       }),
     resetPassword: publicProcedure
       .input(z.object({
         token: z.string(),
-        newPassword: z.string().min(6, "Password must be at least 6 characters"),
+        newPassword: z.string().min(8, "Password must be at least 8 characters"),
       }))
       .mutation(async ({ input }) => {
         const { resetPassword } = await import("./passwordReset");

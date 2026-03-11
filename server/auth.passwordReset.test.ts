@@ -110,7 +110,7 @@ describe("Password Reset Flow", () => {
     ).rejects.toThrow("Invalid or expired reset token");
   });
 
-  it("should reject password shorter than 6 characters", async () => {
+  it("should reject password shorter than 8 characters", async () => {
     const caller = appRouter.createCaller(createContext());
     
     await expect(

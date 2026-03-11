@@ -43,7 +43,7 @@ export default function ResetPassword() {
     setError("");
 
     if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters long");
+      setError("Password must be at least 8 characters long");
       return;
     }
 
@@ -113,7 +113,7 @@ export default function ResetPassword() {
           </div>
           <CardTitle className="text-2xl">Reset Your Password</CardTitle>
           <CardDescription>
-            Enter your new password below (minimum 6 characters).
+            Enter your new password below (minimum 8 characters).
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -127,7 +127,7 @@ export default function ResetPassword() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 disabled={resetPassword.isPending}
               />
             </div>
@@ -141,7 +141,7 @@ export default function ResetPassword() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 disabled={resetPassword.isPending}
               />
             </div>

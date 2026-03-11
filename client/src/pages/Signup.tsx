@@ -106,8 +106,8 @@ export default function Signup() {
       return;
     }
     
-    if (formData.password.length < 6) {
-      setMessage({ type: "error", text: "Password must be at least 6 characters" });
+    if (formData.password.length < 8) {
+      setMessage({ type: "error", text: "Password must be at least 8 characters" });
       return;
     }
     
@@ -258,12 +258,12 @@ export default function Signup() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="At least 6 characters"
+                  placeholder="At least 8 characters"
                   value={formData.password}
                   onChange={(e) => updateField("password", e.target.value)}
                   disabled={signupMutation.isPending}
                   required
-                  minLength={6}
+                  minLength={8}
                 />
               </div>
             </div>
