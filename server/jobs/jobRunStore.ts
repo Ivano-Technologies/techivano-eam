@@ -1,7 +1,7 @@
 // @ts-nocheck — schema pg-core vs getDb mysql2
 import { and, desc, eq } from "drizzle-orm";
 import { backgroundJobRuns } from "../../drizzle/schema";
-import { getDb } from "../db";
+import { getRootDb } from "../db";
 import { logger } from "../_core/logger";
 import { ENV } from "../_core/env";
 import type { BackgroundJobName } from "./types";
@@ -17,7 +17,7 @@ type CreateJobRunInput = {
 };
 
 export async function createJobRun(input: CreateJobRunInput): Promise<number | null> {
-  const db = await getDb();
+  const db = getRootDb();
   if (!db) return null;
 
   const result = await db.insert(backgroundJobRuns).values({
@@ -82,7 +82,7 @@ async function updateJobRun(
     error: string;
   }>
 ) {
-  const db = await getDb();
+  const db = getRootDb();
   if (!db) return;
 
   await db
@@ -92,7 +92,7 @@ async function updateJobRun(
 }
 
 export async function getJobRunById(runId: number, tenantId: number) {
-  const db = await getDb();
+  const db = getRootDb();
   if (!db) return null;
 
   const rows = await db
@@ -105,7 +105,7 @@ export async function getJobRunById(runId: number, tenantId: number) {
 }
 
 export async function listRecentJobRuns(tenantId: number, limit = 20) {
-  const db = await getDb();
+  const db = getRootDb();
   if (!db) return [];
 
   return db

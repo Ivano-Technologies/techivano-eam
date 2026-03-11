@@ -1,0 +1,125 @@
+// @ts-nocheck — users sub-router (HIGH-11)
+import { z } from "zod";
+import { router, protectedOrgProcedure } from "../_core/trpc";
+import { adminProcedure } from "./_shared";
+import * as db from "../db";
+import { invalidateUserCache } from "../_core/userCache";
+
+export const usersRouter = router({
+  list: adminProcedure.query(async () => {
+    return await db.getAllUsers();
+  }),
+  getById: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input }) => {
+      return await db.getUserById(input.id);
+    }),
+  create: adminProcedure
+    .input(
+      z.object({
+        openId: z.string(),
+        name: z.string(),
+        email: z.string().email(),
+        role: z.enum(["admin", "manager", "technician", "user"]),
+        siteId: z.number().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      await db.upsertUser({
+        openId: input.openId,
+        name: input.name,
+        email: input.email,
+        role: input.role,
+        lastSignedIn: new Date(),
+      });
+      return { success: true };
+    }),
+  update: adminProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        email: z.string().email().optional(),
+        role: z.enum(["admin", "manager", "technician", "user"]).optional(),
+        siteId: z.number().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      const result = await db.updateUser(id, data);
+      const sub = await db.getSupabaseUserIdByAppId(id);
+      await invalidateUserCache(sub ?? undefined);
+      return result;
+    }),
+  updateRole: adminProcedure
+    .input(
+      z.object({
+        userId: z.number(),
+        role: z.enum(["admin", "manager", "technician", "user"]),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const updated = await db.updateUserRole(input.userId, input.role);
+      await invalidateUserCache(updated?.supabaseUserId ?? undefined);
+      return updated;
+    }),
+  completeOnboarding: protectedOrgProcedure.mutation(async ({ ctx }) => {
+    await db.updateUser(ctx.user.id, { hasCompletedOnboarding: true });
+    await invalidateUserCache(ctx.user.supabaseUserId ?? undefined);
+    return { success: true };
+  }),
+  delete: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      return await db.deleteUser(input.id);
+    }),
+  getPendingUsers: adminProcedure.query(async () => {
+    return await db.getPendingUsers();
+  }),
+  approveUser: adminProcedure
+    .input(z.object({ userId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.approveUser(input.userId, ctx.user.id);
+      const sub = await db.getSupabaseUserIdByAppId(input.userId);
+      await invalidateUserCache(sub ?? undefined);
+      return result;
+    }),
+  rejectUser: adminProcedure
+    .input(
+      z.object({
+        userId: z.number(),
+        reason: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const result = await db.rejectUser(input.userId, input.reason);
+      const sub = await db.getSupabaseUserIdByAppId(input.userId);
+      await invalidateUserCache(sub ?? undefined);
+      return result;
+    }),
+  bulkApproveUsers: adminProcedure
+    .input(z.object({ userIds: z.array(z.number()) }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.bulkApproveUsers(input.userIds, ctx.user.id);
+      for (const userId of input.userIds) {
+        const sub = await db.getSupabaseUserIdByAppId(userId);
+        await invalidateUserCache(sub ?? undefined);
+      }
+      return result;
+    }),
+  bulkRejectUsers: adminProcedure
+    .input(
+      z.object({
+        userIds: z.array(z.number()),
+        reason: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const result = await db.bulkRejectUsers(input.userIds, input.reason);
+      for (const userId of input.userIds) {
+        const sub = await db.getSupabaseUserIdByAppId(userId);
+        await invalidateUserCache(sub ?? undefined);
+      }
+      return result;
+    }),
+});
