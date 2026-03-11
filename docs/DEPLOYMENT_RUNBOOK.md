@@ -179,8 +179,15 @@ Set in **`/var/www/nrcseam/shared/.env`** (never in the repo):
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_ANON_KEY` | Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
+| `SUPABASE_JWT_SECRET` | Supabase JWT secret (Project Settings → API → JWT Secret); required for server-side session verification |
 
-OAuth redirect URI for production: `https://techivano.com/api/oauth/callback` (must be whitelisted in Manus).
+**Supabase Auth (single auth provider):** Login, sign-up, and API routes use Supabase. Set redirect URLs in **Supabase Dashboard → Authentication → URL Configuration**:
+
+- `https://techivano.com/auth/callback`
+- `http://localhost:3000/auth/callback` (dev)
+- Add `/reset-password` if using password reset emails
+
+Session cookie `app_session_id` holds the Supabase access token; backend verifies it with `SUPABASE_JWT_SECRET`.
 
 ---
 
