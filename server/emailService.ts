@@ -4,32 +4,80 @@ interface EmailOptions {
   to: string;
   subject: string;
   html: string;
+  from?: string;
+}
+
+/** True if Forge (Manus) email API is configured. */
+export function isForgeEmailConfigured(): boolean {
+  return Boolean(ENV.forgeApiUrl?.trim() && ENV.forgeApiKey?.trim());
+}
+
+/** True if SMTP is configured (Phase 70 fallback). */
+export function isSmtpConfigured(): boolean {
+  return Boolean(ENV.smtpHost?.trim());
+}
+
+/** Overall email sending is available (Forge or SMTP). */
+export function isEmailConfigured(): boolean {
+  return isForgeEmailConfigured() || isSmtpConfigured();
+}
+
+async function sendEmailViaForge(options: EmailOptions): Promise<boolean> {
+  const response = await fetch(`${ENV.forgeApiUrl}/email/send`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${ENV.forgeApiKey}`,
+    },
+    body: JSON.stringify({
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+    }),
+  });
+  if (!response.ok) {
+    console.error('Email send failed:', await response.text());
+    return false;
+  }
+  return true;
+}
+
+async function sendEmailViaSmtp(options: EmailOptions): Promise<boolean> {
+  try {
+    const nodemailer = await import('nodemailer');
+    const transporter = nodemailer.default.createTransport({
+      host: ENV.smtpHost,
+      port: ENV.smtpPort,
+      secure: ENV.smtpPort === 465,
+      auth: ENV.smtpUser && ENV.smtpPass ? { user: ENV.smtpUser, pass: ENV.smtpPass } : undefined,
+    });
+    await transporter.sendMail({
+      from: options.from ?? ENV.emailFrom,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+    });
+    return true;
+  } catch (error) {
+    console.error('SMTP send error:', error);
+    return false;
+  }
 }
 
 /**
- * Send email using Manus built-in email service
+ * Send email using Forge (Manus) if configured, otherwise SMTP fallback (Phase 70).
+ * Configure via: BUILT_IN_FORGE_API_URL + BUILT_IN_FORGE_API_KEY, or SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, EMAIL_FROM.
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
   try {
-    const response = await fetch(`${ENV.forgeApiUrl}/email/send`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ENV.forgeApiKey}`,
-      },
-      body: JSON.stringify({
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error('Email send failed:', await response.text());
-      return false;
+    if (isForgeEmailConfigured()) {
+      return await sendEmailViaForge(options);
     }
-
-    return true;
+    if (isSmtpConfigured()) {
+      return await sendEmailViaSmtp(options);
+    }
+    console.warn('Email not sent: neither Forge nor SMTP is configured. Set BUILT_IN_FORGE_* or SMTP_* env.');
+    return false;
   } catch (error) {
     console.error('Email send error:', error);
     return false;

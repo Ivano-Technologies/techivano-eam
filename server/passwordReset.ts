@@ -1,6 +1,6 @@
 // @ts-nocheck — schema pg-core vs getDb mysql2, query result types
 import crypto from 'crypto';
-import { getDb } from './db';
+import { getRootDb } from './db';
 import { passwordResetTokens, users } from '../drizzle/schema';
 import { eq, and, gt } from 'drizzle-orm';
 import { hashPassword } from './passwordAuth';
@@ -8,7 +8,7 @@ import { hashPassword } from './passwordAuth';
 const TOKEN_EXPIRY_MINUTES = 15;
 
 export async function generateResetToken(email: string): Promise<{ token: string; userId: number } | null> {
-  const db = await getDb();
+  const db = getRootDb();
   if (!db) throw new Error('Database not available');
   
   // Find user by email
@@ -38,7 +38,7 @@ export async function generateResetToken(email: string): Promise<{ token: string
 }
 
 export async function verifyResetToken(token: string): Promise<number | null> {
-  const db = await getDb();
+  const db = getRootDb();
   if (!db) throw new Error('Database not available');
   
   const now = new Date();
@@ -69,7 +69,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
     return false;
   }
   
-  const db = await getDb();
+  const db = getRootDb();
   if (!db) throw new Error('Database not available');
   
   // Hash new password
@@ -88,7 +88,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
 }
 
 export async function cleanupExpiredTokens(): Promise<void> {
-  const db = await getDb();
+  const db = getRootDb();
   if (!db) return;
   
   const now = new Date();
