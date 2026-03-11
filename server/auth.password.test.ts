@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { createUserWithPassword, authenticateWithPassword, hashPassword, verifyPassword } from './passwordAuth';
-import { getDb } from './db';
+import { getRootDb } from './db';
 import { users } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
@@ -11,7 +11,7 @@ describe('Password Authentication', () => {
 
   beforeAll(async () => {
     // Clean up any existing test user
-    const db = await getDb();
+    const db = getRootDb();
     if (db) {
       await db.delete(users).where(eq(users.email, testEmail));
     }

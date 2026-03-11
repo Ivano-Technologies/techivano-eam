@@ -20,7 +20,7 @@ function generateToken(): string {
  * Create a magic link token for a user
  */
 export async function createMagicLinkToken(userId: number): Promise<string> {
-  const database = await db.getDb();
+  const database = db.getRootDb();
   if (!database) throw new Error("Database not available");
 
   const token = generateToken();
@@ -40,7 +40,7 @@ export async function createMagicLinkToken(userId: number): Promise<string> {
  * Verify and consume a magic link token
  */
 export async function verifyMagicLinkToken(token: string): Promise<number | null> {
-  const database = await db.getDb();
+  const database = db.getRootDb();
   if (!database) return null;
 
   // Find unused, non-expired token
@@ -124,7 +124,7 @@ export async function createSignupRequest(
   name: string,
   requestedRole: "user" | "manager" = "user"
 ): Promise<{ success: boolean; message: string }> {
-  const database = await db.getDb();
+  const database = db.getRootDb();
   if (!database) return { success: false, message: "Database not available" };
 
   // Check if user already exists
@@ -178,7 +178,7 @@ export async function approvePendingUser(
   pendingUserId: number,
   approvedBy: number
 ): Promise<{ success: boolean; message: string; userId?: number }> {
-  const database = await db.getDb();
+  const database = db.getRootDb();
   if (!database) return { success: false, message: "Database not available" };
 
   // Get pending user
@@ -238,7 +238,7 @@ export async function rejectPendingUser(
   rejectedBy: number,
   reason?: string
 ): Promise<{ success: boolean; message: string }> {
-  const database = await db.getDb();
+  const database = db.getRootDb();
   if (!database) return { success: false, message: "Database not available" };
 
   await database

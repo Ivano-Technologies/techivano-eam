@@ -29,6 +29,7 @@ import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
 import { appRouter } from "../routers";
 import { createContext, resolveOrganizationContext } from "./context";
+import { authenticateRequest } from "./authenticateRequest";
 import { serveStatic, setupVite } from "./vite";
 import { getBackgroundQueue } from "../jobs/queue";
 import { sdk } from "./sdk";
@@ -200,7 +201,7 @@ async function startServer() {
     }
 
     try {
-      const user = await sdk.authenticateRequest(req);
+      const user = await authenticateRequest(req);
       const queued = await enqueueWarehouseRebalanceJob({
         tenantId,
         requestedBy: user?.id ?? null,
@@ -214,7 +215,7 @@ async function startServer() {
 
   app.post("/api/uploads/signed-url", async (req, res) => {
     try {
-      await sdk.authenticateRequest(req);
+      await authenticateRequest(req);
     } catch {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -290,7 +291,7 @@ async function startServer() {
   app.post("/api/uploads/complete", async (req, res) => {
     let user;
     try {
-      user = await sdk.authenticateRequest(req);
+      user = await authenticateRequest(req);
     } catch {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -353,7 +354,7 @@ async function startServer() {
   app.post("/api/uploads/encrypted", async (req, res) => {
     let user: any;
     try {
-      user = await sdk.authenticateRequest(req);
+      user = await authenticateRequest(req);
     } catch {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -494,7 +495,7 @@ async function startServer() {
 
   app.get("/api/uploads/encrypted/:documentId", async (req, res) => {
     try {
-      await sdk.authenticateRequest(req);
+      await authenticateRequest(req);
     } catch {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -627,7 +628,7 @@ async function startServer() {
   app.post("/api/organizations/:organizationId/encryption-keys/rotate", async (req, res) => {
     let user: any;
     try {
-      user = await sdk.authenticateRequest(req);
+      user = await authenticateRequest(req);
     } catch {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -661,7 +662,7 @@ async function startServer() {
 
   app.post("/api/uploads/multipart/start", async (req, res) => {
     try {
-      await sdk.authenticateRequest(req);
+      await authenticateRequest(req);
     } catch {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -733,7 +734,7 @@ async function startServer() {
 
   app.post("/api/uploads/multipart/url", async (req, res) => {
     try {
-      await sdk.authenticateRequest(req);
+      await authenticateRequest(req);
     } catch {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -781,7 +782,7 @@ async function startServer() {
   app.post("/api/uploads/multipart/complete", async (req, res) => {
     let user;
     try {
-      user = await sdk.authenticateRequest(req);
+      user = await authenticateRequest(req);
     } catch {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -944,7 +945,7 @@ async function startServer() {
     }
 
     try {
-      await sdk.authenticateRequest(req);
+      await authenticateRequest(req);
       const recommendations = await listWarehouseTransferRecommendations({
         tenantId: recTenantId,
         stockItemId,

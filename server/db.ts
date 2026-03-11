@@ -1,7 +1,8 @@
-// @ts-nocheck — schema uses pg-core (mysqlTable wraps pgTable), getDb uses mysql2; runtime is consistent, types differ
+// @ts-nocheck — schema uses pg-core; runtime uses Supabase Postgres via postgres-js and request-scoped tenant injection
 import { eq, and, desc, asc, gte, lte, sql, or, like, isNotNull, isNull } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import { 
+import { drizzle } from "drizzle-orm/postgres-js";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import {
   InsertUser, users, sites, InsertSite, assetCategories, assets, InsertAsset,
   workOrders, InsertWorkOrder, maintenanceSchedules, InsertMaintenanceSchedule,
   inventoryItems, InsertInventoryItem, inventoryTransactions, vendors, InsertVendor,
@@ -15,16 +16,23 @@ import {
   procurementRecommendations, purchaseOrders, supplyChainRiskScores, supplyChainRiskEvents,
   fleetUnits, technicians, dispatchAssignments, executiveMetricsSnapshots, operationalKpiTrends
 } from "../drizzle/schema";
-import { ENV } from './_core/env';
+import { ENV } from "./_core/env";
 import { logger } from "./_core/logger";
+import { getPostgresClient } from "./_core/dbPool";
 import { decryptOrgDataKey, encryptOrgDataKey, generateOrgDataKey } from "./_core/encryption";
+import { AsyncLocalStorage } from "node:async_hooks";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+let _db: PostgresJsDatabase | null = null;
 
-export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+/** Request-scoped Drizzle tx when running inside runWithTenantDb (for RLS). */
+const tenantDbStorage = new AsyncLocalStorage<{ tx: PostgresJsDatabase }>();
+
+/** Root DB (no tenant context). Use for auth, background jobs, and schema checks. */
+export function getRootDb(): PostgresJsDatabase | null {
+  if (!_db && ENV.databaseUrl) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      const client = getPostgresClient();
+      if (client) _db = drizzle(client) as PostgresJsDatabase;
     } catch (error) {
       logger.warn("Database connection initialization failed", {
         errorType: error instanceof Error ? error.name : typeof error,
@@ -36,6 +44,43 @@ export async function getDb() {
   return _db;
 }
 
+/**
+ * Run fn inside a Drizzle transaction with app.tenant_id set for RLS.
+ * Use this to wrap tRPC procedures when organizationId is present.
+ */
+export async function runWithTenantDb<T>(
+  organizationId: string,
+  fn: () => Promise<T>
+): Promise<T> {
+  const rootDb = getRootDb();
+  if (!rootDb) {
+    logger.warn("runWithTenantDb: no DB; running without tenant context");
+    return fn();
+  }
+  return rootDb.transaction(async (tx) => {
+    await tx.execute(sql`SELECT set_config('app.tenant_id', ${organizationId}, true)`);
+    return tenantDbStorage.run({ tx: tx as PostgresJsDatabase }, fn);
+  });
+}
+
+/** Get current request's Drizzle tx if inside runWithTenantDb. */
+export function getTenantDbTx(): PostgresJsDatabase | null {
+  const store = tenantDbStorage.getStore();
+  return store?.tx ?? null;
+}
+
+/**
+ * Request-scoped DB with tenant context (RLS). Use inside runWithTenantDb only.
+ * Throws if tenant context is missing to prevent accidental non-tenant queries.
+ */
+export async function getDb(): Promise<PostgresJsDatabase> {
+  const tenantTx = getTenantDbTx();
+  if (tenantTx) return tenantTx;
+  throw new Error(
+    "Tenant DB context missing. Use runWithTenantDb() before accessing the database."
+  );
+}
+
 // ============= USER MANAGEMENT =============
 
 export async function upsertUser(user: InsertUser): Promise<void> {
@@ -43,7 +88,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     throw new Error("User openId is required for upsert");
   }
 
-  const db = await getDb();
+  const db = getRootDb();
   if (!db) {
     logger.warn("Cannot upsert user: database not available");
     return;
@@ -92,7 +137,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
+    await db.insert(users).values(values).onConflictDoUpdate({
+      target: users.openId,
       set: updateSet,
     });
   } catch (error) {
@@ -105,7 +151,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 }
 
 export async function getUserByOpenId(openId: string) {
-  const db = await getDb();
+  const db = getRootDb();
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
@@ -129,9 +175,9 @@ export async function updateUserRole(userId: number, role: "admin" | "manager" |
 export async function createSite(site: InsertSite) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(sites).values(site);
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
-  if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
+  const result = await db.insert(sites).values(site).returning({ id: sites.id });
+  const insertId = result[0]?.id;
+  if (!insertId || isNaN(Number(insertId))) throw new Error("Failed to get insert ID");
   return await db.select().from(sites).where(eq(sites.id, insertId)).limit(1).then(r => r[0]);
 }
 
@@ -168,9 +214,9 @@ export async function getAllAssetCategories() {
 export async function createAssetCategory(name: string, description?: string) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(assetCategories).values({ name, description });
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
-  if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
+  const result = await db.insert(assetCategories).values({ name, description }).returning({ id: assetCategories.id });
+  const insertId = result[0]?.id;
+  if (!insertId || isNaN(Number(insertId))) throw new Error("Failed to get insert ID");
   return await db.select().from(assetCategories).where(eq(assetCategories.id, insertId)).limit(1).then(r => r[0]);
 }
 
@@ -179,9 +225,9 @@ export async function createAssetCategory(name: string, description?: string) {
 export async function createAsset(asset: InsertAsset) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(assets).values(asset);
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
-  if (!insertId || isNaN(insertId)) {
+  const result = await db.insert(assets).values(asset).returning({ id: assets.id });
+  const insertId = result[0]?.id;
+  if (!insertId || isNaN(Number(insertId))) {
     throw new Error("Failed to get insert ID");
   }
   return await db.select().from(assets).where(eq(assets.id, insertId)).limit(1).then(r => r[0]);
@@ -245,9 +291,9 @@ export async function searchAssets(searchTerm: string) {
 export async function createWorkOrder(workOrder: InsertWorkOrder) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(workOrders).values(workOrder);
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
-  if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
+  const result = await db.insert(workOrders).values(workOrder).returning({ id: workOrders.id });
+  const insertId = result[0]?.id;
+  if (!insertId || isNaN(Number(insertId))) throw new Error("Failed to get insert ID");
   return await db.select().from(workOrders).where(eq(workOrders.id, insertId)).limit(1).then(r => r[0]);
 }
 
@@ -290,9 +336,9 @@ export async function updateWorkOrder(id: number, data: Partial<InsertWorkOrder>
 export async function createMaintenanceSchedule(schedule: InsertMaintenanceSchedule) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(maintenanceSchedules).values(schedule);
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
-  if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
+  const result = await db.insert(maintenanceSchedules).values(schedule).returning({ id: maintenanceSchedules.id });
+  const insertId = result[0]?.id;
+  if (!insertId || isNaN(Number(insertId))) throw new Error("Failed to get insert ID");
   return await db.select().from(maintenanceSchedules).where(eq(maintenanceSchedules.id, insertId)).limit(1).then(r => r[0]);
 }
 
@@ -342,9 +388,9 @@ export async function updateMaintenanceSchedule(id: number, data: Partial<Insert
 export async function createInventoryItem(item: InsertInventoryItem) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(inventoryItems).values(item);
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
-  if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
+  const result = await db.insert(inventoryItems).values(item).returning({ id: inventoryItems.id });
+  const insertId = result[0]?.id;
+  if (!insertId || isNaN(Number(insertId))) throw new Error("Failed to get insert ID");
   return await db.select().from(inventoryItems).where(eq(inventoryItems.id, insertId)).limit(1).then(r => r[0]);
 }
 
@@ -399,8 +445,9 @@ export async function deleteSite(id: number) {
 export async function createInventoryTransaction(transaction: typeof inventoryTransactions.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(inventoryTransactions).values(transaction);
-  const insertId = (result as any).insertId;
+  const result = await db.insert(inventoryTransactions).values(transaction).returning({ id: inventoryTransactions.id });
+  const insertId = result[0]?.id;
+  if (!insertId) throw new Error("Failed to get insert ID");
   return await db.select().from(inventoryTransactions).where(eq(inventoryTransactions.id, Number(insertId))).limit(1).then(r => r[0]);
 }
 
@@ -559,7 +606,14 @@ export async function upsertWarehouseTransferRecommendations(params: {
         pressureScore: reco.pressureScore.toFixed(4),
         agentExecutionId: reco.agentExecutionId,
       })
-      .onDuplicateKeyUpdate({
+      .onConflictDoUpdate({
+        target: [
+          warehouseTransferRecommendations.tenantId,
+          warehouseTransferRecommendations.stockItemId,
+          warehouseTransferRecommendations.sourceWarehouseId,
+          warehouseTransferRecommendations.targetWarehouseId,
+          warehouseTransferRecommendations.agentExecutionId,
+        ],
         set: {
           transferQuantity: reco.transferQuantity,
           transferPriority: reco.transferPriority,
@@ -597,9 +651,9 @@ export async function listWarehouseTransferRecommendations(params: {
 export async function createVendor(vendor: InsertVendor) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(vendors).values(vendor);
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
-  if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
+  const result = await db.insert(vendors).values(vendor).returning({ id: vendors.id });
+  const insertId = result[0]?.id;
+  if (!insertId || isNaN(Number(insertId))) throw new Error("Failed to get insert ID");
   return await db.select().from(vendors).where(eq(vendors.id, insertId)).limit(1).then(r => r[0]);
 }
 
@@ -722,7 +776,12 @@ export async function upsertVendorIntelligenceSnapshots(params: {
         vendorScore: row.vendorScore.toFixed(4),
         agentExecutionId: row.agentExecutionId,
       })
-      .onDuplicateKeyUpdate({
+      .onConflictDoUpdate({
+        target: [
+          vendorPerformanceMetrics.tenantId,
+          vendorPerformanceMetrics.vendorId,
+          vendorPerformanceMetrics.agentExecutionId,
+        ],
         set: {
           deliveryReliability: row.deliveryReliability.toFixed(4),
           costVariance: row.costVariance.toFixed(4),
@@ -744,7 +803,12 @@ export async function upsertVendorIntelligenceSnapshots(params: {
         riskBand: row.riskBand,
         agentExecutionId: row.agentExecutionId,
       })
-      .onDuplicateKeyUpdate({
+      .onConflictDoUpdate({
+        target: [
+          vendorRiskScores.tenantId,
+          vendorRiskScores.vendorId,
+          vendorRiskScores.agentExecutionId,
+        ],
         set: {
           vendorScore: row.vendorScore.toFixed(4),
           riskScore: row.riskScore.toFixed(4),
@@ -843,7 +907,13 @@ export async function upsertProcurementRecommendations(params: {
         procurementPriority: row.procurementPriority,
         agentExecutionId: row.agentExecutionId,
       })
-      .onDuplicateKeyUpdate({
+      .onConflictDoUpdate({
+        target: [
+          procurementRecommendations.tenantId,
+          procurementRecommendations.stockItemId,
+          procurementRecommendations.recommendedVendorId,
+          procurementRecommendations.agentExecutionId,
+        ],
         set: {
           recommendedQuantity: row.recommendedQuantity,
           demandScore: row.demandScore.toFixed(4),
@@ -908,8 +978,8 @@ export async function createPurchaseOrderFromRecommendation(params: {
     vendorId: recommendation.recommendedVendorId,
     status: "draft",
     totalValue: totalValue.toFixed(2),
-  });
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId || 0);
+  }).returning({ id: purchaseOrders.id });
+  const insertId = result[0]?.id;
   if (!insertId) return null;
   const inserted = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, insertId)).limit(1);
   return inserted[0] ?? null;
@@ -1021,7 +1091,13 @@ export async function upsertSupplyChainRiskSnapshots(params: {
         riskBand: row.riskBand,
         agentExecutionId: row.agentExecutionId,
       })
-      .onDuplicateKeyUpdate({
+      .onConflictDoUpdate({
+        target: [
+          supplyChainRiskScores.tenantId,
+          supplyChainRiskScores.stockItemId,
+          supplyChainRiskScores.vendorId,
+          supplyChainRiskScores.agentExecutionId,
+        ],
         set: {
           demandVolatility: row.demandVolatility.toFixed(4),
           leadTimeRisk: row.leadTimeRisk.toFixed(4),
@@ -1046,7 +1122,14 @@ export async function upsertSupplyChainRiskSnapshots(params: {
           description: `Risk ${row.riskBand} for stock item ${row.stockItemId} and vendor ${row.vendorId}`,
           agentExecutionId: row.agentExecutionId,
         })
-        .onDuplicateKeyUpdate({
+        .onConflictDoUpdate({
+          target: [
+            supplyChainRiskEvents.tenantId,
+            supplyChainRiskEvents.stockItemId,
+            supplyChainRiskEvents.vendorId,
+            supplyChainRiskEvents.riskType,
+            supplyChainRiskEvents.agentExecutionId,
+          ],
           set: {
             riskScore: row.riskIndex.toFixed(4),
             riskBand: row.riskBand,
@@ -1197,7 +1280,14 @@ export async function upsertDispatchAssignments(params: {
         status: "created",
         agentExecutionId: row.agentExecutionId,
       })
-      .onDuplicateKeyUpdate({
+      .onConflictDoUpdate({
+        target: [
+          dispatchAssignments.tenantId,
+          dispatchAssignments.workOrderId,
+          dispatchAssignments.technicianId,
+          dispatchAssignments.fleetUnitId,
+          dispatchAssignments.agentExecutionId,
+        ],
         set: {
           dispatchPriority: row.dispatchPriority,
           estimatedTravelTime: row.estimatedTravelTime.toFixed(2),
@@ -1372,7 +1462,12 @@ export async function upsertExecutiveMetricsSnapshot(params: {
       overallOperationsIndex: params.snapshot.overallOperationsIndex.toFixed(2),
       agentExecutionId: params.agentExecutionId,
     })
-    .onDuplicateKeyUpdate({
+    .onConflictDoUpdate({
+      target: [
+        executiveMetricsSnapshots.tenantId,
+        executiveMetricsSnapshots.snapshotDate,
+        executiveMetricsSnapshots.agentExecutionId,
+      ],
       set: {
         assetHealthIndex: params.snapshot.assetHealthIndex.toFixed(4),
         maintenanceCostProjection: params.snapshot.maintenanceCostProjection.toFixed(4),
@@ -1417,7 +1512,13 @@ export async function upsertExecutiveMetricsSnapshot(params: {
         trendDirection,
         agentExecutionId: params.agentExecutionId,
       })
-      .onDuplicateKeyUpdate({
+      .onConflictDoUpdate({
+        target: [
+          operationalKpiTrends.tenantId,
+          operationalKpiTrends.metricName,
+          operationalKpiTrends.metricDate,
+          operationalKpiTrends.agentExecutionId,
+        ],
         set: {
           metricValue: item.metricValue.toFixed(4),
           trendDirection,
@@ -1468,8 +1569,9 @@ export async function listOperationalKpiTrends(params: {
 export async function createFinancialTransaction(transaction: typeof financialTransactions.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(financialTransactions).values(transaction);
-  const insertId = (result as any).insertId;
+  const result = await db.insert(financialTransactions).values(transaction).returning({ id: financialTransactions.id });
+  const insertId = result[0]?.id;
+  if (!insertId) throw new Error("Failed to get insert ID");
   return await db.select().from(financialTransactions).where(eq(financialTransactions.id, Number(insertId))).limit(1).then(r => r[0]);
 }
 
@@ -1529,8 +1631,9 @@ export async function getFinancialSummary(filters?: { startDate?: Date; endDate?
 export async function createComplianceRecord(record: typeof complianceRecords.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(complianceRecords).values(record);
-  const insertId = (result as any).insertId;
+  const result = await db.insert(complianceRecords).values(record).returning({ id: complianceRecords.id });
+  const insertId = result[0]?.id;
+  if (!insertId) throw new Error("Failed to get insert ID");
   return await db.select().from(complianceRecords).where(eq(complianceRecords.id, Number(insertId))).limit(1).then(r => r[0]);
 }
 
@@ -1606,8 +1709,9 @@ export async function createDocument(doc: typeof documents.$inferInsert) {
   } else {
     nextDoc.organizationId = normalizeOrganizationId(nextDoc.organizationId);
   }
-  const result = await db.insert(documents).values(nextDoc);
-  const insertId = (result as any).insertId;
+  const result = await db.insert(documents).values(nextDoc).returning({ id: documents.id });
+  const insertId = result[0]?.id;
+  if (!insertId) throw new Error("Failed to get insert ID");
   return await db.select().from(documents).where(eq(documents.id, Number(insertId))).limit(1).then(r => r[0]);
 }
 
@@ -1927,12 +2031,12 @@ export async function getDashboardStats() {
     .where(sql`${inventoryItems.currentStock} <= ${inventoryItems.reorderPoint}`);
   
   return {
-    totalAssets: totalAssets?.count || 0,
-    operationalAssets: operationalAssets?.count || 0,
-    maintenanceAssets: maintenanceAssets?.count || 0,
-    pendingWorkOrders: pendingWorkOrders?.count || 0,
-    inProgressWorkOrders: inProgressWorkOrders?.count || 0,
-    lowStockItems: lowStockCount?.count || 0,
+    totalAssets: Number(totalAssets?.count ?? 0),
+    operationalAssets: Number(operationalAssets?.count ?? 0),
+    maintenanceAssets: Number(maintenanceAssets?.count ?? 0),
+    pendingWorkOrders: Number(pendingWorkOrders?.count ?? 0),
+    inProgressWorkOrders: Number(inProgressWorkOrders?.count ?? 0),
+    lowStockItems: Number(lowStockCount?.count ?? 0),
   };
 }
 
@@ -1941,8 +2045,8 @@ export async function getDashboardStats() {
 export async function createNotification(notification: typeof notifications.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(notifications).values(notification);
-  return Number(result[0].insertId);
+  const result = await db.insert(notifications).values(notification).returning({ id: notifications.id });
+  return Number(result[0]?.id ?? 0);
 }
 
 export async function getUserNotifications(userId: number, limit: number = 50) {
@@ -2026,9 +2130,8 @@ export async function createAssetPhoto(data: InsertAssetPhoto) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(assetPhotos).values(data);
-  const insertId = Number(result[0].insertId);
-  return insertId;
+  const result = await db.insert(assetPhotos).values(data).returning({ id: assetPhotos.id });
+  return Number(result[0]?.id ?? 0);
 }
 
 export async function getAssetPhotos(assetId: number) {
@@ -2057,9 +2160,8 @@ export async function createScheduledReport(data: InsertScheduledReport) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(scheduledReports).values(data);
-  const insertId = Number(result[0].insertId);
-  return insertId;
+  const result = await db.insert(scheduledReports).values(data).returning({ id: scheduledReports.id });
+  return Number(result[0]?.id ?? 0);
 }
 
 export async function getScheduledReports() {
@@ -2188,9 +2290,9 @@ export async function getMaintenanceSummary(assetId: number): Promise<{
 export async function createAssetTransfer(transfer: typeof assetTransfers.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(assetTransfers).values(transfer);
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
-  if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
+  const result = await db.insert(assetTransfers).values(transfer).returning({ id: assetTransfers.id });
+  const insertId = result[0]?.id;
+  if (!insertId || isNaN(Number(insertId))) throw new Error("Failed to get insert ID");
   return await db.select().from(assetTransfers).where(eq(assetTransfers.id, insertId)).limit(1).then(r => r[0]);
 }
 
@@ -2281,9 +2383,9 @@ export async function saveQuickBooksConfig(config: InsertQuickBooksConfig) {
   await db.update(quickbooksConfig).set({ isActive: 0 });
   
   // Insert new config
-  const result = await db.insert(quickbooksConfig).values(config);
-  const insertId = result[0].insertId;
-  
+  const result = await db.insert(quickbooksConfig).values(config).returning({ id: quickbooksConfig.id });
+  const insertId = result[0]?.id;
+  if (!insertId) throw new Error("Failed to get insert ID");
   return await db.select().from(quickbooksConfig).where(eq(quickbooksConfig.id, Number(insertId))).limit(1).then(r => r[0]);
 }
 
@@ -2346,8 +2448,9 @@ export async function upsertUserPreferences(prefs: InsertUserPreferences) {
       .where(eq(userPreferences.userId, prefs.userId));
     return await getUserPreferences(prefs.userId);
   } else {
-    const result = await db.insert(userPreferences).values(prefs);
-    const insertId = result[0].insertId;
+    const result = await db.insert(userPreferences).values(prefs).returning({ id: userPreferences.id });
+    const insertId = result[0]?.id;
+    if (!insertId) throw new Error("Failed to get insert ID");
     return await db.select().from(userPreferences).where(eq(userPreferences.id, Number(insertId))).limit(1).then(r => r[0]);
   }
 }
@@ -2358,8 +2461,9 @@ export async function createEmailNotification(notification: InsertEmailNotificat
   const db = await getDb();
   if (!db) return null;
   
-  const result = await db.insert(emailNotifications).values(notification);
-  const insertId = result[0].insertId;
+  const result = await db.insert(emailNotifications).values(notification).returning({ id: emailNotifications.id });
+  const insertId = result[0]?.id;
+  if (!insertId) throw new Error("Failed to get insert ID");
   return await db.select().from(emailNotifications).where(eq(emailNotifications.id, Number(insertId))).limit(1).then(r => r[0]);
 }
 
@@ -2379,7 +2483,7 @@ export async function getEmailNotificationById(id: number) {
 }
 
 export async function getUserByEmail(email: string) {
-  const database = await getDb();
+  const database = getRootDb();
   if (!database) return null;
 
   const result = await database
@@ -2393,7 +2497,7 @@ export async function getUserByEmail(email: string) {
 
 /** Get app user by Supabase Auth user id (auth.users.id). */
 export async function getUserBySupabaseUserId(supabaseUserId: string) {
-  const database = await getDb();
+  const database = getRootDb();
   if (!database) return undefined;
   const result = await database
     .select()
@@ -2405,7 +2509,7 @@ export async function getUserBySupabaseUserId(supabaseUserId: string) {
 
 /** Set supabase_user_id on an existing user (lazy migration / first Supabase login). */
 export async function setUserSupabaseId(userId: number, supabaseUserId: string): Promise<void> {
-  const database = await getDb();
+  const database = getRootDb();
   if (!database) return;
   await database
     .update(users)
@@ -2415,7 +2519,7 @@ export async function setUserSupabaseId(userId: number, supabaseUserId: string):
 
 /** Get Supabase user id for an app user (for cache invalidation). */
 export async function getSupabaseUserIdByAppId(appUserId: number): Promise<string | null> {
-  const database = await getDb();
+  const database = getRootDb();
   if (!database) return null;
   const result = await database
     .select({ supabaseUserId: users.supabaseUserId })
@@ -2432,8 +2536,8 @@ export async function createWorkOrderTemplate(data: InsertWorkOrderTemplate) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(workOrderTemplates).values(data);
-  return Number(result[0].insertId);
+  const result = await db.insert(workOrderTemplates).values(data).returning({ id: workOrderTemplates.id });
+  return Number(result[0]?.id ?? 0);
 }
 
 export async function getWorkOrderTemplates(filters?: {
@@ -2916,8 +3020,8 @@ export async function createTelemetryPoint(params: {
     metric: params.metric,
     value: params.value.toString(),
     timestamp: ts,
-  });
-  return Number((result as any)[0]?.insertId || (result as any).insertId || 0) || null;
+  }).returning({ id: telemetryPoints.id });
+  return Number(result[0]?.id ?? 0) || null;
 }
 
 export async function aggregateTelemetryHourly(params: {
@@ -2992,7 +3096,13 @@ export async function aggregateTelemetryHourly(params: {
         minValue: group.min.toString(),
         count: group.count,
       })
-      .onDuplicateKeyUpdate({
+      .onConflictDoUpdate({
+        target: [
+          telemetryAggregates.tenantId,
+          telemetryAggregates.assetId,
+          telemetryAggregates.metric,
+          telemetryAggregates.hourBucket,
+        ],
         set: {
           avgValue: (group.sum / group.count).toString(),
           maxValue: group.max.toString(),
@@ -3087,8 +3197,8 @@ export async function createReportSnapshot(params: {
     reportType: params.reportType,
     payloadJson: JSON.stringify(params.payload ?? {}),
     generatedAt: new Date(),
-  });
-  return Number((result as any)[0]?.insertId || (result as any).insertId || 0) || null;
+  }).returning({ id: reportSnapshots.id });
+  return Number(result[0]?.id ?? 0) || null;
 }
 
 export async function createPredictiveScore(params: {
@@ -3105,6 +3215,6 @@ export async function createPredictiveScore(params: {
     riskScore: params.riskScore,
     factorsJson: JSON.stringify(params.factors ?? {}),
     scoredAt: new Date(),
-  });
-  return Number((result as any)[0]?.insertId || (result as any).insertId || 0) || null;
+  }).returning({ id: predictiveScores.id });
+  return Number(result[0]?.id ?? 0) || null;
 }

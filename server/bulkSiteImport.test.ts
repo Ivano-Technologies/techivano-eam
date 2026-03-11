@@ -1,38 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { appRouter } from './routers';
 import ExcelJS from 'exceljs';
-import type { TrpcContext } from './_core/context';
-
-type AuthenticatedUser = NonNullable<TrpcContext['user']>;
-
-function createAdminContext(): TrpcContext {
-  const user: AuthenticatedUser = {
-    id: 1,
-    openId: 'test-admin',
-    name: 'Test Admin',
-    email: 'admin@test.com',
-    loginMethod: 'manus',
-    role: 'admin',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastSignedIn: new Date(),
-  };
-
-  return {
-    user,
-    req: {
-      protocol: 'https',
-      headers: {},
-    } as TrpcContext['req'],
-    res: {
-      clearCookie: () => {},
-    } as TrpcContext['res'],
-  };
-}
+import { createTestContextWithOrg } from './test/contextHelpers';
 
 describe('Bulk Site Import', () => {
   it('should generate site import template', async () => {
-    const ctx = createAdminContext();
+    const ctx = createTestContextWithOrg('admin');
     const caller = appRouter.createCaller(ctx);
     
     const result = await caller.bulkOperations.downloadSiteTemplate();
@@ -60,7 +33,7 @@ describe('Bulk Site Import', () => {
   });
 
   it('should import sites from Excel file', async () => {
-    const ctx = createAdminContext();
+    const ctx = createTestContextWithOrg('admin');
     const caller = appRouter.createCaller(ctx);
     
     // Create a test Excel file
@@ -122,7 +95,7 @@ describe('Bulk Site Import', () => {
   });
 
   it('should handle invalid data gracefully', async () => {
-    const ctx = createAdminContext();
+    const ctx = createTestContextWithOrg('admin');
     const caller = appRouter.createCaller(ctx);
     
     // Create a test Excel file with invalid data
@@ -165,7 +138,7 @@ describe('Bulk Site Import', () => {
   });
 
   it('should export existing sites to Excel', async () => {
-    const ctx = createAdminContext();
+    const ctx = createTestContextWithOrg('admin');
     const caller = appRouter.createCaller(ctx);
     
     const result = await caller.bulkOperations.exportSites();

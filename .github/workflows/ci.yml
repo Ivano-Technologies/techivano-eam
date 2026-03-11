@@ -1,5 +1,6 @@
 # Deployment safety: build, lint, typecheck must pass before merge.
-# See docs/DEPLOYMENT_ARCHITECTURE.md and docs/DEPLOYMENT_AND_BRANCH_STRATEGY.md
+# Migrations run first (supabase db reset); then validate runs pnpm test + build.
+# This guardrail ensures schema rebuilds cleanly before tests run. See docs/DEPLOYMENT_ARCHITECTURE.md.
 name: CI
 
 on:
@@ -9,7 +10,29 @@ on:
     branches: ["main", "staging", "develop", "feature/**"]
 
 jobs:
+  migrations:
+    name: Supabase migrations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase (local)
+        run: supabase start -x studio -x realtime -x storage -x edge-runtime
+
+      - name: Lint migrations
+        run: supabase migration list
+
+      - name: Validate migrations (db reset)
+        run: supabase db reset
+
   validate:
+    needs: [migrations]
     runs-on: ubuntu-latest
     # Optional: set to true to use Node 24 (Actions default from June 2026). Leave false to keep Node 20 until ready.
     # env:

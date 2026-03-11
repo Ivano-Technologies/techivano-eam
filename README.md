@@ -84,7 +84,12 @@ The NRCS Enterprise Asset Management (EAM) System is a full-featured web applica
 - **Express 4** - Web server framework
 - **tRPC 11** - Type-safe API layer
 - **Drizzle ORM** - Database toolkit
-- **MySQL/TiDB** - Relational database
+- **Supabase (PostgreSQL)** - Database and authentication
+
+### Authentication (Supabase)
+- **Supabase Auth** is the single auth provider (email/password, magic link, OAuth).
+- **Required env:** `SUPABASE_JWT_SECRET` (from Supabase Dashboard → Project Settings → API → JWT Secret), `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
+- **Redirect URLs** (Supabase Dashboard → Authentication → URL Configuration): add `https://your-domain.com/auth/callback` and `http://localhost:3000/auth/callback` for dev.
 
 ### Infrastructure
 - **Vite** - Fast build tool

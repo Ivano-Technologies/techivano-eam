@@ -18,6 +18,15 @@ function appUrl(): string {
   return raw.replace(/\/$/, "");
 }
 
+/** Comma-separated list of allowed email domains for signup (e.g. "nrcs.org.ng,redcross.org"). Empty = use default list. */
+function allowedSignupDomains(): string[] {
+  const raw = process.env.ALLOWED_SIGNUP_DOMAINS;
+  if (raw === undefined || raw === "") {
+    return ["nrcs.org.ng", "redcross.org", "example.com"]; // example.com for tests/local
+  }
+  return raw.split(",").map((d) => d.trim().toLowerCase()).filter(Boolean);
+}
+
 export const ENV = {
   /** Base URL of the app (e.g. https://techivano.com). Used for reset links, magic links, QR. */
   appUrl: appUrl(),
@@ -36,4 +45,14 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  /** SMTP (Phase 70): optional fallback when Forge is not configured. */
+  smtpHost: process.env.SMTP_HOST ?? "",
+  smtpPort: numberFromEnv("SMTP_PORT", 587),
+  smtpUser: process.env.SMTP_USER ?? "",
+  smtpPass: process.env.SMTP_PASS ?? "",
+  emailFrom: process.env.EMAIL_FROM ?? process.env.SMTP_USER ?? "noreply@nrcs.org.ng",
+  /** Allowed email domains for signup (from ALLOWED_SIGNUP_DOMAINS or default). */
+  allowedSignupDomains: allowedSignupDomains(),
+  /** If true, skip email domain check for signup (admin override / open signup). */
+  openSignup: booleanFromEnv("OPEN_SIGNUP", false),
 };

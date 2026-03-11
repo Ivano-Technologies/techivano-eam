@@ -407,8 +407,8 @@ Use `authenticateRequest(req)` in tRPC `createContext` and in any API route that
 | 4 | Done | Supabase client; `/auth/callback` page; Login uses Supabase (password, OTP, OAuth) when `VITE_SUPABASE_URL` set. |
 | 5 | Done | Lazy migration: `getUserFromSupabaseToken` matches by email and sets `supabase_user_id`. |
 | 6 | Done | Manus callback removed (redirect to `/login`); `getLoginUrl()` returns `/login`. |
-| 7 | Pending | `src/app/api/*` routes still use `getSupabaseForRequest` + `supabase.auth.getUser()`. Align by having those routes call a shared auth helper that reads `app_session_id` / Bearer and uses `authenticateRequest`-style verification (see [Central auth helper](#central-auth-helper)). |
-| 8 | Pending | Add tests and rollout. |
+| 7 | Done | `src/lib/supabase/server.ts` provides `getSupabaseForRequest(request)` which reads `app_session_id` cookie and `Authorization: Bearer` (same token as Express). API routes use this so auth is unified. |
+| 8 | Done | Unit: supabaseAuth.test.ts (JWT + user resolution). Integration: auth.me + logout. E2E: auth.spec.ts (sign-in → home, optional logout). Runbook + README: Supabase auth env and redirect URLs. |
 
 ---
 

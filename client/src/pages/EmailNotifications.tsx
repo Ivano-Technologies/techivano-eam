@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Send, History, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Mail, Send, History, Loader2, CheckCircle2, XCircle, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function EmailNotifications() {
@@ -17,6 +17,7 @@ export default function EmailNotifications() {
   const [recipientType, setRecipientType] = useState<"all" | "role">("all");
   const [recipientRole, setRecipientRole] = useState<"admin" | "manager" | "user">("user");
 
+  const { data: emailConfig } = trpc.system.emailConfig.useQuery();
   const { data: rawHistory, refetch } = trpc.emailNotifications.history.useQuery();
   type EmailHistoryEntry = { id?: number; subject?: string; status?: string; body?: string; recipientCount?: number; recipientType?: string; recipientRole?: string; sentAt?: string | Date };
   const history: EmailHistoryEntry[] = Array.isArray(rawHistory) ? (rawHistory as EmailHistoryEntry[]) : [];
@@ -53,6 +54,46 @@ export default function EmailNotifications() {
 
   return (
     <div className="space-y-6">
+      {/* Phase 70: Email configuration status */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Settings2 className="h-5 w-5" />
+            Email configuration
+          </CardTitle>
+          <CardDescription>
+            SMTP and Forge (Manus) are configured via environment variables. See .env.example or docs for SMTP_HOST, SMTP_PORT, EMAIL_FROM, or BUILT_IN_FORGE_*.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">SMTP configured:</span>
+            {emailConfig?.smtpConfigured ? (
+              <span className="flex items-center gap-1 text-sm text-green-600"><CheckCircle2 className="h-4 w-4" /> Yes</span>
+            ) : (
+              <span className="flex items-center gap-1 text-sm text-amber-600"><XCircle className="h-4 w-4" /> No</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Forge (Manus) configured:</span>
+            {emailConfig?.forgeConfigured ? (
+              <span className="flex items-center gap-1 text-sm text-green-600"><CheckCircle2 className="h-4 w-4" /> Yes</span>
+            ) : (
+              <span className="flex items-center gap-1 text-sm text-amber-600"><XCircle className="h-4 w-4" /> No</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Email sending:</span>
+            {emailConfig?.emailConfigured ? (
+              <span className="flex items-center gap-1 text-sm text-green-600"><CheckCircle2 className="h-4 w-4" /> Available</span>
+            ) : (
+              <span className="flex items-center gap-1 text-sm text-amber-600"><XCircle className="h-4 w-4" /> Not configured</span>
+            )}
+          </div>
+          <span className="text-xs text-muted-foreground">Configure via .env.example (SMTP_* or BUILT_IN_FORGE_*). See docs/AUDIT_REMEDIATION.md for Phase 70.</span>
+        </CardContent>
+      </Card>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Email Notifications</h1>

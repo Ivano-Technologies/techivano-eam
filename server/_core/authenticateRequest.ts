@@ -1,6 +1,6 @@
 /**
- * Central auth helper: read app_session_id (or Bearer), verify token, resolve user.
- * Logs auth metrics (method, user, latency) for operational visibility and legacy-auth sunset decisions.
+ * Central auth helper: read app_session_id (or Bearer), verify Supabase JWT, resolve user.
+ * Supabase Auth is the only supported auth provider; legacy Manus/app JWT is disabled.
  * @see docs/SUPABASE_AUTH_MIGRATION_PLAN.md
  */
 import { parse as parseCookie } from "cookie";
@@ -8,7 +8,6 @@ import type { Request } from "express";
 import type { User } from "../../drizzle/schema";
 import { COOKIE_NAME } from "@shared/const";
 import { getUserFromSupabaseToken, looksLikeSupabaseJwt } from "./supabaseAuth";
-import { sdk } from "./sdk";
 import { logger } from "./logger";
 
 export function getSessionToken(req: Request): string | undefined {
@@ -24,7 +23,7 @@ export function getSessionToken(req: Request): string | undefined {
   return undefined;
 }
 
-type AuthMethod = "supabase" | "legacy" | "none";
+type AuthMethod = "supabase" | "none";
 
 function logAuthMetrics(method: AuthMethod, user: User | null, latencyMs: number): void {
   const meta: Record<string, unknown> = {
@@ -39,9 +38,8 @@ function logAuthMetrics(method: AuthMethod, user: User | null, latencyMs: number
 }
 
 /**
- * Authenticate request: Supabase JWT first, then legacy app JWT.
- * Returns User or null (no throw).
- * Logs auth_method (supabase | legacy | none), user id, and latency for metrics.
+ * Authenticate request using Supabase JWT only (app_session_id or Authorization Bearer).
+ * Returns User or null. No legacy auth; Supabase is the sole provider.
  */
 export async function authenticateRequest(req: Request): Promise<User | null> {
   const start = performance.now();
@@ -54,11 +52,6 @@ export async function authenticateRequest(req: Request): Promise<User | null> {
         logAuthMetrics("supabase", user as User, performance.now() - start);
         return user as User;
       }
-    }
-    const legacyUser = await sdk.authenticateRequest(req);
-    if (legacyUser) {
-      logAuthMetrics("legacy", legacyUser as User, performance.now() - start);
-      return legacyUser as User;
     }
     logAuthMetrics("none", null, performance.now() - start);
     return null;

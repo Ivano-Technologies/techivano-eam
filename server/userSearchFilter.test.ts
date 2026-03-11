@@ -1,42 +1,41 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import * as db from './db';
 import { createUserWithPassword } from './passwordAuth';
+import { runWithTestTenantContext } from './test/testTenantContext';
 
 describe('User Search and Filter', () => {
   let testUsers: any[] = [];
 
   beforeAll(async () => {
-    // Create test users with different attributes
-    const userConfigs = [
-      { email: 'john.doe@nrcs.org', name: 'John Doe', agency: 'Lagos Branch', status: 'pending' },
-      { email: 'jane.smith@nrcs.org', name: 'Jane Smith', agency: 'Abuja Branch', status: 'approved' },
-      { email: 'bob.wilson@nrcs.org', name: 'Bob Wilson', agency: 'Lagos Branch', status: 'rejected' },
-      { email: 'alice.brown@nrcs.org', name: 'Alice Brown', agency: 'Kano Branch', status: 'pending' },
-      { email: 'charlie.davis@nrcs.org', name: 'Charlie Davis', agency: 'Abuja Branch', status: 'approved' },
-    ];
+    await runWithTestTenantContext(async () => {
+      const userConfigs = [
+        { email: 'john.doe@nrcs.org', name: 'John Doe', agency: 'Lagos Branch', status: 'pending' },
+        { email: 'jane.smith@nrcs.org', name: 'Jane Smith', agency: 'Abuja Branch', status: 'approved' },
+        { email: 'bob.wilson@nrcs.org', name: 'Bob Wilson', agency: 'Lagos Branch', status: 'rejected' },
+        { email: 'alice.brown@nrcs.org', name: 'Alice Brown', agency: 'Kano Branch', status: 'pending' },
+        { email: 'charlie.davis@nrcs.org', name: 'Charlie Davis', agency: 'Abuja Branch', status: 'approved' },
+      ];
 
-    for (const config of userConfigs) {
-      const user = await createUserWithPassword(
-        config.email,
-        config.name,
-        'password123',
-        { agency: config.agency }
-      );
-      
-      // Update status if needed
-      if (config.status === 'approved') {
-        await db.approveUser(user.id, 1);
-      } else if (config.status === 'rejected') {
-        await db.rejectUser(user.id, 'Test rejection');
+      for (const config of userConfigs) {
+        const user = await createUserWithPassword(
+          config.email,
+          config.name,
+          'password123',
+          { agency: config.agency }
+        );
+        if (config.status === 'approved') {
+          await db.approveUser(user.id, 1);
+        } else if (config.status === 'rejected') {
+          await db.rejectUser(user.id, 'Test rejection');
+        }
+        testUsers.push({ ...user, ...config });
       }
-      
-      testUsers.push({ ...user, ...config });
-    }
+    });
   });
 
   describe('Search Functionality', () => {
     it('should filter users by name', async () => {
-      const allUsers = await db.getPendingUsers();
+      const allUsers = await runWithTestTenantContext(() => db.getPendingUsers());
       const searchQuery = 'john';
       
       const filtered = allUsers.filter((u: any) => 
@@ -50,7 +49,7 @@ describe('User Search and Filter', () => {
     });
 
     it('should filter users by email', async () => {
-      const allUsers = await db.getPendingUsers();
+      const allUsers = await runWithTestTenantContext(() => db.getPendingUsers());
       const searchQuery = 'jane.smith';
       
       const filtered = allUsers.filter((u: any) => 
@@ -64,7 +63,7 @@ describe('User Search and Filter', () => {
     });
 
     it('should filter users by agency', async () => {
-      const allUsers = await db.getPendingUsers();
+      const allUsers = await runWithTestTenantContext(() => db.getPendingUsers());
       const searchQuery = 'lagos';
       
       const filtered = allUsers.filter((u: any) => 
@@ -78,7 +77,7 @@ describe('User Search and Filter', () => {
     });
 
     it('should return empty array for non-matching search', async () => {
-      const allUsers = await db.getPendingUsers();
+      const allUsers = await runWithTestTenantContext(() => db.getPendingUsers());
       const searchQuery = 'nonexistentuser12345';
       
       const filtered = allUsers.filter((u: any) => 
@@ -93,7 +92,7 @@ describe('User Search and Filter', () => {
 
   describe('Status Filter', () => {
     it('should filter pending users', async () => {
-      const allUsers = await db.getPendingUsers();
+      const allUsers = await runWithTestTenantContext(() => db.getPendingUsers());
       const filtered = allUsers.filter((u: any) => u.status === 'pending');
       
       expect(filtered.length).toBeGreaterThan(0);
@@ -101,7 +100,7 @@ describe('User Search and Filter', () => {
     });
 
     it('should filter approved users', async () => {
-      const allUsers = await db.getPendingUsers();
+      const allUsers = await runWithTestTenantContext(() => db.getPendingUsers());
       const filtered = allUsers.filter((u: any) => u.status === 'approved');
       
       expect(filtered.length).toBeGreaterThan(0);
@@ -109,7 +108,7 @@ describe('User Search and Filter', () => {
     });
 
     it('should filter rejected users', async () => {
-      const allUsers = await db.getPendingUsers();
+      const allUsers = await runWithTestTenantContext(() => db.getPendingUsers());
       const filtered = allUsers.filter((u: any) => u.status === 'rejected');
       
       expect(filtered.length).toBeGreaterThan(0);
@@ -119,7 +118,7 @@ describe('User Search and Filter', () => {
 
   describe('Date Range Filter', () => {
     it('should filter users created after a specific date', async () => {
-      const allUsers = await db.getPendingUsers();
+      const allUsers = await runWithTestTenantContext(() => db.getPendingUsers());
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       
@@ -133,7 +132,7 @@ describe('User Search and Filter', () => {
     });
 
     it('should filter users created before a specific date', async () => {
-      const allUsers = await db.getPendingUsers();
+      const allUsers = await runWithTestTenantContext(() => db.getPendingUsers());
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       
@@ -147,7 +146,7 @@ describe('User Search and Filter', () => {
     });
 
     it('should filter users within date range', async () => {
-      const allUsers = await db.getPendingUsers();
+      const allUsers = await runWithTestTenantContext(() => db.getPendingUsers());
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const tomorrow = new Date();
@@ -164,7 +163,7 @@ describe('User Search and Filter', () => {
 
   describe('Combined Filters', () => {
     it('should apply search and status filter together', async () => {
-      const allUsers = await db.getPendingUsers();
+      const allUsers = await runWithTestTenantContext(() => db.getPendingUsers());
       const searchQuery = 'lagos';
       const statusFilter = 'pending';
       
@@ -181,7 +180,7 @@ describe('User Search and Filter', () => {
     });
 
     it('should apply all filters together', async () => {
-      const allUsers = await db.getPendingUsers();
+      const allUsers = await runWithTestTenantContext(() => db.getPendingUsers());
       const searchQuery = 'nrcs';
       const statusFilter = 'approved';
       const dateFrom = new Date();

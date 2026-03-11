@@ -1,6 +1,6 @@
 // @ts-nocheck — schema pg-core vs getDb mysql2
 import bcrypt from 'bcrypt';
-import { getDb } from './db';
+import { getRootDb } from './db';
 import { users } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { logger } from './_core/logger';
@@ -37,7 +37,7 @@ export async function createUserWithPassword(
   // Generate a unique openId for password-based users
   const openId = `pwd_${Date.now()}_${Math.random().toString(36).substring(7)}`;
   
-  const db = await getDb();
+  const db = getRootDb();
   if (!db) {
     logger.warn("createUserWithPassword aborted: database not available", {
       nodeEnv: process.env.NODE_ENV || null,
@@ -71,7 +71,7 @@ export async function createUserWithPassword(
 }
 
 export async function authenticateWithPassword(email: string, password: string) {
-  const db = await getDb();
+  const db = getRootDb();
   if (!db) throw new Error('Database not available');
   
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);

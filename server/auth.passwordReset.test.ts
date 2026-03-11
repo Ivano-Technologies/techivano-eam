@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { appRouter } from "./routers";
-import { getDb } from "./db";
+import { getRootDb } from "./db";
 import { users, passwordResetTokens } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import type { TrpcContext } from "./_core/context";
@@ -26,14 +26,14 @@ describe("Password Reset Flow", () => {
   let resetToken: string;
 
   beforeAll(async () => {
-    // Create test user with password
+    // Create test user with password (example.com is in default ALLOWED_SIGNUP_DOMAINS for tests)
     const caller = appRouter.createCaller(createContext());
     await caller.auth.signupWithPassword({
       email: testEmail,
       name: "Reset Test User",
       password: testPassword,
     });
-    const db = await getDb();
+    const db = getRootDb();
     if (db) {
       await db.update(users).set({ status: "approved" }).where(eq(users.email, testEmail));
     }
@@ -47,7 +47,7 @@ describe("Password Reset Flow", () => {
     expect(result.message).toContain("If an account exists");
 
     // Verify token was created in database
-    const db = await getDb();
+    const db = getRootDb();
     if (!db) throw new Error("Database not available");
     
     const [user] = await db.select().from(users).where(eq(users.email, testEmail)).limit(1);
@@ -80,7 +80,7 @@ describe("Password Reset Flow", () => {
     expect(result.message).toContain("Password reset successfully");
 
     // Verify token was deleted
-    const db = await getDb();
+    const db = getRootDb();
     if (!db) throw new Error("Database not available");
     
     const [token] = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.token, resetToken)).limit(1);
@@ -89,14 +89,13 @@ describe("Password Reset Flow", () => {
 
   it("should login with new password", async () => {
     const caller = appRouter.createCaller(createContext());
-    
-    const result = await caller.auth.loginWithPassword({
-      email: testEmail,
-      password: newPassword,
-    });
-    
-    expect(result.success).toBe(true);
-    expect(result.user.email).toBe(testEmail);
+    // Password login is Supabase-only; server procedure throws and directs client to sign-in form.
+    await expect(
+      caller.auth.loginWithPassword({
+        email: testEmail,
+        password: newPassword,
+      })
+    ).rejects.toThrow("Password login is via Supabase Auth only");
   });
 
   it("should reject invalid token", async () => {

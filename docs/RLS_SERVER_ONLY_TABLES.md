@@ -7,6 +7,16 @@
 - **Core tenant tables** (assets, work_orders, sites, vendors, documents, inspections, etc.) have org-scoped RLS policies and are listed in `supabase/migrations/20260309133000_canonical_organization_tenancy.sql` and `20260309160000_phase3_organization_id_not_null_and_rls.sql`.
 - **Server-only tables** below are not exposed to client or anon/key; the API (tRPC) and workers use a service role or server-side DB connection that bypasses RLS, or they are internal (e.g. job runs, telemetry, audit logs). Adding a policy is unnecessary and would only duplicate server-side access control.
 
+## Tables With RLS and Policies (App-Used Supabase Tables)
+
+As of `20260311120000_rls_app_used_tables.sql`, the following have RLS enabled and **tenant-scoped or deny-anon policies** (anon key cannot read/write all rows):
+
+- `platform_events`, `warehouse_transfer_recommendations`, `vendor_performance`, `integration_connectors`, `telemetry_anomaly_events` — tenant isolation via `organization_members` + `auth.uid()`.
+- `tenant_organization_map` — deny anon (`using (false)`).
+- `organization_encryption_keys` — org-scoped policy.
+
+Core tenant tables (e.g. `assets`, `work_orders`, `sites`, `vendors`, `documents`) are covered in `20260309133000` and `20260309160000`.
+
 ## Tables Considered Server-Only (RLS Enabled, No Policy)
 
 | Table / area | Notes |
