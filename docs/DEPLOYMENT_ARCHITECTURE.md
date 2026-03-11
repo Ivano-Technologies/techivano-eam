@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for the CI/CD and deployment flow: developer commit → GitHub → CI → Preview (Vercel) → Staging → Production.
 
-**Related:** Server atomic deploys (PM2) are documented in [DEPLOYMENT_RUNBOOK.md](./DEPLOYMENT_RUNBOOK.md). Branch strategy and env vars: [DEPLOYMENT_AND_BRANCH_STRATEGY.md](./DEPLOYMENT_AND_BRANCH_STRATEGY.md).
+**Related:** [SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md) (platform diagram: Browser → Vercel → API → Redis → Workers → Supabase). [DEPLOYMENT_WORKFLOW.md](./DEPLOYMENT_WORKFLOW.md) (step-by-step workflow: branches, worktrees, protection, rollback). Server atomic deploys (PM2): [DEPLOYMENT_RUNBOOK.md](./DEPLOYMENT_RUNBOOK.md). Branch strategy and env vars: [DEPLOYMENT_AND_BRANCH_STRATEGY.md](./DEPLOYMENT_AND_BRANCH_STRATEGY.md).
 
 ---
 
@@ -220,6 +220,7 @@ This pattern is used by companies such as Vercel, Linear, Supabase, and Stripe f
 ## Quick reference
 
 | Item              | Location / value |
+| **Platform diagram** | [SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md) |
 |-------------------|------------------|
 | Production URL    | `https://techivano.com` |
 | Staging URL       | `https://staging.techivano.com` |
