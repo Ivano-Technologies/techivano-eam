@@ -68,7 +68,11 @@ export const users = mysqlTable("users", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   hasCompletedOnboarding: boolean("has_completed_onboarding").default(false).notNull(),
-});
+  /** Supabase Auth user id (auth.users.id). Links app user to Supabase Auth. */
+  supabaseUserId: uuid("supabase_user_id"),
+}, (table) => ({
+  supabaseUserIdUnique: uniqueIndex("uq_users_supabase_user_id").on(table.supabaseUserId),
+}));
 
 /**
  * Sites/Locations for multi-site management

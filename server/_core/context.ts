@@ -1,7 +1,7 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
 import { normalizeOrganizationId } from "../db";
-import { sdk } from "./sdk";
+import { authenticateRequest } from "./authenticateRequest";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
@@ -118,14 +118,7 @@ export function resolveOrganizationContext({
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
-  let user: User | null = null;
-
-  try {
-    user = await sdk.authenticateRequest(opts.req);
-  } catch (error) {
-    // Authentication is optional for public procedures.
-    user = null;
-  }
+  const user = await authenticateRequest(opts.req);
   const orgContext = resolveOrganizationContext({ req: opts.req, user });
 
   return {

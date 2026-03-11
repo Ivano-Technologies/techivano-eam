@@ -2,7 +2,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
+import { getSessionCookieOptions, getAuthSessionCookieOptions } from "./_core/cookies";
+import { invalidateUserCache } from "./_core/userCache";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedOrgProcedure } from "./_core/trpc";
 import * as db from "./db";
@@ -89,6 +90,33 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+    setSession: publicProcedure
+      .input(z.object({ accessToken: z.string().min(1) }))
+      .mutation(async ({ input, ctx }) => {
+        const { getUserFromSupabaseToken } = await import("./_core/supabaseAuth");
+        const user = await getUserFromSupabaseToken(input.accessToken);
+        if (!user) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid or expired session token",
+          });
+        }
+        const u = user as { status?: string };
+        if (u.status === "pending") {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Your account is pending admin approval.",
+          });
+        }
+        if (u.status === "rejected" || u.status === "inactive") {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Your account is not active. Please contact the administrator.",
+          });
+        }
+        ctx.res.cookie(COOKIE_NAME, input.accessToken, getAuthSessionCookieOptions(ctx.req));
+        return { success: true, user };
+      }),
     signup: publicProcedure
       .input(z.object({
         email: z.string().email(),
@@ -1809,21 +1837,27 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         const { id, ...data } = input;
-        return await db.updateUser(id, data);
+        const result = await db.updateUser(id, data);
+        const sub = await db.getSupabaseUserIdByAppId(id);
+        await invalidateUserCache(sub ?? undefined);
+        return result;
       }),
-    
+
     updateRole: adminProcedure
       .input(z.object({
         userId: z.number(),
         role: z.enum(["admin", "manager", "technician", "user"]),
       }))
       .mutation(async ({ input }) => {
-        return await db.updateUserRole(input.userId, input.role);
+        const updated = await db.updateUserRole(input.userId, input.role);
+        await invalidateUserCache(updated?.supabaseUserId ?? undefined);
+        return updated;
       }),
 
     completeOnboarding: protectedOrgProcedure
       .mutation(async ({ ctx }) => {
         await db.updateUser(ctx.user.id, { hasCompletedOnboarding: true });
+        await invalidateUserCache(ctx.user.supabaseUserId ?? undefined);
         return { success: true };
       }),
 
@@ -1841,31 +1875,47 @@ export const appRouter = router({
     approveUser: adminProcedure
       .input(z.object({ userId: z.number() }))
       .mutation(async ({ input, ctx }) => {
-        return await db.approveUser(input.userId, ctx.user.id);
+        const result = await db.approveUser(input.userId, ctx.user.id);
+        const sub = await db.getSupabaseUserIdByAppId(input.userId);
+        await invalidateUserCache(sub ?? undefined);
+        return result;
       }),
-    
+
     rejectUser: adminProcedure
-      .input(z.object({ 
+      .input(z.object({
         userId: z.number(),
         reason: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        return await db.rejectUser(input.userId, input.reason);
+        const result = await db.rejectUser(input.userId, input.reason);
+        const sub = await db.getSupabaseUserIdByAppId(input.userId);
+        await invalidateUserCache(sub ?? undefined);
+        return result;
       }),
     
     bulkApproveUsers: adminProcedure
       .input(z.object({ userIds: z.array(z.number()) }))
       .mutation(async ({ input, ctx }) => {
-        return await db.bulkApproveUsers(input.userIds, ctx.user.id);
+        const result = await db.bulkApproveUsers(input.userIds, ctx.user.id);
+        for (const userId of input.userIds) {
+          const sub = await db.getSupabaseUserIdByAppId(userId);
+          await invalidateUserCache(sub ?? undefined);
+        }
+        return result;
       }),
-    
+
     bulkRejectUsers: adminProcedure
-      .input(z.object({ 
+      .input(z.object({
         userIds: z.array(z.number()),
         reason: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        return await db.bulkRejectUsers(input.userIds, input.reason);
+        const result = await db.bulkRejectUsers(input.userIds, input.reason);
+        for (const userId of input.userIds) {
+          const sub = await db.getSupabaseUserIdByAppId(userId);
+          await invalidateUserCache(sub ?? undefined);
+        }
+        return result;
       }),
   }),
 

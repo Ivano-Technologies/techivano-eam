@@ -21,28 +21,27 @@ function isSecureRequest(req: Request) {
   return protoList.some(proto => proto.trim().toLowerCase() === "https");
 }
 
+/** Session cookie options for auth (Supabase access token). Protects against XSS and CSRF. */
+const AUTH_SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
 export function getSessionCookieOptions(
   req: Request
-): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure"> {
-  // const hostname = req.hostname;
-  // const shouldSetDomain =
-  //   hostname &&
-  //   !LOCAL_HOSTS.has(hostname) &&
-  //   !isIpAddress(hostname) &&
-  //   hostname !== "127.0.0.1" &&
-  //   hostname !== "::1";
-
-  // const domain =
-  //   shouldSetDomain && !hostname.startsWith(".")
-  //     ? `.${hostname}`
-  //     : shouldSetDomain
-  //       ? hostname
-  //       : undefined;
-
+): Pick<CookieOptions, "httpOnly" | "path" | "sameSite" | "secure"> {
+  const isProduction = process.env.NODE_ENV === "production";
   return {
     httpOnly: true,
     path: "/",
-    sameSite: "none",
-    secure: isSecureRequest(req),
+    sameSite: "lax",
+    secure: isProduction || isSecureRequest(req),
+  };
+}
+
+/** Options for setting the auth session cookie (includes maxAge). Use when calling res.cookie(COOKIE_NAME, value, options). */
+export function getAuthSessionCookieOptions(
+  req: Request
+): Pick<CookieOptions, "httpOnly" | "path" | "sameSite" | "secure" | "maxAge"> {
+  return {
+    ...getSessionCookieOptions(req),
+    maxAge: AUTH_SESSION_MAX_AGE_MS, // Express expects milliseconds
   };
 }

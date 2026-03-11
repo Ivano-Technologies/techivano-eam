@@ -64,6 +64,13 @@
       "when": 1772807200000,
       "tag": "0032_warehouse_transfer_recommendations",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1772810800000,
+      "tag": "0038_supabase_auth_user_id",
+      "breakpoints": true
     }
   ]
 }

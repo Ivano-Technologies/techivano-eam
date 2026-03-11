@@ -2381,17 +2381,50 @@ export async function getEmailNotificationById(id: number) {
 export async function getUserByEmail(email: string) {
   const database = await getDb();
   if (!database) return null;
-  
+
   const result = await database
     .select()
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
-  
+
   return result.length > 0 ? result[0] : null;
 }
 
+/** Get app user by Supabase Auth user id (auth.users.id). */
+export async function getUserBySupabaseUserId(supabaseUserId: string) {
+  const database = await getDb();
+  if (!database) return undefined;
+  const result = await database
+    .select()
+    .from(users)
+    .where(eq(users.supabaseUserId, supabaseUserId))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
 
+/** Set supabase_user_id on an existing user (lazy migration / first Supabase login). */
+export async function setUserSupabaseId(userId: number, supabaseUserId: string): Promise<void> {
+  const database = await getDb();
+  if (!database) return;
+  await database
+    .update(users)
+    .set({ supabaseUserId, lastSignedIn: new Date() })
+    .where(eq(users.id, userId));
+}
+
+/** Get Supabase user id for an app user (for cache invalidation). */
+export async function getSupabaseUserIdByAppId(appUserId: number): Promise<string | null> {
+  const database = await getDb();
+  if (!database) return null;
+  const result = await database
+    .select({ supabaseUserId: users.supabaseUserId })
+    .from(users)
+    .where(eq(users.id, appUserId))
+    .limit(1);
+  const sid = result[0]?.supabaseUserId;
+  return typeof sid === "string" ? sid : null;
+}
 
 // ============= WORK ORDER TEMPLATES =============
 

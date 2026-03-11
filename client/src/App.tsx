@@ -14,6 +14,7 @@ const Login = lazy(() => import("./pages/Login"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const VerifyMagicLink = lazy(() => import("./pages/VerifyMagicLink"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const Welcome = lazy(() => import("@/pages/Welcome"));
 const PendingUsers = lazy(() => import("./pages/PendingUsers"));
 const Home = lazy(() => import("./pages/Home"));
@@ -75,6 +76,7 @@ function Router() {
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
         <Route path="/verify-magic-link" component={VerifyMagicLink} />
+        <Route path="/auth/callback" component={AuthCallback} />
         <Route path="/welcome" component={Welcome} />
       <Route path="/" component={Home} />
       <Route path="/assets" component={Assets} />

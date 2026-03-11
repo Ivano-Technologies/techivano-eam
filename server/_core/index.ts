@@ -20,7 +20,6 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
-import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext, resolveOrganizationContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -172,8 +171,10 @@ async function startServer() {
     });
   });
 
-  // OAuth callback under /api/oauth/callback
-  registerOAuthRoutes(app);
+  // Legacy Manus OAuth callback deprecated — redirect to app login (Supabase Auth)
+  app.get("/api/oauth/callback", (_req, res) => {
+    res.redirect(302, "/login");
+  });
   
   // Magic link verification endpoint
   app.post("/api/auth/verify-magic-link", async (req, res) => {
