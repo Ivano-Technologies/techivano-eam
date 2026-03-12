@@ -2,6 +2,10 @@
  * Supabase Auth — server-side JWT verification and user resolution.
  * Uses request-level identity cache (Redis) to avoid repeated DB lookups per request.
  * @see docs/SUPABASE_AUTH_MIGRATION_PLAN.md
+ *
+ * JWT verification: Supabase uses HS256. Set SUPABASE_JWT_SECRET from Dashboard → API → JWT Secret.
+ * Optional: SUPABASE_JWT_ISSUER (e.g. https://<project-ref>.supabase.co/auth/v1) and
+ * SUPABASE_JWT_AUDIENCE (e.g. "authenticated") — must match Dashboard → API → JWT Settings if set.
  */
 import { jwtVerify } from "jose";
 import * as db from "../db";
@@ -18,7 +22,7 @@ const alg = "HS256";
 
 /**
  * Verify Supabase access token (JWT) and return payload or null.
- * Validates exp, nbf (jose default) and optional iss, aud when configured.
+ * Validates exp, nbf (jose default), algorithms: ["HS256"], and optional iss/aud when configured.
  */
 export async function verifySupabaseToken(
   token: string | undefined | null
