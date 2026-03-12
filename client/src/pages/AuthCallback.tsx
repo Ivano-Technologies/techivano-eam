@@ -27,10 +27,8 @@ export default function AuthCallback() {
       const accessToken = hashParams.get("access_token");
 
       if (code) {
-        fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "cb0794" }, body: JSON.stringify({ sessionId: "cb0794", location: "AuthCallback.tsx", message: "callback has code", data: { hasCode: true }, timestamp: Date.now(), hypothesisId: "D" }) }).catch(() => {});
         const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         if (cancelled) return;
-        fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "cb0794" }, body: JSON.stringify({ sessionId: "cb0794", location: "AuthCallback.tsx:exchange", message: "exchange result", data: { ok: !exchangeError && !!data?.session?.access_token, errorMsg: exchangeError?.message?.slice(0, 60) }, timestamp: Date.now(), hypothesisId: "D" }) }).catch(() => {});
         if (exchangeError) {
           setError(exchangeError.message);
           return;
@@ -40,7 +38,6 @@ export default function AuthCallback() {
             await setSessionMutation.mutateAsync({
               accessToken: data.session.access_token,
             });
-            fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "cb0794" }, body: JSON.stringify({ sessionId: "cb0794", location: "AuthCallback.tsx:setSession", message: "callback setSession ok", data: {}, timestamp: Date.now(), hypothesisId: "D" }) }).catch(() => {});
             if (!cancelled) setLocation("/");
             return;
           } catch (e) {

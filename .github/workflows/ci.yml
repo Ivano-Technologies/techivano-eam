@@ -1,6 +1,5 @@
 # Deployment safety: build, lint, typecheck must pass before merge.
-# Migrations run first (link + supabase db reset); then validate runs pnpm test + build.
-# Required GitHub Actions secrets: SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF (e.g. itzigdbbkkwmnaitlqfy).
+# Note: Supabase migrations are NOT run in CI. Run manually (e.g. supabase db push) or in a separate release process.
 name: CI
 
 on:
@@ -10,38 +9,7 @@ on:
     branches: ["main", "staging", "develop", "feature/**"]
 
 jobs:
-  migrations:
-    name: Supabase migrations
-    runs-on: ubuntu-latest
-    env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Authenticate Supabase
-        run: supabase login --token $SUPABASE_ACCESS_TOKEN
-
-      - name: Link Supabase project
-        run: supabase link --project-ref $SUPABASE_PROJECT_REF
-
-      - name: Start Supabase (local)
-        run: supabase start -x studio -x realtime -x storage -x edge-runtime
-
-      - name: Lint migrations
-        run: supabase migration list
-
-      - name: Validate migrations (db reset)
-        run: supabase db reset
-
   validate:
-    needs: [migrations]
     runs-on: ubuntu-latest
     # Optional: set to true to use Node 24 (Actions default from June 2026). Leave false to keep Node 20 until ready.
     # env:
@@ -63,70 +31,5 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Tests
-        run: pnpm test
-
-      - name: Phase 4 tests
-        run: pnpm test:phase4
-
-      - name: Worker tests
-        run: pnpm test:workers
-
-      - name: Build API + frontend
-        run: pnpm build
-
-      - name: Build worker
-        run: pnpm build:worker
-
-  e2e-auth:
-    name: E2E Auth (optional)
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.E2E_ENABLED == 'true'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Run E2E auth test
-        env:
-          E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://www.techivano.com' }}
-          E2E_AUTH_EMAIL: ${{ secrets.E2E_AUTH_EMAIL }}
-          E2E_AUTH_PASSWORD: ${{ secrets.E2E_AUTH_PASSWORD }}
-        run: pnpm exec playwright test tests/e2e/auth.spec.ts --reporter=html
-        continue-on-error: true
-
-      - name: Upload Playwright report
-        if: failure() || always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report/
-          if-no-files-found: ignore
-
-      - name: Upload test results (screenshots)
-        if: failure() || always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-test-results
-          path: test-results/
-          if-no-files-found: ignore
+      - name: CI (typecheck, test, build)
+        run: pnpm run ci

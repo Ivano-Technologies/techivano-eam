@@ -166,6 +166,8 @@ Before deployments, CI runs (see `.github/workflows/ci.yml`):
 
 If any step fails, the merge can be blocked (via branch protection).
 
+**Supabase migrations:** CI does **not** run Supabase migrations (`supabase db push` / `supabase db reset`). Apply migrations manually (e.g. `supabase db push` from a linked project) or as part of a separate release/deploy step. Keep migration history in `supabase/migrations/` and run them against the correct environment (staging vs production) when deploying.
+
 ---
 
 ## 11. Emergency rollback procedure
