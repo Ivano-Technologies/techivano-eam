@@ -2517,6 +2517,40 @@ export async function setUserSupabaseId(userId: number, supabaseUserId: string):
     .where(eq(users.id, userId));
 }
 
+/**
+ * Create an app user from a valid Supabase JWT payload when no user exists (e.g. test account or first login).
+ * Uses sub as openId and supabase_user_id; status approved so they can log in immediately.
+ */
+export async function provisionUserFromSupabase(payload: { sub: string; email?: string }): Promise<typeof users.$inferSelect | null> {
+  const database = getRootDb();
+  if (!database) return null;
+  const openId = payload.sub;
+  const email = payload.email ?? "";
+  const name = (email && email.includes("@")) ? email.split("@")[0] : "User";
+  try {
+    const result = await database
+      .insert(users)
+      .values({
+        openId,
+        email: email || null,
+        name: name || null,
+        supabaseUserId: payload.sub,
+        status: "approved",
+        role: "user",
+        loginMethod: "supabase",
+      } as any)
+      .onConflictDoUpdate({
+        target: users.openId,
+        set: { supabaseUserId: payload.sub, lastSignedIn: new Date(), email: email || undefined, name: name || undefined },
+      })
+      .returning();
+    return result[0] ?? null;
+  } catch {
+    const existing = await getUserBySupabaseUserId(payload.sub);
+    return existing ?? null;
+  }
+}
+
 /** Get Supabase user id for an app user (for cache invalidation). */
 export async function getSupabaseUserIdByAppId(appUserId: number): Promise<string | null> {
   const database = getRootDb();

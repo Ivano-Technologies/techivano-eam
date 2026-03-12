@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = process.env.E2E_BASE_URL ?? "https://www.techivano.com";
+// Use techivano.com (no www) so /api/trpc is same-origin; www may serve static-only and return HTML for API.
+const baseURL = process.env.E2E_BASE_URL ?? "https://techivano.com";
 
 export default defineConfig({
   testDir: "./tests/e2e",

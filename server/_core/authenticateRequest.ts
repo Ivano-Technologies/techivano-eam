@@ -44,19 +44,31 @@ function logAuthMetrics(method: AuthMethod, user: User | null, latencyMs: number
 export async function authenticateRequest(req: Request): Promise<User | null> {
   const start = performance.now();
   const token = getSessionToken(req);
-
+  // #region agent log
+  const hasToken = !!token;
+  const looksLikeSupabase = !!(token && looksLikeSupabaseJwt(token));
+  // #endregion
   try {
     if (token && looksLikeSupabaseJwt(token)) {
       const user = await getUserFromSupabaseToken(token);
       if (user) {
         logAuthMetrics("supabase", user as User, performance.now() - start);
+        // #region agent log
+        fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "cb0794" }, body: JSON.stringify({ sessionId: "cb0794", location: "authenticateRequest.ts", message: "auth result", data: { hasToken, looksLikeSupabase, hasUser: true }, timestamp: Date.now(), hypothesisId: "E" }) }).catch(() => {});
+        // #endregion
         return user as User;
       }
     }
     logAuthMetrics("none", null, performance.now() - start);
+    // #region agent log
+    fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "cb0794" }, body: JSON.stringify({ sessionId: "cb0794", location: "authenticateRequest.ts", message: "auth result", data: { hasToken, looksLikeSupabase, hasUser: false }, timestamp: Date.now(), hypothesisId: "E" }) }).catch(() => {});
+    // #endregion
     return null;
   } catch {
     logAuthMetrics("none", null, performance.now() - start);
+    // #region agent log
+    fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "cb0794" }, body: JSON.stringify({ sessionId: "cb0794", location: "authenticateRequest.ts", message: "auth result", data: { hasToken, looksLikeSupabase, hasUser: false, caught: true }, timestamp: Date.now(), hypothesisId: "E" }) }).catch(() => {});
+    // #endregion
     return null;
   }
 }

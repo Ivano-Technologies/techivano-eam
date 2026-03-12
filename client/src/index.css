@@ -523,3 +523,112 @@
 .safe-area-inset-bottom {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* Auth login: dots that change from grey to other hues — moving "light" blobs create floating shape illusion */
+.auth-dots-base {
+  background-image: radial-gradient(circle at center, currentColor 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-color: transparent;
+}
+/* Colored dot layers: same grid, different hue; a moving circular mask reveals a blob that drifts */
+.auth-dots-blob {
+  position: absolute;
+  inset: 0;
+  background-size: 20px 20px;
+  mask-image: radial-gradient(circle at center, black 0%, black 15%, transparent 45%);
+  mask-size: 90% 90%;
+  mask-repeat: no-repeat;
+  mask-position: 0% 0%;
+  -webkit-mask-image: radial-gradient(circle at center, black 0%, black 15%, transparent 45%);
+  -webkit-mask-size: 90% 90%;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: 0% 0%;
+  animation: auth-blob-drift 25s ease-in-out infinite;
+}
+.auth-dots-blob:nth-child(2) { animation-name: auth-blob-drift-alt; animation-duration: 30s; animation-delay: -8s; }
+.auth-dots-blob:nth-child(3) { animation-name: auth-blob-drift-third; animation-duration: 28s; animation-delay: -15s; }
+.auth-dots-blob:nth-child(4) { animation-name: auth-blob-drift-fourth; animation-duration: 22s; animation-delay: -3s; }
+/* Blob paths: move around the screen in irregular paths so shapes feel random */
+@keyframes auth-blob-drift {
+  0%, 100% { mask-position: 10% 20%; -webkit-mask-position: 10% 20%; }
+  25% { mask-position: 85% 15%; -webkit-mask-position: 85% 15%; }
+  50% { mask-position: 80% 80%; -webkit-mask-position: 80% 80%; }
+  75% { mask-position: 15% 75%; -webkit-mask-position: 15% 75%; }
+}
+@keyframes auth-blob-drift-alt {
+  0%, 100% { mask-position: 90% 70%; -webkit-mask-position: 90% 70%; }
+  33% { mask-position: 20% 30%; -webkit-mask-position: 20% 30%; }
+  66% { mask-position: 50% 90%; -webkit-mask-position: 50% 90%; }
+}
+@keyframes auth-blob-drift-third {
+  0%, 100% { mask-position: 50% 10%; -webkit-mask-position: 50% 10%; }
+  25% { mask-position: 15% 50%; -webkit-mask-position: 15% 50%; }
+  50% { mask-position: 70% 40%; -webkit-mask-position: 70% 40%; }
+  75% { mask-position: 40% 85%; -webkit-mask-position: 40% 85%; }
+}
+@keyframes auth-blob-drift-fourth {
+  0%, 100% { mask-position: 70% 25%; -webkit-mask-position: 70% 25%; }
+  50% { mask-position: 25% 60%; -webkit-mask-position: 25% 60%; }
+}
+
+/* Auth dark theme: form elements when variant="manusDark" */
+.auth-dark label,
+.auth-dark [data-slot="label"] {
+  color: #fff;
+  font-weight: 500;
+}
+.auth-dark input,
+.auth-dark [data-slot="input"] {
+  background-color: #363636 !important;
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+.auth-dark input::placeholder {
+  color: rgba(156, 163, 175, 0.9);
+}
+.auth-dark button[type="submit"],
+.auth-dark [data-slot="button"]:not([data-variant="link"]) {
+  background-color: #363636 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.auth-dark a > button,
+.auth-dark button.variant-outline {
+  background-color: #363636 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.auth-dark .text-muted-foreground,
+.auth-dark p.text-sm {
+  color: #9ca3af;
+}
+.auth-dark a[href]:not(.text-\[\#DC2626\]) {
+  color: #9ca3af;
+}
+.auth-dark a[href]:hover {
+  color: #fff;
+}
+.auth-dark a.text-\[\#DC2626\],
+.auth-dark a[href="/login"],
+.auth-dark a[href="/signup"],
+.auth-dark a[href="/forgot-password"] {
+  color: #f87171;
+}
+.auth-dark .text-destructive {
+  color: #fca5a5;
+}
+.auth-dark [data-slot="checkbox"] {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Dark auth footer: inherit muted color so "Powered by Techivano" etc. match login page */
+.auth-footer-dark,
+.auth-footer-dark * {
+  color: inherit;
+}
+.auth-dark .text-emerald-600 {
+  color: #6ee7b7;
+}
+.auth-dark .text-xs.text-muted-foreground {
+  color: #9ca3af;
+}

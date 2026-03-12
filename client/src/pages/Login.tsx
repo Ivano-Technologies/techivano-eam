@@ -7,35 +7,25 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { trpc } from "@/lib/trpc";
 import { ButtonLoader } from "@/components/ButtonLoader";
 import { supabase } from "@/lib/supabase";
-import { AuthPageLayout, AuthIconCircle } from "@/components/AuthPageLayout";
+import { AuthPageLayout, AuthLogo, ManusStyleAuthFooter } from "@/components/AuthPageLayout";
+import { Eye, EyeOff } from "lucide-react";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const useSupabaseAuth = typeof supabaseUrl === "string" && supabaseUrl.length > 0;
 
+const SOCIAL_PROVIDERS = [
+  { id: "google", label: "Continue with Google" },
+  { id: "microsoft", label: "Continue with Microsoft" },
+] as const;
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [usePassword, setUsePassword] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const setSessionMutation = trpc.auth.setSession.useMutation();
-  const magicLinkMutation = trpc.auth.requestMagicLink.useMutation({
-    onSuccess: (data) => {
-      if (data.success) {
-        setMessage({ type: "success", text: data.message });
-      } else {
-        setMessage({ type: "error", text: data.message });
-      }
-    },
-    onError: (error: unknown) => {
-      setMessage({
-        type: "error",
-        text: error instanceof Error ? error.message : "Failed to send magic link",
-      });
-    },
-  });
-
   const passwordLoginMutation = trpc.auth.loginWithPassword.useMutation({
     onSuccess: () => {
       window.location.href = "/";
@@ -56,232 +46,176 @@ export default function Login() {
       setMessage({ type: "error", text: "Please enter your email" });
       return;
     }
-
-    if (usePassword) {
-      if (!password) {
-        setMessage({ type: "error", text: "Please enter your password" });
-        return;
-      }
-
-      if (useSupabaseAuth) {
-        setLoading(true);
-        try {
-          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-          if (error) {
-            setMessage({ type: "error", text: error.message });
-            return;
-          }
-          if (data?.session?.access_token) {
-            await setSessionMutation.mutateAsync({
-              accessToken: data.session.access_token,
-            });
-            window.location.href = "/";
-          }
-        } catch (err) {
-          setMessage({
-            type: "error",
-            text: err instanceof Error ? err.message : "Login failed",
-          });
-        } finally {
-          setLoading(false);
-        }
-        return;
-      }
-
-      passwordLoginMutation.mutate({ email, password });
+    if (!password) {
+      setMessage({ type: "error", text: "Please enter your password" });
       return;
     }
 
     if (useSupabaseAuth) {
       setLoading(true);
       try {
-        const redirectTo = `${window.location.origin}/auth/callback`;
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: { emailRedirectTo: redirectTo },
-        });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
           setMessage({ type: "error", text: error.message });
           return;
         }
-        setMessage({
-          type: "success",
-          text: "Check your email for the sign-in link.",
-        });
+        if (data?.session?.access_token) {
+          await setSessionMutation.mutateAsync({
+            accessToken: data.session.access_token,
+          });
+          window.location.href = "/";
+        }
       } catch (err) {
-        setMessage({
-          type: "error",
-          text: err instanceof Error ? err.message : "Failed to send magic link",
-        });
+        const raw = err instanceof Error ? err.message : "Login failed";
+        const text = /not valid JSON|Unexpected token|SyntaxError/i.test(raw)
+          ? "Unable to reach the server. Please check your connection and try again."
+          : raw;
+        setMessage({ type: "error", text });
       } finally {
         setLoading(false);
-        return;
       }
+      return;
     }
 
-    magicLinkMutation.mutate({ email });
-  };
-
-  const handleOAuthSignIn = async (provider: "google" | "github") => {
-    if (!useSupabaseAuth) return;
-    setMessage(null);
-    setLoading(true);
-    try {
-      const redirectTo = `${window.location.origin}/auth/callback`;
-      await supabase.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo },
-      });
-    } catch (err) {
-      setMessage({
-        type: "error",
-        text: err instanceof Error ? err.message : "OAuth sign-in failed",
-      });
-    } finally {
-      setLoading(false);
-    }
+    passwordLoginMutation.mutate({ email, password });
   };
 
   const isPending =
     loading ||
     passwordLoginMutation.isPending ||
-    magicLinkMutation.isPending ||
     setSessionMutation.isPending;
+
+  const formColor = "#363636"; // entire form card and inputs/buttons
+  const textMuted = "#9ca3af";
+  const buttonBorder = "rgba(255,255,255,0.12)"; // slightly light grey border on buttons
 
   return (
     <AuthPageLayout
-      icon={
-        <AuthIconCircle>
-          <span className="text-lg font-bold text-white">NRCS</span>
-        </AuthIconCircle>
-      }
-      title="Sign In"
-      description={
-        <>
-          Nigerian Red Cross Society
-          <br />
-          Enterprise Asset Management
-        </>
-      }
+      variant="manusDark"
+      icon={<AuthLogo />}
+      title="Continue to NRCS Enterprise Asset Management System"
+      footer={<ManusStyleAuthFooter />}
     >
+      {/* Google and Microsoft only */}
+      <div className="space-y-2 mb-6">
+        {SOCIAL_PROVIDERS.map(({ id, label }) => (
+          <Button
+            key={id}
+            type="button"
+            variant="outline"
+            className="w-full text-white hover:opacity-90 font-medium"
+            style={{ backgroundColor: formColor, borderColor: buttonBorder, borderWidth: 1 }}
+            disabled
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+
+      <div className="relative my-6">
+        <span className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-white/10" />
+        </span>
+        <span
+          className="relative flex justify-center text-xs uppercase px-2 font-medium"
+          style={{ color: textMuted, backgroundColor: formColor }}
+        >
+          Or
+        </span>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
-            {message && (
-              <Alert variant={message.type === "error" ? "destructive" : "default"}>
-                <AlertDescription>{message.text}</AlertDescription>
-              </Alert>
-            )}
+        {message && (
+          <Alert variant={message.type === "error" ? "destructive" : "default"}>
+            <AlertDescription>{message.text}</AlertDescription>
+          </Alert>
+        )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isPending}
-                required
-              />
-            </div>
-
-            {usePassword && (
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isPending}
-                  required
-                />
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white"
-              disabled={isPending}
-            >
-              {isPending ? (
-                <>
-                  <ButtonLoader className="mr-2" />
-                  Processing...
-                </>
-              ) : usePassword ? (
-                "Sign In"
-              ) : (
-                "Send Magic Link"
-              )}
-            </Button>
-
-            {useSupabaseAuth && (
-              <div className="relative my-4">
-                <span className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </span>
-                <span className="relative flex justify-center text-xs uppercase text-muted-foreground">
-                  Or continue with
-                </span>
-              </div>
-            )}
-            {useSupabaseAuth && (
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isPending}
-                  onClick={() => handleOAuthSignIn("google")}
-                >
-                  Google
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isPending}
-                  onClick={() => handleOAuthSignIn("github")}
-                >
-                  GitHub
-                </Button>
-              </div>
-            )}
-
-            <div className="flex justify-between items-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setUsePassword(!usePassword);
-                  setPassword("");
-                  setMessage(null);
-                }}
-                className="text-sm text-[#DC2626] hover:underline"
-              >
-                {usePassword ? "Use magic link instead" : "Use password instead"}
-              </button>
-              {usePassword && (
-                <Link href="/forgot-password">
-                  <button type="button" className="text-sm text-[#DC2626] hover:underline">
-                    Forgot password?
-                  </button>
-                </Link>
-              )}
-            </div>
-
-            <div className="text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
-              <Link href="/signup" className="text-[#DC2626] hover:underline font-medium">
-                Request Access
-              </Link>
-            </div>
-          </form>
-
-      {!usePassword && !useSupabaseAuth && (
-        <div className="mt-6 pt-6 border-t text-center text-xs text-muted-foreground">
-          <p>We'll send a secure sign-in link to your email.</p>
-          <p className="mt-1">No password required.</p>
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-white font-medium">
+            Email Address
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="your@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={isPending}
+            required
+            className="pr-10 border-white/20 text-white placeholder:text-gray-400 focus-visible:ring-white/30"
+            style={{ backgroundColor: formColor }}
+          />
         </div>
-      )}
+
+        <div className="space-y-2">
+          <Label htmlFor="password" className="text-white font-medium">
+            Password
+          </Label>
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isPending}
+              required
+              className="pr-10 border-white/20 text-white placeholder:text-gray-400 focus-visible:ring-white/30"
+              style={{ backgroundColor: formColor }}
+            />
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={() => setShowPassword((p) => !p)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 hover:bg-white/10"
+              style={{ color: textMuted }}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <Link href="/forgot-password">
+            <button
+              type="button"
+              className="text-sm hover:underline"
+              style={{ color: textMuted }}
+            >
+              Forgot password?
+            </button>
+          </Link>
+        </div>
+
+        <Button
+          type="submit"
+          className="w-full text-white font-medium hover:opacity-90"
+          style={{ backgroundColor: formColor, borderColor: buttonBorder, borderWidth: 1 }}
+          disabled={isPending}
+        >
+          {isPending ? (
+            <>
+              <ButtonLoader className="mr-2" />
+              Signing in...
+            </>
+          ) : (
+            "Continue"
+          )}
+        </Button>
+
+        <div className="text-center text-sm pt-2" style={{ color: textMuted }}>
+          Don&apos;t have an account?{" "}
+          <Link href="/signup" className="text-white hover:underline font-medium">
+            Request Access
+          </Link>
+        </div>
+      </form>
     </AuthPageLayout>
   );
 }

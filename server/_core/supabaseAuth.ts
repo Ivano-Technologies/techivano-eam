@@ -76,6 +76,14 @@ export async function getUserFromSupabaseToken(
     }
   }
 
+  // Valid Supabase JWT but no app user: provision one so first-time Supabase users (e.g. test account) can log in
+  const provisioned = await db.provisionUserFromSupabase(payload);
+  if (provisioned) {
+    const user = provisioned as User;
+    await setUserInCache(payload.sub, user);
+    return user;
+  }
+
   return null;
 }
 

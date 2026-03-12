@@ -24,8 +24,8 @@ import { useIsMobile } from "@/hooks/useMobile";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan, Search, AlertTriangle, BarChart3, History, ArrowRightLeft, Truck, Gauge } from "lucide-react";
 import { NairaIcon } from "./icons/NairaIcon";
-import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { CSSProperties, Suspense, useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
@@ -102,10 +102,9 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { loading, user } = useAuth();
-  const [location] = useLocation();
-  // Use both wouter location and window.pathname so /login is recognized on first paint (before wouter syncs)
-  const pathname = typeof window !== "undefined" ? window.location.pathname : location;
-  const isPublicAuthPath = PUBLIC_AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}?`) || location === p || location.startsWith(`${p}?`));
+  // Use only window.pathname so we never depend on wouter context (DashboardLayout is above Switch, so useLocation() would run outside Router and can throw)
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+  const isPublicAuthPath = PUBLIC_AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}?`));
   const { data: userPrefs } = trpc.userPreferences.get.useQuery(undefined, { enabled: !!user });
   const isMobile = useIsMobile();
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -126,8 +125,27 @@ export default function DashboardLayout({
 
   // Public auth pages: render only the route content (login form, etc.) with no sidebar/skeleton.
   // This guarantees /login opens even when auth.me is slow or never resolves.
+  // #region agent log
+  const layoutBranch = isPublicAuthPath ? "public" : loading ? "loading" : !user ? "unauthenticated" : "full";
+  useEffect(() => {
+    fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "cb0794" }, body: JSON.stringify({ sessionId: "cb0794", location: "DashboardLayout.tsx:layout", message: "layout branch", data: { pathname, isPublicAuthPath, loading, hasUser: !!user, layoutBranch }, timestamp: Date.now(), hypothesisId: "A" }) }).catch(() => {});
+  }, [pathname, isPublicAuthPath, loading, user, layoutBranch]);
+  // #endregion
   if (isPublicAuthPath) {
-    return <div className="min-h-screen bg-background">{children}</div>;
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Suspense
+          fallback={
+            <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-50 text-slate-600">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+              <span className="text-sm">Loading sign-in…</span>
+            </div>
+          }
+        >
+          {children}
+        </Suspense>
+      </div>
+    );
   }
 
   if (loading) {

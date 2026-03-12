@@ -57,7 +57,29 @@ Supabase will only redirect to these URLs after sign-in, OAuth, or magic link. W
 
 ---
 
-## 5. Auth flows (sign up, sign in, reset)
+## 5. Enable OAuth providers (Google, GitHub)
+
+If users click **Google** or **GitHub** on the login page and see a raw JSON error like:
+
+```json
+{"code":400,"error_code":"validation_failed","msg":"Unsupported provider: provider is not enabled"}
+```
+
+the provider is **not enabled** in your Supabase project. Enable it in the Dashboard:
+
+1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project (**itzigdbbkkwmnaitlqfy**).
+2. Go to **Authentication** → **Providers**.
+3. Turn **on** the provider (e.g. **Google** or **GitHub**).
+4. Enter **Client ID** and **Client Secret** from the provider:
+   - **Google:** [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials → OAuth 2.0 Client ID (Web application). Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`.
+   - **GitHub:** [GitHub Developer Settings](https://github.com/settings/developers) → OAuth Apps → New → Authorization callback URL: `https://<project-ref>.supabase.co/auth/v1/callback`.
+5. Save. Ensure your app’s redirect URL (e.g. `http://localhost:3000/auth/callback`) is listed under **Authentication** → **URL Configuration** → **Redirect URLs**.
+
+After this, Google and GitHub sign-in will work instead of returning “Unsupported provider”.
+
+---
+
+## 6. Auth flows (sign up, sign in, reset)
 
 - **Sign up:** `supabase.auth.signUp({ email, password, options: { emailRedirectTo } })`. If email confirmation is enabled, user confirms via the link sent by Supabase.
 - **Sign in:** `supabase.auth.signInWithPassword({ email, password })`. On success, send the `session.access_token` to your backend (e.g. `auth.setSession`); backend verifies with `SUPABASE_JWT_SECRET` and sets the app cookie.
@@ -71,7 +93,7 @@ Use a **single callback route** (e.g. `/auth/callback`) to handle OAuth and magi
 
 ---
 
-## 6. Auth UI: consistent and accessible
+## 7. Auth UI: consistent and accessible
 
 - Use a **shared layout** for all auth pages (login, signup, forgot-password, reset-password, auth/callback) so branding and structure are consistent.
 - Prefer **glass-style cards** and a clear visual hierarchy; keep forms simple and labels/errors visible.
@@ -81,7 +103,7 @@ Use a **single callback route** (e.g. `/auth/callback`) to handle OAuth and magi
 
 ---
 
-## 7. Summary
+## 8. Summary
 
 | Topic | Recommendation |
 |-------|----------------|
@@ -89,6 +111,7 @@ Use a **single callback route** (e.g. `/auth/callback`) to handle OAuth and magi
 | Session | Backend verifies Supabase JWT, sets httpOnly cookie; frontend uses that cookie for API calls |
 | Env vars | `VITE_SUPABASE_*` for client; `SUPABASE_JWT_SECRET` (and optionally service role) for server only |
 | Redirect URLs | Configure in Supabase Dashboard for each environment (prod + localhost) |
+| OAuth (Google/GitHub) | Enable in Dashboard → Authentication → Providers; add Client ID/Secret and callback URL |
 | Auth UI | Shared layout, glass card, loading/error states, 8+ char passwords |
 
 For full migration details and backend wiring, see [SUPABASE_AUTH_MIGRATION_PLAN.md](./SUPABASE_AUTH_MIGRATION_PLAN.md).

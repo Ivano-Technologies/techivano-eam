@@ -6,9 +6,9 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
-import { AuthPageLayout, AuthIconCircle } from "@/components/AuthPageLayout";
+import { AuthPageLayout, AuthLogo, ManusStyleAuthFooter } from "@/components/AuthPageLayout";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export default function AuthCallback() {
   const [, setLocation] = useLocation();
@@ -27,8 +27,10 @@ export default function AuthCallback() {
       const accessToken = hashParams.get("access_token");
 
       if (code) {
+        fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "cb0794" }, body: JSON.stringify({ sessionId: "cb0794", location: "AuthCallback.tsx", message: "callback has code", data: { hasCode: true }, timestamp: Date.now(), hypothesisId: "D" }) }).catch(() => {});
         const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         if (cancelled) return;
+        fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "cb0794" }, body: JSON.stringify({ sessionId: "cb0794", location: "AuthCallback.tsx:exchange", message: "exchange result", data: { ok: !exchangeError && !!data?.session?.access_token, errorMsg: exchangeError?.message?.slice(0, 60) }, timestamp: Date.now(), hypothesisId: "D" }) }).catch(() => {});
         if (exchangeError) {
           setError(exchangeError.message);
           return;
@@ -38,6 +40,7 @@ export default function AuthCallback() {
             await setSessionMutation.mutateAsync({
               accessToken: data.session.access_token,
             });
+            fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "cb0794" }, body: JSON.stringify({ sessionId: "cb0794", location: "AuthCallback.tsx:setSession", message: "callback setSession ok", data: {}, timestamp: Date.now(), hypothesisId: "D" }) }).catch(() => {});
             if (!cancelled) setLocation("/");
             return;
           } catch (e) {
@@ -85,9 +88,11 @@ export default function AuthCallback() {
   if (error) {
     return (
       <AuthPageLayout
-        icon={<AuthIconCircle variant="error"><AlertCircle className="h-6 w-6" /></AuthIconCircle>}
+        variant="manusDark"
+        icon={<AuthLogo />}
         title="Sign-in issue"
         description={error}
+        footer={<ManusStyleAuthFooter />}
       >
         <Button asChild className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white">
           <a href="/login">Return to sign in</a>
@@ -98,13 +103,11 @@ export default function AuthCallback() {
 
   return (
     <AuthPageLayout
-      icon={
-        <AuthIconCircle>
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </AuthIconCircle>
-      }
+      variant="manusDark"
+      icon={<AuthLogo />}
       title="Completing sign-in..."
       description="Please wait while we set up your session."
+      footer={<ManusStyleAuthFooter />}
     >
       <div className="flex justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden />

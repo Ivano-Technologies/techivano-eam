@@ -4,8 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Mail, CheckCircle } from "lucide-react";
-import { AuthPageLayout, AuthIconCircle } from "@/components/AuthPageLayout";
+import { ArrowLeft } from "lucide-react";
+import { AuthPageLayout, AuthLogo, ManusStyleAuthFooter } from "@/components/AuthPageLayout";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -25,13 +25,15 @@ export default function ForgotPassword() {
   if (submitted) {
     return (
       <AuthPageLayout
-        icon={<AuthIconCircle variant="success"><CheckCircle className="h-6 w-6" /></AuthIconCircle>}
+        variant="manusDark"
+        icon={<AuthLogo />}
         title="Check Your Email"
         description={
           <>
             If an account exists with <strong>{email}</strong>, you will receive a password reset link shortly.
           </>
         }
+        footer={<ManusStyleAuthFooter />}
       >
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground text-center">
@@ -50,9 +52,11 @@ export default function ForgotPassword() {
 
   return (
     <AuthPageLayout
-      icon={<AuthIconCircle><Mail className="h-6 w-6" /></AuthIconCircle>}
+      variant="manusDark"
+      icon={<AuthLogo />}
       title="Forgot Password?"
       description="Enter your email address and we'll send you a link to reset your password."
+      footer={<ManusStyleAuthFooter />}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">

@@ -26,8 +26,9 @@ const AppProviders = lazy(() => import("./providers/AppProviders"));
 
 function AppLoader() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-100 text-slate-700">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+      <span className="text-sm font-medium">Loading…</span>
     </div>
   );
 }
@@ -42,11 +43,16 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-createRoot(document.getElementById("root")!).render(
-  <Suspense fallback={<AppLoader />}>
-    <AppProviders />
-  </Suspense>
-);
+const rootEl = document.getElementById("root");
+if (!rootEl) {
+  document.body.innerHTML = "<div style='min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f1f5f9;color:#475569;font-family:system-ui,sans-serif'><div style='text-align:center'><p style='margin:0 0 0.5rem'>Root element missing</p><p style='margin:0;font-size:0.875rem'>Expected &lt;div id=\"root\"&gt; in index.html</p></div></div>";
+} else {
+  createRoot(rootEl).render(
+    <Suspense fallback={<AppLoader />}>
+      <AppProviders />
+    </Suspense>
+  );
+}
 
 // Report Web Vitals (LCP, CLS, INP) — e.g. to analytics or console
 import("web-vitals").then(({ onCLS, onINP, onLCP }) => {

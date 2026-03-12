@@ -4,8 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { Lock, CheckCircle, AlertCircle } from "lucide-react";
-import { AuthPageLayout, AuthIconCircle } from "@/components/AuthPageLayout";
+import { AuthPageLayout, AuthLogo, ManusStyleAuthFooter } from "@/components/AuthPageLayout";
 
 export default function ResetPassword() {
   const [, setLocation] = useLocation();
@@ -58,9 +57,11 @@ export default function ResetPassword() {
   if (success) {
     return (
       <AuthPageLayout
-        icon={<AuthIconCircle variant="success"><CheckCircle className="h-6 w-6" /></AuthIconCircle>}
+        variant="manusDark"
+        icon={<AuthLogo />}
         title="Password Reset Successful"
         description="Your password has been reset successfully. Redirecting to login..."
+        footer={<ManusStyleAuthFooter />}
       >
         <Link href="/login">
           <Button className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white">Go to Login</Button>
@@ -72,9 +73,11 @@ export default function ResetPassword() {
   if (!token || error.includes("Invalid reset link")) {
     return (
       <AuthPageLayout
-        icon={<AuthIconCircle variant="error"><AlertCircle className="h-6 w-6" /></AuthIconCircle>}
+        variant="manusDark"
+        icon={<AuthLogo />}
         title="Invalid Reset Link"
         description="This password reset link is invalid or has expired."
+        footer={<ManusStyleAuthFooter />}
       >
         <div className="space-y-3">
           <Link href="/forgot-password">
@@ -90,9 +93,11 @@ export default function ResetPassword() {
 
   return (
     <AuthPageLayout
-      icon={<AuthIconCircle><Lock className="h-6 w-6" /></AuthIconCircle>}
+      variant="manusDark"
+      icon={<AuthLogo />}
       title="Reset Your Password"
       description="Enter your new password below (minimum 8 characters)."
+      footer={<ManusStyleAuthFooter />}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">

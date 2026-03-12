@@ -62,8 +62,9 @@ const ExecutiveDashboard = lazy(() => import("./pages/ExecutiveDashboard"));
 
 function PageFallback() {
   return (
-    <div className="flex min-h-[200px] items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    <div className="flex min-h-[200px] flex-col items-center justify-center gap-2 bg-slate-50 text-slate-600">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+      <span className="text-sm">Loading…</span>
     </div>
   );
 }

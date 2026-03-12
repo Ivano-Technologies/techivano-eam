@@ -1,6 +1,6 @@
 # Deployment safety: build, lint, typecheck must pass before merge.
 # Migrations run first (link + supabase db reset); then validate runs pnpm test + build.
-# Required GitHub Actions secrets: SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF (e.g. itzigdbbkwmnaitlqfy).
+# Required GitHub Actions secrets: SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF (e.g. itzigdbbkkwmnaitlqfy).
 name: CI
 
 on:
