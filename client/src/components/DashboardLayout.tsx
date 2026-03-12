@@ -122,7 +122,9 @@ export default function DashboardLayout({
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
 
-  if (loading) {
+  // On public auth pages (login, signup, etc.), render children immediately so the page opens
+  // without waiting for auth.me. Otherwise unauthenticated users would only see the skeleton.
+  if (loading && !isPublicAuthPath) {
     return <DashboardLayoutSkeleton />
   }
 

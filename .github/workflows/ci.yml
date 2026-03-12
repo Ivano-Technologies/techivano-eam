@@ -1,6 +1,6 @@
 # Deployment safety: build, lint, typecheck must pass before merge.
-# Migrations run first (supabase db reset); then validate runs pnpm test + build.
-# This guardrail ensures schema rebuilds cleanly before tests run. See docs/DEPLOYMENT_ARCHITECTURE.md.
+# Migrations run first (link + supabase db reset); then validate runs pnpm test + build.
+# Required GitHub Actions secrets: SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF (e.g. itzigdbbkwmnaitlqfy).
 name: CI
 
 on:
@@ -13,6 +13,9 @@ jobs:
   migrations:
     name: Supabase migrations
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,6 +24,12 @@ jobs:
         uses: supabase/setup-cli@v1
         with:
           version: latest
+
+      - name: Authenticate Supabase
+        run: supabase login --token $SUPABASE_ACCESS_TOKEN
+
+      - name: Link Supabase project
+        run: supabase link --project-ref $SUPABASE_PROJECT_REF
 
       - name: Start Supabase (local)
         run: supabase start -x studio -x realtime -x storage -x edge-runtime

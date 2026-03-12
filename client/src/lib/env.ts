@@ -1,17 +1,16 @@
-function requireEnv(name: string, value: string | undefined) {
-  if (!value) {
-    throw new Error(`Missing environment variable: ${name}`)
-  }
-  return value
+// Client: do not throw on missing vars so the login page can open even when Supabase
+// is not configured (e.g. local dev). Use empty string when missing.
+function getEnv(name: string, value: string | undefined): string {
+  return value ?? "";
 }
 
 export const env = {
-  SUPABASE_URL: requireEnv(
+  SUPABASE_URL: getEnv(
     "SUPABASE_URL",
     import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL
   ),
 
-  SUPABASE_ANON_KEY: requireEnv(
+  SUPABASE_ANON_KEY: getEnv(
     "SUPABASE_ANON_KEY",
     import.meta.env.VITE_SUPABASE_ANON_KEY ||
       import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
