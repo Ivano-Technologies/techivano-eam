@@ -24,6 +24,10 @@ function isSecureRequest(req: Request) {
 /** Session cookie options for auth (Supabase access token). Protects against XSS and CSRF. */
 const AUTH_SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+/**
+ * Session cookie flags. In production, secure must be true or browsers may reject the cookie.
+ * Values: httpOnly true, path "/", sameSite "lax", secure true in production or when x-forwarded-proto is https.
+ */
 export function getSessionCookieOptions(
   req: Request
 ): Pick<CookieOptions, "httpOnly" | "path" | "sameSite" | "secure"> {

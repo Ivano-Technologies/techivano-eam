@@ -103,7 +103,9 @@ export default function DashboardLayout({
 }) {
   const { loading, user } = useAuth();
   const [location] = useLocation();
-  const isPublicAuthPath = PUBLIC_AUTH_PATHS.some((p) => location === p || location.startsWith(`${p}?`));
+  // Use both wouter location and window.pathname so /login is recognized on first paint (before wouter syncs)
+  const pathname = typeof window !== "undefined" ? window.location.pathname : location;
+  const isPublicAuthPath = PUBLIC_AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}?`) || location === p || location.startsWith(`${p}?`));
   const { data: userPrefs } = trpc.userPreferences.get.useQuery(undefined, { enabled: !!user });
   const isMobile = useIsMobile();
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -122,13 +124,17 @@ export default function DashboardLayout({
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
 
-  // On public auth pages (login, signup, etc.), render children immediately so the page opens
-  // without waiting for auth.me. Otherwise unauthenticated users would only see the skeleton.
-  if (loading && !isPublicAuthPath) {
-    return <DashboardLayoutSkeleton />
+  // Public auth pages: render only the route content (login form, etc.) with no sidebar/skeleton.
+  // This guarantees /login opens even when auth.me is slow or never resolves.
+  if (isPublicAuthPath) {
+    return <div className="min-h-screen bg-background">{children}</div>;
   }
 
-  if (!user && !isPublicAuthPath) {
+  if (loading) {
+    return <DashboardLayoutSkeleton />;
+  }
+
+  if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-white via-blue-50 to-red-50">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full bg-white rounded-2xl shadow-2xl border border-border">

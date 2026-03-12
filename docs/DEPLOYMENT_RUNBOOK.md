@@ -187,7 +187,7 @@ Set in **`/var/www/nrcseam/shared/.env`** (never in the repo):
 - `http://localhost:3000/auth/callback` (dev)
 - Add `/reset-password` if using password reset emails
 
-Session cookie `app_session_id` holds the Supabase access token; backend verifies it with `SUPABASE_JWT_SECRET`.
+Session cookie `app_session_id` holds the Supabase access token; backend verifies it with `SUPABASE_JWT_SECRET`. For full auth audit, checklist, and troubleshooting, see **docs/SUPABASE_AUTH_AUDIT.md**.
 
 ---
 
