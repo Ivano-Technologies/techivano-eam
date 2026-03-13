@@ -330,7 +330,7 @@ async function startServer() {
             organizationId: orgContext.organizationId ?? undefined,
             encryptionKeyVersion: encryptionMeta.encryptionKeyVersion,
             encryptionAlgorithm: encryptionMeta.encryptionAlgorithm,
-            requestedBy: user.id ?? null,
+            requestedBy: user?.id ?? null,
             fileKey,
             fileType,
             fileUrl,
@@ -886,7 +886,7 @@ async function startServer() {
           organizationId: orgContext.organizationId ?? undefined,
           encryptionKeyVersion: encryptionMeta.encryptionKeyVersion,
           encryptionAlgorithm: encryptionMeta.encryptionAlgorithm,
-          requestedBy: user.id ?? null,
+          requestedBy: user?.id ?? null,
           fileKey,
           fileType: normalizeContentType(fileType),
           fileUrl,
@@ -895,7 +895,7 @@ async function startServer() {
         queuedForOcr = true;
       }
 
-      if (orgContext.organizationId && fileUrl) {
+      if (orgContext.organizationId && fileUrl && user?.id != null) {
         try {
           const db = await import("../db");
           await db.createDocument({

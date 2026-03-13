@@ -17,6 +17,8 @@ const MANUS_DARK_CARD = "#363636";
 const MANUS_DARK_ELEMENT = "#363636";
 const MANUS_DARK_TEXT = "#ffffff";
 const MANUS_DARK_TEXT_MUTED = "#9ca3af";
+/** Charcoal grey for "Powered by Techivano" and other footer branding */
+const AUTH_FOOTER_CHARCOAL = "#3d3d3d";
 
 type AuthPageLayoutProps = {
   /** Optional icon above the title (e.g. lucide icon in a circle) */
@@ -101,7 +103,7 @@ export function AuthPageLayout({
         />
       )}
       <div
-        className={`w-full ${maxWidthClass} relative ${isManusDark ? "rounded-xl shadow-xl" : isManus ? "rounded-lg border border-gray-200/80 shadow-sm" : "animate-in fade-in slide-in-from-bottom-4 duration-300 rounded-xl border-2 shadow-2xl glass dark:glass-dark"} ${cardClassName}`}
+        className={`w-full ${maxWidthClass} relative ${isManusDark ? "auth-card-dark rounded-xl" : isManus ? "rounded-lg border border-gray-200/80 shadow-sm" : "animate-in fade-in slide-in-from-bottom-4 duration-300 rounded-xl border-2 shadow-2xl glass dark:glass-dark"} ${cardClassName}`}
         style={
           isManusDark
             ? { backgroundColor: MANUS_DARK_CARD }
@@ -110,21 +112,25 @@ export function AuthPageLayout({
               : undefined
         }
       >
-        <div className={isManus ? "p-8 sm:p-10" : "p-6 sm:p-8"}>
+        <div className={`${isManus ? "p-8 sm:p-10" : "p-6 sm:p-8"} ${isManusDark ? "auth-card-content-dark" : ""}`}>
           {(icon || title) && (
             <header className="text-center mb-6">
               {icon && (
-                <div className={`flex justify-center mb-4 ${isManusDark ? "mx-auto flex items-center justify-center shrink-0" : ""}`} style={isManusDark ? { width: AUTH_LOGO_SIZE_PX, height: AUTH_LOGO_SIZE_PX } : undefined}>
+                <div
+                  className={`flex justify-center items-center mb-4 ${isManusDark ? "mx-auto shrink-0" : ""}`}
+                  style={isManusDark ? { width: AUTH_LOGO_SIZE_PX, height: AUTH_LOGO_SIZE_PX, minWidth: AUTH_LOGO_SIZE_PX, minHeight: AUTH_LOGO_SIZE_PX } : undefined}
+                  aria-hidden
+                >
                   {icon}
                 </div>
               )}
               <h1
-                className={`font-bold tracking-tight ${isManusDark ? "text-xl sm:text-2xl" : isManus ? "text-xl sm:text-2xl" : "text-2xl"} ${isManusDark ? "text-white" : "text-foreground"}`}
+                className={`font-bold tracking-tight ${isManusDark ? "text-xl sm:text-2xl auth-title" : isManus ? "text-xl sm:text-2xl" : "text-2xl"} ${isManusDark ? "text-white" : "text-foreground"}`}
               >
                 {title}
               </h1>
               {description && (
-                <div className={`mt-2 text-sm ${isManusDark ? "text-[#9ca3af]" : "text-muted-foreground"}`}>
+                <div className={`mt-2 text-sm auth-description ${isManusDark ? "text-[#9ca3af]" : "text-muted-foreground"}`}>
                   {description}
                 </div>
               )}
@@ -161,8 +167,10 @@ export function AuthLogo() {
   return (
     <img
       src={logoUrl}
-      alt="Nigerian Red Cross Society — Enterprise Asset Management"
-      className="object-contain"
+      alt="NRCS"
+      width={AUTH_LOGO_SIZE_PX}
+      height={AUTH_LOGO_SIZE_PX}
+      className="object-contain block"
       style={{ width: AUTH_LOGO_SIZE_PX, height: AUTH_LOGO_SIZE_PX }}
       onError={() => setLogoError(true)}
     />
@@ -174,8 +182,8 @@ export function ManusStyleAuthFooter() {
   const year = new Date().getFullYear();
   return (
     <>
-      <p className="font-medium text-foreground/80">Powered by Techivano</p>
-      <p className="mt-2">
+      <p className="auth-footer-powered font-medium" style={{ color: AUTH_FOOTER_CHARCOAL }}>Powered by Techivano</p>
+      <p className="mt-2 auth-footer-links">
         <Link href="/legal/terms" className="hover:underline">Terms of service</Link>
         {" · "}
         <Link href="/legal/privacy" className="hover:underline">Privacy policy</Link>

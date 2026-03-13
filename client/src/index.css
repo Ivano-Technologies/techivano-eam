@@ -108,6 +108,11 @@
   --chart-5: oklch(0.20 0.08 250);
   
   --radius: 0.5rem;
+
+  /* Global button interaction: depth, hover scale, press feedback, ripple */
+  --btn-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --btn-shadow-deep: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -4px rgba(0, 0, 0, 0.15);
+  --btn-ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dark {
@@ -510,13 +515,41 @@
   animation: fade-in 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Button press animation for mobile */
-@media (max-width: 768px) {
-  button:active,
-  [role="button"]:active {
-    transform: scale(0.97);
-    transition: transform 100ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
+/* Global button interaction: 5% scale on hover, deeper shadow, press feedback, ripple (all pages) */
+button:not(.no-btn-effect),
+[role="button"]:not(.no-btn-effect) {
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--btn-shadow);
+  transition: transform 0.2s var(--btn-ease), box-shadow 0.2s var(--btn-ease);
+}
+button:not(.no-btn-effect):hover,
+[role="button"]:not(.no-btn-effect):hover {
+  transform: scale(1.05);
+  box-shadow: var(--btn-shadow-deep);
+}
+button:not(.no-btn-effect):active,
+[role="button"]:not(.no-btn-effect):active {
+  transform: scale(0.98);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+button:not(.no-btn-effect)::after,
+[role="button"]:not(.no-btn-effect)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.35) 0%, transparent 65%);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.35s var(--btn-ease), transform 0.45s var(--btn-ease);
+  pointer-events: none;
+}
+button:not(.no-btn-effect):active::after,
+[role="button"]:not(.no-btn-effect):active::after {
+  opacity: 1;
+  transform: scale(1.4);
+  transition-duration: 0.15s, 0.2s;
 }
 
 /* Safe area insets for iOS devices */
@@ -571,42 +604,103 @@
   50% { mask-position: 25% 60%; -webkit-mask-position: 25% 60%; }
 }
 
-/* Auth dark theme: form elements when variant="manusDark" */
+/* Auth dark theme: light grey typography scale (primary → subtle) and form elements */
+.auth-card-content-dark,
+.auth-dark {
+  --auth-fg-primary: #ffffff;
+  --auth-fg-secondary: #e5e7eb;
+  --auth-fg-tertiary: #d1d5db;
+  --auth-fg-muted: #9ca3af;
+  --auth-fg-subtle: #6b7280;
+  --auth-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.25);
+  --auth-shadow-deep: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  --auth-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+.auth-card-content-dark .auth-title {
+  color: var(--auth-fg-primary);
+}
+.auth-card-content-dark .auth-description {
+  color: var(--auth-fg-muted);
+}
 .auth-dark label,
 .auth-dark [data-slot="label"] {
-  color: #fff;
+  color: var(--auth-fg-secondary);
   font-weight: 500;
 }
 .auth-dark input,
 .auth-dark [data-slot="input"] {
   background-color: #363636 !important;
   border-color: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  color: var(--auth-fg-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 .auth-dark input::placeholder {
-  color: rgba(156, 163, 175, 0.9);
+  color: var(--auth-fg-muted);
 }
+/* Buttons: depth, hover +5% scale, press tactile (scale down + inset shadow), ripple on click */
 .auth-dark button[type="submit"],
-.auth-dark [data-slot="button"]:not([data-variant="link"]) {
-  background-color: #363636 !important;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
+.auth-dark button[type="button"],
+.auth-dark [data-slot="button"]:not([data-variant="link"]),
 .auth-dark a > button,
 .auth-dark button.variant-outline {
+  position: relative;
+  overflow: hidden;
   background-color: #363636 !important;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #fff;
+  color: var(--auth-fg-primary);
+  box-shadow: var(--auth-shadow);
+  transition: transform 0.2s var(--auth-ease), box-shadow 0.2s var(--auth-ease);
+}
+.auth-dark button[type="submit"]:hover,
+.auth-dark button[type="button"]:hover,
+.auth-dark [data-slot="button"]:not([data-variant="link"]):hover,
+.auth-dark a > button:hover,
+.auth-dark button.variant-outline:hover {
+  transform: scale(1.05);
+  box-shadow: var(--auth-shadow-deep);
+}
+.auth-dark button[type="submit"]:active,
+.auth-dark button[type="button"]:active,
+.auth-dark [data-slot="button"]:not([data-variant="link"]):active,
+.auth-dark a > button:active,
+.auth-dark button.variant-outline:active {
+  transform: scale(0.98);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+/* Ripple + easing on click */
+.auth-dark button[type="submit"]::after,
+.auth-dark button[type="button"]::after,
+.auth-dark [data-slot="button"]:not([data-variant="link"])::after,
+.auth-dark a > button::after,
+.auth-dark button.variant-outline::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.25) 0%, transparent 65%);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.35s var(--auth-ease), transform 0.45s var(--auth-ease);
+  pointer-events: none;
+}
+.auth-dark button[type="submit"]:active::after,
+.auth-dark button[type="button"]:active::after,
+.auth-dark [data-slot="button"]:not([data-variant="link"]):active::after,
+.auth-dark a > button:active::after,
+.auth-dark button.variant-outline:active::after {
+  opacity: 1;
+  transform: scale(1.4);
+  transition-duration: 0.15s, 0.2s;
 }
 .auth-dark .text-muted-foreground,
 .auth-dark p.text-sm {
-  color: #9ca3af;
+  color: var(--auth-fg-muted);
 }
 .auth-dark a[href]:not(.text-\[\#DC2626\]) {
-  color: #9ca3af;
+  color: var(--auth-fg-subtle);
 }
 .auth-dark a[href]:hover {
-  color: #fff;
+  color: var(--auth-fg-primary);
 }
 .auth-dark a.text-\[\#DC2626\],
 .auth-dark a[href="/login"],
@@ -620,15 +714,26 @@
 .auth-dark [data-slot="checkbox"] {
   border-color: rgba(255, 255, 255, 0.3);
 }
-
-/* Dark auth footer: inherit muted color so "Powered by Techivano" etc. match login page */
-.auth-footer-dark,
-.auth-footer-dark * {
-  color: inherit;
-}
 .auth-dark .text-emerald-600 {
   color: #6ee7b7;
 }
 .auth-dark .text-xs.text-muted-foreground {
-  color: #9ca3af;
+  color: var(--auth-fg-muted);
+}
+
+/* Auth card: deeper shadow for depth */
+.auth-card-dark {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 12px 24px -8px rgba(0, 0, 0, 0.35);
+}
+
+/* Footer: "Powered by Techivano" charcoal; links use subtle grey */
+.auth-footer-dark {
+  color: var(--auth-fg-subtle, #6b7280);
+}
+.auth-footer-dark .auth-footer-powered {
+  color: #3d3d3d;
+}
+.auth-footer-dark .auth-footer-links,
+.auth-footer-dark .auth-footer-links * {
+  color: inherit;
 }

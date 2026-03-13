@@ -76,7 +76,7 @@ export default function Signup() {
       variant="manusDark"
       icon={<AuthLogo />}
       title="Register for NRCS EAM"
-      description="Nigerian Red Cross Society — Enterprise Asset Management. Request access; an administrator will review your registration."
+      description="Request access; an administrator will review your registration."
       footer={<ManusStyleAuthFooter />}
     >
       <form onSubmit={handleSubmit} className="space-y-4">

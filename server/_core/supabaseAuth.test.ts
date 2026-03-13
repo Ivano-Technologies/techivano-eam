@@ -25,6 +25,7 @@ vi.mock("../db", () => ({
   getUserByEmail: vi.fn(),
   getUserBySupabaseUserId: vi.fn(),
   setUserSupabaseId: vi.fn(),
+  provisionUserFromSupabase: vi.fn(),
 }));
 
 vi.mock("./userCache", () => ({
