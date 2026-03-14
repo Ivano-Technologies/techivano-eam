@@ -22,7 +22,9 @@ function appUrl(): string {
 function allowedSignupDomains(): string[] {
   const raw = process.env.ALLOWED_SIGNUP_DOMAINS;
   if (raw === undefined || raw === "") {
-    return ["nrcs.org.ng", "redcross.org", "example.com"]; // example.com for tests/local
+    const domains = ["redcrossnigeria.org", "ifrc.org", "gmail.com", "icloud.com", "yahoo.com", "outlook.com", "hotmail.com"];
+    if (process.env.NODE_ENV === "test") domains.push("example.com");
+    return domains;
   }
   return raw.split(",").map((d) => d.trim().toLowerCase()).filter(Boolean);
 }

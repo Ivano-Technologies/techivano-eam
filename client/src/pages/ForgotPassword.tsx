@@ -88,7 +88,7 @@ export default function ForgotPassword() {
 
         <div className="text-center">
           <Link href="/login">
-            <Button variant="link" className="text-sm text-[#DC2626]">
+            <Button variant="link" className="text-sm">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Login
             </Button>

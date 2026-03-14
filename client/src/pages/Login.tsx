@@ -13,10 +13,10 @@ import { Eye, EyeOff } from "lucide-react";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const useSupabaseAuth = typeof supabaseUrl === "string" && supabaseUrl.length > 0;
 
-const SOCIAL_PROVIDERS = [
+const SOCIAL_PROVIDERS: { id: "google" | "azure"; label: string }[] = [
   { id: "google", label: "Continue with Google" },
-  { id: "microsoft", label: "Continue with Microsoft" },
-] as const;
+  { id: "azure", label: "Continue with Microsoft" },
+];
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -24,6 +24,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<"google" | "azure" | null>(null);
 
   const setSessionMutation = trpc.auth.setSession.useMutation();
   const passwordLoginMutation = trpc.auth.loginWithPassword.useMutation({
@@ -85,6 +86,39 @@ export default function Login() {
     passwordLoginMutation.isPending ||
     setSessionMutation.isPending;
 
+  const handleOAuthSignIn = async (provider: "google" | "azure") => {
+    if (!useSupabaseAuth) return;
+    setMessage(null);
+    setOauthLoading(provider);
+    try {
+      const redirectTo = `${window.location.origin}/auth/callback`;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo,
+          ...(provider === "azure" ? { scopes: "email openid" } : {}),
+        },
+      });
+      if (error) {
+        setMessage({ type: "error", text: error.message });
+        setOauthLoading(null);
+        return;
+      }
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+      setMessage({ type: "error", text: "Sign-in could not be started. Please try again." });
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Sign-in failed. Please try again.",
+      });
+    } finally {
+      setOauthLoading(null);
+    }
+  };
+
   const formColor = "#363636"; // entire form card and inputs/buttons
   const textMuted = "#9ca3af";
   const buttonBorder = "rgba(255,255,255,0.12)"; // slightly light grey border on buttons
@@ -96,20 +130,31 @@ export default function Login() {
       title="Continue to NRCS Enterprise Asset Management System"
       footer={<ManusStyleAuthFooter />}
     >
-      {/* Google and Microsoft only */}
+      {/* Google and Microsoft OAuth — only enabled when Supabase is configured */}
       <div className="space-y-2 mb-6">
-        {SOCIAL_PROVIDERS.map(({ id, label }) => (
-          <Button
-            key={id}
-            type="button"
-            variant="outline"
-            className="w-full text-white hover:opacity-90 font-medium"
-            style={{ backgroundColor: formColor, borderColor: buttonBorder, borderWidth: 1 }}
-            disabled
-          >
-            {label}
-          </Button>
-        ))}
+        {SOCIAL_PROVIDERS.map(({ id, label }) => {
+          const isOauthPending = oauthLoading === id;
+          return (
+            <Button
+              key={id}
+              type="button"
+              variant="outline"
+              className="w-full text-white hover:opacity-90 font-medium"
+              style={{ backgroundColor: formColor, borderColor: buttonBorder, borderWidth: 1 }}
+              disabled={!useSupabaseAuth || isPending || isOauthPending}
+              onClick={() => handleOAuthSignIn(id)}
+            >
+              {isOauthPending ? (
+                <>
+                  <ButtonLoader className="mr-2" />
+                  Redirecting...
+                </>
+              ) : (
+                label
+              )}
+            </Button>
+          );
+        })}
       </div>
 
       <div className="relative my-6">
@@ -152,7 +197,7 @@ export default function Login() {
           <Label htmlFor="password" className="text-white font-medium">
             Password
           </Label>
-          <div className="relative">
+          <div className="relative flex items-center">
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
@@ -161,35 +206,29 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               disabled={isPending}
               required
-              className="pr-10 border-white/20 text-white placeholder:text-gray-400 focus-visible:ring-white/30"
+              className="pr-10 border-white/20 text-white placeholder:text-gray-400 focus-visible:ring-white/30 flex-1 min-w-0 h-10"
               style={{ backgroundColor: formColor }}
             />
             <button
               type="button"
               tabIndex={-1}
               onClick={() => setShowPassword((p) => !p)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 hover:bg-white/10"
+              className="no-btn-effect absolute right-0 top-0 bottom-0 w-10 flex items-center justify-center rounded-r hover:bg-white/10"
               style={{ color: textMuted }}
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? (
-                <EyeOff className="h-4 w-4" />
+                <EyeOff className="h-4 w-4 shrink-0" />
               ) : (
-                <Eye className="h-4 w-4" />
+                <Eye className="h-4 w-4 shrink-0" />
               )}
             </button>
           </div>
         </div>
 
         <div className="flex justify-end">
-          <Link href="/forgot-password">
-            <button
-              type="button"
-              className="text-sm hover:underline"
-              style={{ color: textMuted }}
-            >
-              Forgot password?
-            </button>
+          <Link href="/forgot-password" className="text-sm">
+            Forgot password?
           </Link>
         </div>
 
@@ -211,7 +250,7 @@ export default function Login() {
 
         <div className="text-center text-sm pt-2" style={{ color: textMuted }}>
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-white hover:underline font-medium">
+          <Link href="/signup" className="font-medium">
             Request Access
           </Link>
         </div>

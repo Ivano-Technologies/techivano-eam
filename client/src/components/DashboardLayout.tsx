@@ -125,12 +125,6 @@ export default function DashboardLayout({
 
   // Public auth pages: render only the route content (login form, etc.) with no sidebar/skeleton.
   // This guarantees /login opens even when auth.me is slow or never resolves.
-  // #region agent log
-  const layoutBranch = isPublicAuthPath ? "public" : loading ? "loading" : !user ? "unauthenticated" : "full";
-  useEffect(() => {
-    fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "cb0794" }, body: JSON.stringify({ sessionId: "cb0794", location: "DashboardLayout.tsx:layout", message: "layout branch", data: { pathname, isPublicAuthPath, loading, hasUser: !!user, layoutBranch }, timestamp: Date.now(), hypothesisId: "A" }) }).catch(() => {});
-  }, [pathname, isPublicAuthPath, loading, user, layoutBranch]);
-  // #endregion
   if (isPublicAuthPath) {
     return (
       <div className="min-h-screen bg-slate-50">

@@ -57,25 +57,28 @@ Supabase will only redirect to these URLs after sign-in, OAuth, or magic link. W
 
 ---
 
-## 5. Enable OAuth providers (Google, GitHub)
+## 5. Enable OAuth providers (Google, Microsoft)
 
-If users click **Google** or **GitHub** on the login page and see a raw JSON error like:
+The login page offers **Continue with Google** and **Continue with Microsoft**. If users see an error like “Unsupported provider: provider is not enabled”, enable the provider in Supabase:
 
-```json
-{"code":400,"error_code":"validation_failed","msg":"Unsupported provider: provider is not enabled"}
-```
-
-the provider is **not enabled** in your Supabase project. Enable it in the Dashboard:
-
-1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project (**itzigdbbkkwmnaitlqfy**).
+1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project.
 2. Go to **Authentication** → **Providers**.
-3. Turn **on** the provider (e.g. **Google** or **GitHub**).
-4. Enter **Client ID** and **Client Secret** from the provider:
-   - **Google:** [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials → OAuth 2.0 Client ID (Web application). Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`.
-   - **GitHub:** [GitHub Developer Settings](https://github.com/settings/developers) → OAuth Apps → New → Authorization callback URL: `https://<project-ref>.supabase.co/auth/v1/callback`.
-5. Save. Ensure your app’s redirect URL (e.g. `http://localhost:3000/auth/callback`) is listed under **Authentication** → **URL Configuration** → **Redirect URLs**.
+3. Turn **on** the provider and enter **Client ID** and **Client Secret**:
 
-After this, Google and GitHub sign-in will work instead of returning “Unsupported provider”.
+   - **Google**
+     - [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials → Create OAuth 2.0 Client ID (Web application).
+     - Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback` (replace `<project-ref>` with your Supabase project ref, e.g. from your project URL).
+   - **Microsoft (Azure)**
+     - [Azure Portal](https://portal.azure.com/) → Microsoft Entra ID → App registrations → New registration.
+     - Web redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`.
+     - Create a client secret (Certificates & secrets). In Supabase, use the Application (client) ID and the secret **Value** (not Secret ID).
+     - Optional: under API permissions, add Microsoft Graph → `email`, `openid` if you need email.
+
+4. In Supabase **Authentication** → **URL Configuration** → **Redirect URLs**, add:
+   - `https://yourdomain.com/auth/callback` (production)
+   - `http://localhost:3000/auth/callback` (local)
+
+After this, Google and Microsoft sign-in will redirect to the provider and then to `/auth/callback` to complete the session.
 
 ---
 

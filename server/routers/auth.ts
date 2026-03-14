@@ -16,13 +16,9 @@ export const authRouter = router({
   setSession: publicProcedure
     .input(z.object({ accessToken: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
-      // #region agent log
-      fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "cb0794" }, body: JSON.stringify({ sessionId: "cb0794", location: "auth.ts:setSession", message: "setSession called", data: { tokenLength: input.accessToken?.length ?? 0 }, timestamp: Date.now(), hypothesisId: "C" }) }).catch(() => {});
-      // #endregion
       const { getUserFromSupabaseToken } = await import("../_core/supabaseAuth");
       const user = await getUserFromSupabaseToken(input.accessToken);
       if (!user) {
-        fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "cb0794" }, body: JSON.stringify({ sessionId: "cb0794", location: "auth.ts:setSession", message: "setSession getUser null", data: {}, timestamp: Date.now(), hypothesisId: "C" }) }).catch(() => {});
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Invalid or expired session token",
@@ -42,9 +38,6 @@ export const authRouter = router({
         });
       }
       ctx.res.cookie(COOKIE_NAME, input.accessToken, getAuthSessionCookieOptions(ctx.req));
-      // #region agent log
-      fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "cb0794" }, body: JSON.stringify({ sessionId: "cb0794", location: "auth.ts:setSession", message: "setSession cookie set", data: { hasUser: true }, timestamp: Date.now(), hypothesisId: "C" }) }).catch(() => {});
-      // #endregion
       return { success: true, user };
     }),
   signup: publicProcedure

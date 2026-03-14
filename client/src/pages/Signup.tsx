@@ -127,7 +127,7 @@ export default function Signup() {
 
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <div className="relative">
+          <div className="relative flex items-center">
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
@@ -137,19 +137,19 @@ export default function Signup() {
               disabled={isPending}
               required
               minLength={8}
-              className="pr-10"
+              className="pr-10 flex-1 min-w-0 h-10"
             />
             <button
               type="button"
               tabIndex={-1}
               onClick={() => setShowPassword((p) => !p)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground rounded p-1"
+              className="no-btn-effect absolute right-0 top-0 bottom-0 w-10 flex items-center justify-center rounded-r text-muted-foreground hover:text-foreground"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? (
-                <EyeOff className="h-4 w-4" />
+                <EyeOff className="h-4 w-4 shrink-0" />
               ) : (
-                <Eye className="h-4 w-4" />
+                <Eye className="h-4 w-4 shrink-0" />
               )}
             </button>
           </div>
@@ -166,11 +166,11 @@ export default function Signup() {
           />
           <label htmlFor="terms" className="text-sm leading-tight cursor-pointer">
             I agree to the{" "}
-            <Link href="/legal/terms" className="text-[#DC2626] hover:underline">
+            <Link href="/legal/terms">
               Terms of Use
             </Link>{" "}
             and{" "}
-            <Link href="/legal/privacy" className="text-[#DC2626] hover:underline">
+            <Link href="/legal/privacy">
               Privacy Policy
             </Link>
           </label>
@@ -193,7 +193,7 @@ export default function Signup() {
 
         <div className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link href="/login" className="text-[#DC2626] hover:underline font-medium">
+          <Link href="/login" className="font-medium">
             Sign In
           </Link>
         </div>

@@ -515,7 +515,7 @@
   animation: fade-in 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Global button interaction: 5% scale on hover, deeper shadow, press feedback, ripple (all pages) */
+/* Global button interaction: 2% scale on hover, deeper shadow, press feedback, ripple (all pages) */
 button:not(.no-btn-effect),
 [role="button"]:not(.no-btn-effect) {
   position: relative;
@@ -525,7 +525,7 @@ button:not(.no-btn-effect),
 }
 button:not(.no-btn-effect):hover,
 [role="button"]:not(.no-btn-effect):hover {
-  transform: scale(1.05);
+  transform: scale(1.02);
   box-shadow: var(--btn-shadow-deep);
 }
 button:not(.no-btn-effect):active,
@@ -637,7 +637,7 @@ button:not(.no-btn-effect):active::after,
 .auth-dark input::placeholder {
   color: var(--auth-fg-muted);
 }
-/* Buttons: depth, hover +5% scale, press tactile (scale down + inset shadow), ripple on click */
+/* Buttons: depth, hover +2% scale, press tactile (scale down + inset shadow), ripple on click */
 .auth-dark button[type="submit"],
 .auth-dark button[type="button"],
 .auth-dark [data-slot="button"]:not([data-variant="link"]),
@@ -656,7 +656,7 @@ button:not(.no-btn-effect):active::after,
 .auth-dark [data-slot="button"]:not([data-variant="link"]):hover,
 .auth-dark a > button:hover,
 .auth-dark button.variant-outline:hover {
-  transform: scale(1.05);
+  transform: scale(1.02);
   box-shadow: var(--auth-shadow-deep);
 }
 .auth-dark button[type="submit"]:active,
@@ -696,17 +696,21 @@ button:not(.no-btn-effect):active::after,
 .auth-dark p.text-sm {
   color: var(--auth-fg-muted);
 }
-.auth-dark a[href]:not(.text-\[\#DC2626\]) {
-  color: var(--auth-fg-subtle);
+/* Auth text links: uniform light gray by default, NRCS red on hover/click */
+.auth-dark a {
+  color: var(--auth-fg-muted);
+  transition: color 0.2s var(--auth-ease, ease);
 }
-.auth-dark a[href]:hover {
-  color: var(--auth-fg-primary);
+.auth-dark a:hover,
+.auth-dark a:active {
+  color: #DC2626;
 }
-.auth-dark a.text-\[\#DC2626\],
-.auth-dark a[href="/login"],
-.auth-dark a[href="/signup"],
-.auth-dark a[href="/forgot-password"] {
-  color: #f87171;
+.auth-dark a button {
+  color: inherit;
+}
+.auth-dark a button:hover,
+.auth-dark a button:active {
+  color: inherit;
 }
 .auth-dark .text-destructive {
   color: #fca5a5;
@@ -736,4 +740,13 @@ button:not(.no-btn-effect):active::after,
 .auth-footer-dark .auth-footer-links,
 .auth-footer-dark .auth-footer-links * {
   color: inherit;
+}
+/* Auth footer links: same as card links — light gray, NRCS red on hover/click */
+.auth-footer-dark a {
+  color: var(--auth-fg-muted, #9ca3af);
+  transition: color 0.2s ease;
+}
+.auth-footer-dark a:hover,
+.auth-footer-dark a:active {
+  color: #DC2626;
 }
