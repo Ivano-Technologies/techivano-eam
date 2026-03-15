@@ -6,8 +6,11 @@ import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { AlertCircle } from "lucide-react";
 import { AuthPageLayout, AuthLogo, ManusStyleAuthFooter } from "@/components/AuthPageLayout";
+import { PasswordStrength, PasswordRequirements } from "@/components/PasswordStrength";
+import { useAuthBranding } from "@/hooks/useAuthBranding";
 
 export default function ResetPassword() {
+  const branding = useAuthBranding();
   const [, setLocation] = useLocation();
   const [token, setToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -22,7 +25,7 @@ export default function ResetPassword() {
     if (tokenParam) {
       setToken(tokenParam);
     } else {
-      setError("Invalid reset link. Please request a new password reset.");
+      setError("Invalid or expired link.");
     }
   }, []);
 
@@ -59,10 +62,10 @@ export default function ResetPassword() {
     return (
       <AuthPageLayout
         variant="manusDark"
-        icon={<AuthLogo />}
+        icon={<AuthLogo branding={branding} />}
         title="Password Reset Successful"
         description="Your password has been reset successfully. Redirecting to login..."
-        footer={<ManusStyleAuthFooter />}
+        footer={<ManusStyleAuthFooter branding={branding} />}
       >
         <Link href="/login">
           <Button className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white">Go to Login</Button>
@@ -71,22 +74,24 @@ export default function ResetPassword() {
     );
   }
 
-  if (!token || error.includes("Invalid reset link")) {
+  if (!token || error.includes("Invalid or expired")) {
     return (
       <AuthPageLayout
         variant="manusDark"
-        icon={<AuthLogo />}
-        title="Invalid Reset Link"
-        description="This password reset link is invalid or has expired."
-        footer={<ManusStyleAuthFooter />}
+        icon={<AuthLogo branding={branding} />}
+        title="Invalid or Expired Link"
+        description="This link is invalid or has expired. Request a new reset link below or go back to login."
+        footer={<ManusStyleAuthFooter branding={branding} />}
       >
         <div className="space-y-3">
           <Link href="/forgot-password">
-            <Button className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white">Request New Reset Link</Button>
+            <Button className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white">Request new reset link</Button>
           </Link>
-          <Link href="/login">
-            <Button variant="outline" className="w-full">Back to Login</Button>
-          </Link>
+          <div className="flex justify-end pt-2">
+            <Link href="/login" className="text-xs">
+              Back to Login
+            </Link>
+          </div>
         </div>
       </AuthPageLayout>
     );
@@ -95,18 +100,16 @@ export default function ResetPassword() {
   return (
     <AuthPageLayout
       variant="manusDark"
-      icon={<AuthLogo />}
-      title="Reset Your Password"
-      description="Enter your new password below (minimum 8 characters)."
-      footer={<ManusStyleAuthFooter />}
+      icon={<AuthLogo branding={branding} />}
+      title="Set New Password"
+      footer={<ManusStyleAuthFooter branding={branding} />}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="newPassword">New Password</Label>
+          <Label htmlFor="newPassword">New password</Label>
           <Input
             id="newPassword"
             type="password"
-            placeholder="Enter new password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             required
@@ -116,17 +119,22 @@ export default function ResetPassword() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="confirmPassword">Confirm Password</Label>
+          <Label htmlFor="confirmPassword">Confirm new password</Label>
           <Input
             id="confirmPassword"
             type="password"
-            placeholder="Confirm new password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
             minLength={8}
             disabled={resetPassword.isPending}
           />
+        </div>
+
+        {/* Strength + rules after confirm; reserved min-height so layout doesn't shift when they appear */}
+        <div className="min-h-[132px] space-y-1">
+          <PasswordStrength password={newPassword} />
+          <PasswordRequirements password={newPassword} />
         </div>
 
         {error && (
@@ -136,18 +144,20 @@ export default function ResetPassword() {
           </div>
         )}
 
-        <Button
-          type="submit"
-          className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white"
-          disabled={resetPassword.isPending}
-        >
-          {resetPassword.isPending ? "Resetting..." : "Reset Password"}
-        </Button>
+        <div className="space-y-4 mt-6">
+          <Button
+            type="submit"
+            className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white"
+            disabled={resetPassword.isPending}
+          >
+            {resetPassword.isPending ? "Setting password..." : "Set new password"}
+          </Button>
 
-        <div className="text-center">
-          <Link href="/login">
-            <Button variant="link" className="text-sm">Back to Login</Button>
-          </Link>
+          <div className="flex justify-end pt-5">
+            <Link href="/login" className="text-xs">
+              Back to Login
+            </Link>
+          </div>
         </div>
       </form>
     </AuthPageLayout>

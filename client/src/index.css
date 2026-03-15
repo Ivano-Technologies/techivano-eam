@@ -622,10 +622,12 @@ button:not(.no-btn-effect):active::after,
 .auth-card-content-dark .auth-description {
   color: var(--auth-fg-muted);
 }
+/* Minimal label style (Page 1–style): small, muted */
 .auth-dark label,
 .auth-dark [data-slot="label"] {
-  color: var(--auth-fg-secondary);
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--auth-fg-muted);
 }
 .auth-dark input,
 .auth-dark [data-slot="input"] {

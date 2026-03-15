@@ -10,10 +10,10 @@ const AUTH_LOGO_SIZE_PX = 50;
 
 const AUTH_ACCENT = "#DC2626"; // NRCS red, matches existing auth cards
 const MANUS_BG = "#f8f8f7";
-// Manus dark theme (account selection / login screen)
-const MANUS_DARK_BG = "#1a1a1a";
-/** Form/card background for Manus dark — entire form uses this */
-const MANUS_DARK_CARD = "#363636";
+// Manus dark theme — near-black page background like reference
+const MANUS_DARK_BG = "#0d0d0d";
+/** Form card background — kept as-is (matches form elements) */
+const MANUS_DARK_CARD = "#252525";
 const MANUS_DARK_ELEMENT = "#363636";
 const MANUS_DARK_TEXT = "#ffffff";
 const MANUS_DARK_TEXT_MUTED = "#9ca3af";
@@ -23,7 +23,7 @@ const AUTH_FOOTER_CHARCOAL = "#3d3d3d";
 type AuthPageLayoutProps = {
   /** Optional icon above the title (e.g. lucide icon in a circle) */
   icon?: ReactNode;
-  title: string;
+  title: ReactNode;
   description?: ReactNode;
   children: ReactNode;
   /** Extra class for the inner card */
@@ -153,9 +153,20 @@ export function AuthPageLayout({
   );
 }
 
-/** NRCS logo shown on all auth pages (50px). Uses /nrcs-logo.png or VITE_AUTH_LOGO_URL, fallback to "NRCS" circle. */
-export function AuthLogo() {
+/** Logo for auth pages: NRCS image or Techivano text when branding is ivano. */
+export function AuthLogo({ branding = "nrcs" }: { branding?: "nrcs" | "ivano" }) {
   const [logoError, setLogoError] = useState(false);
+  if (branding === "ivano") {
+    return (
+      <div
+        className="flex items-center justify-center font-semibold text-white tracking-tight"
+        style={{ width: AUTH_LOGO_SIZE_PX, height: AUTH_LOGO_SIZE_PX, fontSize: "0.65rem" }}
+        aria-hidden
+      >
+        Techivano
+      </div>
+    );
+  }
   const logoUrl = import.meta.env.VITE_AUTH_LOGO_URL || "/nrcs-logo.png";
   if (logoError) {
     return (
@@ -177,17 +188,18 @@ export function AuthLogo() {
   );
 }
 
-/** Default Manus-style footer: Powered by, Terms, Privacy, copyright */
-export function ManusStyleAuthFooter() {
+/** Default Manus-style footer: Powered by, Terms, Privacy, copyright. Use branding="ivano" for admin subdomain. */
+export function ManusStyleAuthFooter({ branding = "nrcs" }: { branding?: "nrcs" | "ivano" }) {
   const year = new Date().getFullYear();
+  const copyright = branding === "ivano" ? `©${year} Techivano` : `©${year} NRCS EAM`;
   return (
     <>
       <p className="auth-footer-powered font-medium" style={{ color: AUTH_FOOTER_CHARCOAL }}>Powered by Techivano</p>
       <p className="mt-2 auth-footer-links">
-        <Link href="/legal/terms" className="hover:underline">Terms of service</Link>
-        {" · "}
-        <Link href="/legal/privacy" className="hover:underline">Privacy policy</Link>
-        {" ©" + year + " NRCS EAM"}
+        <Link href="/legal/terms" className="hover:underline">Terms of Service</Link>
+        {" . "}
+        <Link href="/legal/privacy" className="hover:underline">Privacy Policy</Link>
+        {" . " + copyright}
       </p>
     </>
   );

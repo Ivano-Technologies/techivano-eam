@@ -57,4 +57,15 @@ export const ENV = {
   allowedSignupDomains: allowedSignupDomains(),
   /** If true, skip email domain check for signup (admin override / open signup). */
   openSignup: booleanFromEnv("OPEN_SIGNUP", false),
+
+  /** Host → org: UUID for admin.techivano.com (Ivano mothership). Use canonical form 00000000-0000-4000-8000-<12 hex digits> for tenantId derivation. */
+  hostOrgAdmin: process.env.HOST_ORG_ADMIN?.trim() || "",
+  /** Host → org: UUID for nrcseam.techivano.com (NRCS tenant). Use canonical form for tenantId derivation. */
+  hostOrgNrcs: process.env.HOST_ORG_NRCS?.trim() || "",
+  /** Per-tenant allowed signup domains: admin subdomain (comma-separated, e.g. ivanotechnologies.com). */
+  allowedDomainsAdmin: (process.env.ALLOWED_DOMAINS_ADMIN ?? "ivanotechnologies.com").split(",").map((d) => d.trim().toLowerCase()).filter(Boolean),
+  /** Per-tenant allowed signup domains: NRCS subdomain (comma-separated). Empty = use default list. */
+  allowedDomainsNrcs: process.env.ALLOWED_DOMAINS_NRCS
+    ? process.env.ALLOWED_DOMAINS_NRCS.split(",").map((d) => d.trim().toLowerCase()).filter(Boolean)
+    : ["redcrossnigeria.org", "ifrc.org", "gmail.com", "icloud.com", "yahoo.com", "outlook.com", "hotmail.com"],
 };

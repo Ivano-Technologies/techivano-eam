@@ -6,8 +6,10 @@ import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft } from "lucide-react";
 import { AuthPageLayout, AuthLogo, ManusStyleAuthFooter } from "@/components/AuthPageLayout";
+import { useAuthBranding } from "@/hooks/useAuthBranding";
 
 export default function ForgotPassword() {
+  const branding = useAuthBranding();
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -26,14 +28,14 @@ export default function ForgotPassword() {
     return (
       <AuthPageLayout
         variant="manusDark"
-        icon={<AuthLogo />}
+        icon={<AuthLogo branding={branding} />}
         title="Check Your Email"
         description={
           <>
             If an account exists with <strong>{email}</strong>, you will receive a password reset link shortly.
           </>
         }
-        footer={<ManusStyleAuthFooter />}
+        footer={<ManusStyleAuthFooter branding={branding} />}
       >
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground text-center">
@@ -53,10 +55,9 @@ export default function ForgotPassword() {
   return (
     <AuthPageLayout
       variant="manusDark"
-      icon={<AuthLogo />}
+      icon={<AuthLogo branding={branding} />}
       title="Forgot Password?"
-      description="Enter your email address and we'll send you a link to reset your password."
-      footer={<ManusStyleAuthFooter />}
+      footer={<ManusStyleAuthFooter branding={branding} />}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
@@ -64,7 +65,6 @@ export default function ForgotPassword() {
           <Input
             id="email"
             type="email"
-            placeholder="your.email@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -83,15 +83,12 @@ export default function ForgotPassword() {
           className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white"
           disabled={requestReset.isPending}
         >
-          {requestReset.isPending ? "Sending..." : "Send Reset Link"}
+          {requestReset.isPending ? "Sending..." : "Send Password Reset Link"}
         </Button>
 
-        <div className="text-center">
-          <Link href="/login">
-            <Button variant="link" className="text-sm">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Login
-            </Button>
+        <div className="flex justify-end mt-12">
+          <Link href="/login" className="text-xs">
+            Back to Login
           </Link>
         </div>
       </form>

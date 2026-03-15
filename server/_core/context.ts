@@ -2,6 +2,7 @@ import type { CreateExpressContextOptions } from "@trpc/server/adapters/express"
 import type { User } from "../../drizzle/schema";
 import { normalizeOrganizationId } from "../db";
 import { authenticateRequest } from "./authenticateRequest";
+import { ENV } from "./env";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
@@ -73,6 +74,30 @@ export function tenantIdFromCanonicalOrganizationId(
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
+/** Normalize host from request (lowercase, no port). */
+function getHostFromRequest(req: { headers: Record<string, string | string[] | undefined> }): string {
+  const raw = (req.headers["x-forwarded-host"] ?? req.headers.host) ?? "";
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  const host = (value ?? "").split(":")[0].trim().toLowerCase();
+  return host;
+}
+
+/** Resolve organizationId and tenantId from host (admin.techivano.com → Ivano, nrcseam.techivano.com → NRCS). */
+function getOrganizationContextFromHost(host: string): { organizationId: string | null; tenantId: number | null } {
+  if (!host) return { organizationId: null, tenantId: null };
+  if (host === "admin.techivano.com" && ENV.hostOrgAdmin) {
+    const organizationId = ENV.hostOrgAdmin;
+    const tenantId = tenantIdFromCanonicalOrganizationId(organizationId);
+    return { organizationId, tenantId };
+  }
+  if (host === "nrcseam.techivano.com" && ENV.hostOrgNrcs) {
+    const organizationId = ENV.hostOrgNrcs;
+    const tenantId = tenantIdFromCanonicalOrganizationId(organizationId);
+    return { organizationId, tenantId };
+  }
+  return { organizationId: null, tenantId: null };
+}
+
 type ResolveOrganizationContextOptions = {
   req: Pick<CreateExpressContextOptions["req"], "headers" | "query"> & {
     session?: { organizationId?: unknown; tenantId?: unknown };
@@ -88,6 +113,12 @@ export function resolveOrganizationContext({
   explicitOrganizationId,
   explicitTenantId,
 }: ResolveOrganizationContextOptions): { organizationId: string | null; tenantId: number | null } {
+  const host = getHostFromRequest(req);
+  const fromHost = getOrganizationContextFromHost(host);
+  if (fromHost.organizationId) {
+    return fromHost;
+  }
+
   const requestAsAny = req;
   const userAsAny = user as (User & { organizationId?: unknown; tenantId?: unknown }) | null | undefined;
 

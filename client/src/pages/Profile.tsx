@@ -5,11 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { 
-  User, Mail, Shield, Bell, Palette, Fingerprint, 
-  Activity, Package, Wrench, LogOut, Settings 
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  User, Mail, Shield, Bell, Palette, Fingerprint,
+  Activity, Package, Wrench, LogOut, Settings, KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
+
+const useSupabaseAuth = typeof import.meta.env.VITE_SUPABASE_URL === "string" && import.meta.env.VITE_SUPABASE_URL.length > 0;
 
 export default function Profile() {
   const [, setLocation] = useLocation();
@@ -20,6 +25,58 @@ export default function Profile() {
       toast.success("Logged out successfully");
     },
   });
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changePasswordError, setChangePasswordError] = useState("");
+  const [changePasswordPending, setChangePasswordPending] = useState(false);
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState(false);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChangePasswordError("");
+    setChangePasswordSuccess(false);
+    if (newPassword.length < 8) {
+      setChangePasswordError("New password must be at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setChangePasswordError("New password and confirmation do not match.");
+      return;
+    }
+    if (!user?.email) {
+      setChangePasswordError("Email not available.");
+      return;
+    }
+    setChangePasswordPending(true);
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+      if (signInError) {
+        setChangePasswordError("Current password is incorrect.");
+        setChangePasswordPending(false);
+        return;
+      }
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateError) {
+        setChangePasswordError(updateError.message || "Failed to update password.");
+        setChangePasswordPending(false);
+        return;
+      }
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setChangePasswordSuccess(true);
+      toast.success("Password updated successfully.");
+    } catch (err) {
+      setChangePasswordError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setChangePasswordPending(false);
+    }
+  };
 
   // Fetch user stats
   const { data: rawAssets } = trpc.assets.list.useQuery({});
@@ -165,6 +222,72 @@ export default function Profile() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Change password (Supabase email/password users) */}
+      {useSupabaseAuth && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4" />
+              Change password
+            </CardTitle>
+            <CardDescription>
+              Enter your current password and choose a new one. Use at least 8 characters.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">Current password</Label>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                  disabled={changePasswordPending}
+                  autoComplete="current-password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">New password</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  disabled={changePasswordPending}
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm new password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  disabled={changePasswordPending}
+                  autoComplete="new-password"
+                />
+              </div>
+              {changePasswordError && (
+                <p className="text-sm text-destructive">{changePasswordError}</p>
+              )}
+              {changePasswordSuccess && (
+                <p className="text-sm text-green-600 dark:text-green-400">Password updated successfully.</p>
+              )}
+              <Button type="submit" disabled={changePasswordPending}>
+                {changePasswordPending ? "Updating..." : "Update password"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Logout */}
       <Card>

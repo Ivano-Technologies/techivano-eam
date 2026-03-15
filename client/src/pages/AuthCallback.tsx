@@ -7,10 +7,12 @@ import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
 import { AuthPageLayout, AuthLogo, ManusStyleAuthFooter } from "@/components/AuthPageLayout";
+import { useAuthBranding } from "@/hooks/useAuthBranding";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
 export default function AuthCallback() {
+  const branding = useAuthBranding();
   const [, setLocation] = useLocation();
   const [error, setError] = useState<string | null>(null);
   const setSessionMutation = trpc.auth.setSession.useMutation();
@@ -21,6 +23,7 @@ export default function AuthCallback() {
     async function handleCallback() {
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
+      const rememberMe = params.get("remember") !== "0";
       const hashParams = new URLSearchParams(
         window.location.hash?.replace(/^#/, "") || ""
       );
@@ -37,6 +40,7 @@ export default function AuthCallback() {
           try {
             await setSessionMutation.mutateAsync({
               accessToken: data.session.access_token,
+              rememberMe,
             });
             if (!cancelled) setLocation("/");
             return;
@@ -49,7 +53,7 @@ export default function AuthCallback() {
 
       if (accessToken) {
         try {
-          await setSessionMutation.mutateAsync({ accessToken });
+          await setSessionMutation.mutateAsync({ accessToken, rememberMe });
           if (!cancelled) setLocation("/");
           return;
         } catch (e) {
@@ -64,6 +68,7 @@ export default function AuthCallback() {
         try {
           await setSessionMutation.mutateAsync({
             accessToken: session.access_token,
+              rememberMe,
           });
           if (!cancelled) setLocation("/");
           return;
@@ -86,10 +91,10 @@ export default function AuthCallback() {
     return (
       <AuthPageLayout
         variant="manusDark"
-        icon={<AuthLogo />}
-        title="Sign-in issue"
+        icon={<AuthLogo branding={branding} />}
+        title=""
         description={error}
-        footer={<ManusStyleAuthFooter />}
+        footer={<ManusStyleAuthFooter branding={branding} />}
       >
         <Button asChild className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white">
           <a href="/login">Return to sign in</a>
@@ -101,10 +106,10 @@ export default function AuthCallback() {
   return (
     <AuthPageLayout
       variant="manusDark"
-      icon={<AuthLogo />}
+      icon={<AuthLogo branding={branding} />}
       title="Completing sign-in..."
       description="Please wait while we set up your session."
-      footer={<ManusStyleAuthFooter />}
+      footer={<ManusStyleAuthFooter branding={branding} />}
     >
       <div className="flex justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden />

@@ -82,7 +82,6 @@ export function PasswordRequirements({ password }: { password: string }) {
     }),
     [password]
   );
-  if (!password.length) return null;
   return (
     <ul className="text-xs text-muted-foreground space-y-0.5 mt-1">
       <li className={checks.length ? "text-emerald-600" : ""}>

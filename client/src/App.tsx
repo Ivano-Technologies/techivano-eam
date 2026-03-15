@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
 const DashboardLayout = lazy(() => import("./components/DashboardLayout"));
+const Marketing = lazy(() => import("./pages/Marketing"));
 
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const Signup = lazy(() => import("./pages/Signup"));
@@ -128,20 +129,38 @@ function Router() {
   );
 }
 
+/** True when host is techivano.com or www.techivano.com (apex marketing). */
+function useIsApexHost() {
+  const [isApex, setIsApex] = useState(false);
+  useEffect(() => {
+    const host = window.location.hostname.toLowerCase();
+    setIsApex(host === "techivano.com" || host === "www.techivano.com");
+  }, []);
+  return isApex;
+}
+
 function App() {
+  const isApex = useIsApexHost();
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
           <PWAInstallPrompt />
-          <Suspense fallback={<PageFallback />}>
-            <DashboardLayout>
-              <Suspense fallback={<PageFallback />}>
-                <Router />
-              </Suspense>
-            </DashboardLayout>
-          </Suspense>
+          {isApex ? (
+            <Suspense fallback={<PageFallback />}>
+              <Marketing />
+            </Suspense>
+          ) : (
+            <Suspense fallback={<PageFallback />}>
+              <DashboardLayout>
+                <Suspense fallback={<PageFallback />}>
+                  <Router />
+                </Suspense>
+              </DashboardLayout>
+            </Suspense>
+          )}
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

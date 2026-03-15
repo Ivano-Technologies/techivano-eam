@@ -21,12 +21,13 @@ function isSecureRequest(req: Request) {
   return protoList.some(proto => proto.trim().toLowerCase() === "https");
 }
 
-/** Session cookie options for auth (Supabase access token). Protects against XSS and CSRF. */
-const AUTH_SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+/** Session cookie options for persistent auth (Supabase access token). */
+const AUTH_PERSISTENT_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000; // 1 year
 
 /**
  * Session cookie flags. In production, secure must be true or browsers may reject the cookie.
  * Values: httpOnly true, path "/", sameSite "lax", secure true in production or when x-forwarded-proto is https.
+ * We do not set domain so the cookie is host-scoped (admin.techivano.com and nrcseam.techivano.com do not share sessions).
  */
 export function getSessionCookieOptions(
   req: Request
@@ -40,12 +41,23 @@ export function getSessionCookieOptions(
   };
 }
 
-/** Options for setting the auth session cookie (includes maxAge). Use when calling res.cookie(COOKIE_NAME, value, options). */
+/**
+ * Options for setting the auth session cookie.
+ * - rememberMe=true: persistent cookie (maxAge set)
+ * - rememberMe=false: session cookie (expires on browser close)
+ */
 export function getAuthSessionCookieOptions(
-  req: Request
+  req: Request,
+  opts?: { rememberMe?: boolean }
 ): Pick<CookieOptions, "httpOnly" | "path" | "sameSite" | "secure" | "maxAge"> {
+  const rememberMe = opts?.rememberMe ?? true;
+  if (!rememberMe) {
+    return {
+      ...getSessionCookieOptions(req),
+    };
+  }
   return {
     ...getSessionCookieOptions(req),
-    maxAge: AUTH_SESSION_MAX_AGE_MS, // Express expects milliseconds
+    maxAge: AUTH_PERSISTENT_MAX_AGE_MS, // Express expects milliseconds
   };
 }

@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
+import { AuthPageLayout, AuthLogo, ManusStyleAuthFooter } from "@/components/AuthPageLayout";
+import { useAuthBranding } from "@/hooks/useAuthBranding";
+import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 export default function VerifyMagicLink() {
+  const branding = useAuthBranding();
   const [, setLocation] = useLocation();
   const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
   const [message, setMessage] = useState("");
@@ -19,7 +22,6 @@ export default function VerifyMagicLink() {
       return;
     }
 
-    // Call verification endpoint
     fetch(`/api/auth/verify-magic-link?token=${token}`, {
       method: "POST",
       credentials: "include",
@@ -43,47 +45,49 @@ export default function VerifyMagicLink() {
       });
   }, [setLocation]);
 
+  if (status === "verifying") {
+    return (
+      <AuthPageLayout
+        variant="manusDark"
+        icon={<AuthLogo branding={branding} />}
+        title="Verifying..."
+        description="Please wait while we verify your magic link."
+        footer={<ManusStyleAuthFooter branding={branding} />}
+      >
+        <div className="flex justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-[#9ca3af]" aria-hidden />
+        </div>
+      </AuthPageLayout>
+    );
+  }
+
+  if (status === "success") {
+    return (
+      <AuthPageLayout
+        variant="manusDark"
+        icon={<AuthLogo branding={branding} />}
+        title="Success!"
+        description={message}
+        footer={<ManusStyleAuthFooter branding={branding} />}
+      >
+        <div className="flex justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-[#9ca3af]" aria-hidden />
+        </div>
+      </AuthPageLayout>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-[#1E3A8A] rounded-full flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">NRCS</span>
-            </div>
-          </div>
-          <CardTitle className="text-2xl font-bold">
-            {status === "verifying" && "Verifying..."}
-            {status === "success" && "Success!"}
-            {status === "error" && "Verification Failed"}
-          </CardTitle>
-          <CardDescription>
-            Nigerian Red Cross Society
-            <br />
-            Enterprise Asset Management
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {status === "verifying" && (
-            <div className="flex flex-col items-center gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-[#1E3A8A]" />
-              <p className="text-center text-gray-600">Verifying your magic link...</p>
-            </div>
-          )}
-
-          {status === "success" && (
-            <Alert>
-              <AlertDescription className="text-center">{message}</AlertDescription>
-            </Alert>
-          )}
-
-          {status === "error" && (
-            <Alert variant="destructive">
-              <AlertDescription className="text-center">{message}</AlertDescription>
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <AuthPageLayout
+      variant="manusDark"
+      icon={<AuthLogo branding={branding} />}
+      title=""
+      description={message}
+      footer={<ManusStyleAuthFooter branding={branding} />}
+    >
+      <Button asChild className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white">
+        <Link href="/login">Return to sign in</Link>
+      </Button>
+    </AuthPageLayout>
   );
 }

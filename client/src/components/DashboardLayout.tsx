@@ -168,7 +168,9 @@ export default function DashboardLayout({
               </p>
             </div>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Sign in to access the Enterprise Asset Management System
+              Sign in to access the
+              <br />
+              Enterprise Asset Management System
             </p>
           </div>
           <Button

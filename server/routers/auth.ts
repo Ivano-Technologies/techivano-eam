@@ -14,7 +14,10 @@ export const authRouter = router({
     return { success: true } as const;
   }),
   setSession: publicProcedure
-    .input(z.object({ accessToken: z.string().min(1) }))
+    .input(z.object({
+      accessToken: z.string().min(1),
+      rememberMe: z.boolean().default(true),
+    }))
     .mutation(async ({ input, ctx }) => {
       const { getUserFromSupabaseToken } = await import("../_core/supabaseAuth");
       const user = await getUserFromSupabaseToken(input.accessToken);
@@ -37,7 +40,11 @@ export const authRouter = router({
           message: "Your account is not active. Please contact the administrator.",
         });
       }
-      ctx.res.cookie(COOKIE_NAME, input.accessToken, getAuthSessionCookieOptions(ctx.req));
+      ctx.res.cookie(
+        COOKIE_NAME,
+        input.accessToken,
+        getAuthSessionCookieOptions(ctx.req, { rememberMe: input.rememberMe })
+      );
       return { success: true, user };
     }),
   signup: publicProcedure
@@ -45,9 +52,9 @@ export const authRouter = router({
       email: z.string().email(),
       name: z.string().min(1),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { isAllowedSignupEmail } = await import("../_core/signupDomain");
-      if (!isAllowedSignupEmail(input.email)) {
+      if (!isAllowedSignupEmail(input.email, ctx.req)) {
         const domain = input.email.split("@")[1] ?? "unknown";
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -88,9 +95,9 @@ export const authRouter = router({
       supervisorName: z.string().optional(),
       supervisorEmail: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { isAllowedSignupEmail } = await import("../_core/signupDomain");
-      if (!isAllowedSignupEmail(input.email)) {
+      if (!isAllowedSignupEmail(input.email, ctx.req)) {
         const domain = input.email.split("@")[1] ?? "unknown";
         throw new TRPCError({
           code: "BAD_REQUEST",
