@@ -168,10 +168,9 @@ export default function Signup() {
             checked={agreedToTerms}
             onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
             disabled={isPending}
-            style={{ width: 6, height: 6, minWidth: 6, minHeight: 6 }}
-            className="rounded-[1px] border-white/30 data-[state=checked]:bg-white/20 data-[state=checked]:border-white/40"
-            iconClassName="h-[17.5px] w-[17.5px] shrink-0"
-            indicator={<RedCheckIcon className="h-[17.5px] w-[17.5px]" />}
+            className="size-4 rounded-[4px] border-white/30 data-[state=checked]:bg-white/20 data-[state=checked]:border-white/40"
+            iconClassName="size-3.5 shrink-0"
+            indicator={<RedCheckIcon className="size-3.5" />}
           />
           <label htmlFor="terms" className="text-xs cursor-pointer leading-tight" style={{ color: "#9ca3af" }}>
             I agree to the{" "}

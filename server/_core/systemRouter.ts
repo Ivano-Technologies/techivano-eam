@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { notifyOwner } from "./notification";
 import { adminProcedure, publicProcedure, router } from "./trpc";
-import { isEmailConfigured, isForgeEmailConfigured, isSmtpConfigured } from "../emailService";
+import { isEmailConfigured, isForgeEmailConfigured, isResendConfigured, isSmtpConfigured } from "../emailService";
 
 export const systemRouter = router({
   /** Phase 70: Email configuration status (read-only, for admin UI). */
   emailConfig: adminProcedure.query(() => ({
+    resendConfigured: isResendConfigured(),
     forgeConfigured: isForgeEmailConfigured(),
     smtpConfigured: isSmtpConfigured(),
     emailConfigured: isEmailConfigured(),

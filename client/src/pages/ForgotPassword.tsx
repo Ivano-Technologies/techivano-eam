@@ -74,7 +74,9 @@ export default function ForgotPassword() {
 
         {requestReset.error && (
           <div className="text-sm text-destructive">
-            {requestReset.error.message}
+            {requestReset.error.message.includes("valid JSON") || requestReset.error.message.includes("Unexpected token")
+              ? "Something went wrong. Please try again in a moment."
+              : requestReset.error.message}
           </div>
         )}
 

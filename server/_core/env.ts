@@ -47,12 +47,15 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
-  /** SMTP (Phase 70): optional fallback when Forge is not configured. */
+  /** Resend: primary email provider for techivano.com. Verify domain at https://resend.com/domains. */
+  resendApiKey: process.env.RESEND_API_KEY ?? "",
+  /** SMTP (Phase 70): optional fallback when Resend/Forge are not configured. */
   smtpHost: process.env.SMTP_HOST ?? "",
   smtpPort: numberFromEnv("SMTP_PORT", 587),
   smtpUser: process.env.SMTP_USER ?? "",
   smtpPass: process.env.SMTP_PASS ?? "",
-  emailFrom: process.env.EMAIL_FROM ?? process.env.SMTP_USER ?? "noreply@nrcs.org.ng",
+  /** From address. For Resend use a verified domain (e.g. noreply@techivano.com). */
+  emailFrom: process.env.EMAIL_FROM ?? process.env.SMTP_USER ?? "noreply@techivano.com",
   /** Allowed email domains for signup (from ALLOWED_SIGNUP_DOMAINS or default). */
   allowedSignupDomains: allowedSignupDomains(),
   /** If true, skip email domain check for signup (admin override / open signup). */

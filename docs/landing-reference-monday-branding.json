@@ -1,0 +1,52 @@
+{
+  "source": "https://monday.com/ap/crm/smb",
+  "scrapedVia": "Firecrawl MCP",
+  "colorScheme": "light",
+  "colors": {
+    "primary": "#6161FF",
+    "accent": "#0173EA",
+    "background": "#FFFFFF",
+    "textPrimary": "#000000",
+    "link": "#0173EA"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "Poppins",
+      "heading": "Poppins"
+    },
+    "fontStacks": {
+      "heading": ["Poppins", "sans-serif"],
+      "body": ["Poppins", "sans-serif"],
+      "paragraph": ["Poppins", "sans-serif"]
+    },
+    "fontSizes": {
+      "h1": "64px",
+      "h2": "18px",
+      "body": "18px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 4,
+    "borderRadius": "16px"
+  },
+  "components": {
+    "buttonPrimary": {
+      "background": "#0173EA",
+      "textColor": "#FFFFFF",
+      "borderColor": "#0173EA",
+      "borderRadius": "160px",
+      "shadow": "none"
+    },
+    "buttonSecondary": {
+      "background": "#00D2D2",
+      "textColor": "#000000",
+      "borderRadius": "0px",
+      "shadow": "none"
+    }
+  },
+  "personality": {
+    "tone": "modern",
+    "energy": "high",
+    "targetAudience": "small businesses"
+  }
+}

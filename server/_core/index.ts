@@ -962,9 +962,13 @@ async function startServer() {
   const trpcLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
-    message: { error: "Too many requests; try again later." },
     standardHeaders: true,
     legacyHeaders: false,
+    handler: (_req, res) => {
+      res.status(429).setHeader("Content-Type", "application/json").end(
+        JSON.stringify({ error: "Too many requests; try again later." })
+      );
+    },
   });
   app.use("/api/trpc", trpcLimiter);
 

@@ -152,35 +152,41 @@ export const authRouter = router({
   requestPasswordReset: publicProcedure
     .input(z.object({ email: z.string().email() }))
     .mutation(async ({ input }) => {
-      const { generateResetToken } = await import("../passwordReset");
-      const { sendEmail } = await import("../emailService");
-      const { ENV } = await import("../_core/env");
-      const { logger } = await import("../_core/logger");
-      const result = await generateResetToken(input.email);
-      if (!result) {
-        return {
-          success: true,
-          message:
-            "If an account exists with this email, you will receive a password reset link.",
-        };
-      }
-      const resetLink = `${ENV.appUrl}/reset-password?token=${result.token}`;
-      const { renderPasswordResetEmail } = await import("../emailTemplates");
-      const sent = await sendEmail({
-        to: input.email,
-        subject: "Reset your NRCS EAM password",
-        html: renderPasswordResetEmail(resetLink),
-      });
-      if (!sent) {
-        logger.warn("Password reset email could not be sent; check email/Forge configuration", {
-          to: input.email,
-        });
-      }
-      return {
-        success: true,
+      const successPayload = {
+        success: true as const,
         message:
           "If an account exists with this email, you will receive a password reset link.",
       };
+      try {
+        const { generateResetToken } = await import("../passwordReset");
+        const { sendEmail } = await import("../emailService");
+        const { ENV } = await import("../_core/env");
+        const { logger } = await import("../_core/logger");
+        const result = await generateResetToken(input.email);
+        if (!result) {
+          return successPayload;
+        }
+        const resetLink = `${ENV.appUrl}/reset-password?token=${result.token}`;
+        const { renderPasswordResetEmail } = await import("../emailTemplates");
+        const sent = await sendEmail({
+          to: input.email,
+          subject: "Reset your NRCS EAM password",
+          html: renderPasswordResetEmail(resetLink),
+        });
+        if (!sent) {
+          logger.warn("Password reset email could not be sent; check email/Resend configuration", {
+            to: input.email,
+          });
+        }
+        return successPayload;
+      } catch (err) {
+        const { logger } = await import("../_core/logger");
+        logger.error(err, "Password reset request failed");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Unable to send the reset link. Please try again later.",
+        });
+      }
     }),
   resetPassword: publicProcedure
     .input(z.object({

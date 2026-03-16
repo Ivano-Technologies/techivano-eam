@@ -1,10 +1,23 @@
+import { Resend } from 'resend';
 import { ENV } from './_core/env';
 
-interface EmailOptions {
+export interface EmailOptions {
   to: string;
   subject: string;
   html: string;
+  /** Override from address (must be a verified domain in Resend). */
   from?: string;
+  /** Optional friendly name for "From" (e.g. "Techivano EAM" or tenant name). Multi-tenant: set per organization. */
+  fromName?: string;
+  /** Reply-To address. Multi-tenant: use organization support email so replies go to the right tenant. */
+  replyTo?: string;
+  /** Optional tags for Resend analytics (e.g. category, organization_id). */
+  tags?: Array<{ name: string; value: string }>;
+}
+
+/** True if Resend is configured (primary provider for techivano.com). */
+export function isResendConfigured(): boolean {
+  return Boolean(ENV.resendApiKey?.trim());
 }
 
 /** True if Forge (Manus) email API is configured. */
@@ -17,9 +30,36 @@ export function isSmtpConfigured(): boolean {
   return Boolean(ENV.smtpHost?.trim());
 }
 
-/** Overall email sending is available (Forge or SMTP). */
+/** Overall email sending is available (Resend, Forge, or SMTP). */
 export function isEmailConfigured(): boolean {
-  return isForgeEmailConfigured() || isSmtpConfigured();
+  return isResendConfigured() || isForgeEmailConfigured() || isSmtpConfigured();
+}
+
+function buildFromAddress(options: EmailOptions): string {
+  const email = options.from ?? ENV.emailFrom;
+  const name = options.fromName?.trim();
+  if (name) {
+    return `${name} <${email}>`;
+  }
+  return email;
+}
+
+async function sendEmailViaResend(options: EmailOptions): Promise<boolean> {
+  const resend = new Resend(ENV.resendApiKey);
+  const from = buildFromAddress(options);
+  const { data, error } = await resend.emails.send({
+    from,
+    to: options.to,
+    subject: options.subject,
+    html: options.html,
+    replyTo: options.replyTo ?? undefined,
+    tags: options.tags ?? undefined,
+  });
+  if (error) {
+    console.error('Resend send failed:', error);
+    return false;
+  }
+  return Boolean(data?.id);
 }
 
 async function sendEmailViaForge(options: EmailOptions): Promise<boolean> {
@@ -52,10 +92,11 @@ async function sendEmailViaSmtp(options: EmailOptions): Promise<boolean> {
       auth: ENV.smtpUser && ENV.smtpPass ? { user: ENV.smtpUser, pass: ENV.smtpPass } : undefined,
     });
     await transporter.sendMail({
-      from: options.from ?? ENV.emailFrom,
+      from: options.from ?? buildFromAddress(options),
       to: options.to,
       subject: options.subject,
       html: options.html,
+      replyTo: options.replyTo,
     });
     return true;
   } catch (error) {
@@ -65,18 +106,22 @@ async function sendEmailViaSmtp(options: EmailOptions): Promise<boolean> {
 }
 
 /**
- * Send email using Forge (Manus) if configured, otherwise SMTP fallback (Phase 70).
- * Configure via: BUILT_IN_FORGE_API_URL + BUILT_IN_FORGE_API_KEY, or SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, EMAIL_FROM.
+ * Send email using Resend (primary), then Forge (Manus), then SMTP fallback.
+ * Multi-tenant: pass fromName/replyTo per organization when sending on behalf of a tenant.
+ * Configure: RESEND_API_KEY + verify techivano.com at https://resend.com/domains; or BUILT_IN_FORGE_*; or SMTP_*.
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
   try {
+    if (isResendConfigured()) {
+      return await sendEmailViaResend(options);
+    }
     if (isForgeEmailConfigured()) {
       return await sendEmailViaForge(options);
     }
     if (isSmtpConfigured()) {
       return await sendEmailViaSmtp(options);
     }
-    console.warn('Email not sent: neither Forge nor SMTP is configured. Set BUILT_IN_FORGE_* or SMTP_* env.');
+    console.warn('Email not sent: no provider configured. Set RESEND_API_KEY, BUILT_IN_FORGE_*, or SMTP_* env.');
     return false;
   } catch (error) {
     console.error('Email send error:', error);
