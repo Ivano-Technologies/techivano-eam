@@ -1,4 +1,5 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
+import type { Request as ExpressRequest } from "express";
 import type { User } from "../../drizzle/schema";
 import { normalizeOrganizationId } from "../db";
 import { authenticateRequest } from "./authenticateRequest";
@@ -98,10 +99,9 @@ function getOrganizationContextFromHost(host: string): { organizationId: string 
   return { organizationId: null, tenantId: null };
 }
 
+/** Uses Express Request so types are stable when used from api/trpc (Vercel) and server. */
 type ResolveOrganizationContextOptions = {
-  req: Pick<CreateExpressContextOptions["req"], "headers" | "query"> & {
-    session?: { organizationId?: unknown; tenantId?: unknown };
-  };
+  req: ExpressRequest & { session?: { organizationId?: unknown; tenantId?: unknown } };
   user?: User | null;
   explicitOrganizationId?: unknown;
   explicitTenantId?: unknown;
@@ -149,8 +149,9 @@ export function resolveOrganizationContext({
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
-  const user = await authenticateRequest(opts.req);
-  const orgContext = resolveOrganizationContext({ req: opts.req, user });
+  const req = opts.req as ExpressRequest;
+  const user = await authenticateRequest(req);
+  const orgContext = resolveOrganizationContext({ req, user });
 
   return {
     req: opts.req,

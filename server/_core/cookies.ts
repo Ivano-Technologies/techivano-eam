@@ -1,4 +1,4 @@
-import type { CookieOptions, Request } from "express";
+import type { Request } from "express";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
@@ -8,7 +8,7 @@ function isIpAddress(host: string) {
   return host.includes(":");
 }
 
-function isSecureRequest(req: Request) {
+function isSecureRequest(req: Request): boolean {
   if (req.protocol === "https") return true;
 
   const forwardedProto = req.headers["x-forwarded-proto"];
@@ -16,22 +16,28 @@ function isSecureRequest(req: Request) {
 
   const protoList = Array.isArray(forwardedProto)
     ? forwardedProto
-    : forwardedProto.split(",");
+    : (forwardedProto as string).split(",");
 
-  return protoList.some(proto => proto.trim().toLowerCase() === "https");
+  return protoList.some((proto: string) => proto.trim().toLowerCase() === "https");
 }
 
 /** Session cookie options for persistent auth (Supabase access token). */
 const AUTH_PERSISTENT_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000; // 1 year
+
+/** Session cookie options compatible with Express res.cookie(). */
+export type SessionCookieOptions = {
+  httpOnly: boolean;
+  path: string;
+  sameSite: "lax" | "strict" | "none";
+  secure: boolean;
+};
 
 /**
  * Session cookie flags. In production, secure must be true or browsers may reject the cookie.
  * Values: httpOnly true, path "/", sameSite "lax", secure true in production or when x-forwarded-proto is https.
  * We do not set domain so the cookie is host-scoped (admin.techivano.com and nrcseam.techivano.com do not share sessions).
  */
-export function getSessionCookieOptions(
-  req: Request
-): Pick<CookieOptions, "httpOnly" | "path" | "sameSite" | "secure"> {
+export function getSessionCookieOptions(req: Request): SessionCookieOptions {
   const isProduction = process.env.NODE_ENV === "production";
   return {
     httpOnly: true,
@@ -41,6 +47,9 @@ export function getSessionCookieOptions(
   };
 }
 
+/** Auth session cookie options (persistent or session). */
+export type AuthSessionCookieOptions = SessionCookieOptions & { maxAge?: number };
+
 /**
  * Options for setting the auth session cookie.
  * - rememberMe=true: persistent cookie (maxAge set)
@@ -49,7 +58,7 @@ export function getSessionCookieOptions(
 export function getAuthSessionCookieOptions(
   req: Request,
   opts?: { rememberMe?: boolean }
-): Pick<CookieOptions, "httpOnly" | "path" | "sameSite" | "secure" | "maxAge"> {
+): AuthSessionCookieOptions {
   const rememberMe = opts?.rememberMe ?? true;
   if (!rememberMe) {
     return {
