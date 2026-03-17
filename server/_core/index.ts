@@ -1059,14 +1059,16 @@ async function startServer() {
     })
   );
 
-  // Queue monitoring dashboard
-  const bullBoardAdapter = new ExpressAdapter();
-  bullBoardAdapter.setBasePath("/admin/queues");
-  createBullBoard({
-    queues: [new BullMQAdapter(getBackgroundQueue())],
-    serverAdapter: bullBoardAdapter,
-  });
-  app.use("/admin/queues", bullBoardAdapter.getRouter());
+  // Queue monitoring dashboard (disabled in E2E to avoid Redis)
+  if (process.env.E2E !== "1") {
+    const bullBoardAdapter = new ExpressAdapter();
+    bullBoardAdapter.setBasePath("/admin/queues");
+    createBullBoard({
+      queues: [new BullMQAdapter(getBackgroundQueue())],
+      serverAdapter: bullBoardAdapter,
+    });
+    app.use("/admin/queues", bullBoardAdapter.getRouter());
+  }
 
   // API 404: any /api request not handled above
   app.use("/api", (_req, res) => {

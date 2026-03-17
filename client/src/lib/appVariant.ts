@@ -8,6 +8,7 @@ export type AppVariant = "admin" | "nrcs" | "marketing";
 
 export function getAppVariant(): AppVariant {
   const host = typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1") return "admin";
   if (host.includes("admin.techivano.com")) return "admin";
   if (host.includes("nrcseam.techivano.com")) return "nrcs";
   return "marketing";

@@ -108,6 +108,8 @@ export function getHostFromRequest(req: { headers: Record<string, string | strin
 /** Resolve app variant from host for single Vercel project with multiple domains. */
 export function getAppVariantFromHost(host: string): AppVariant {
   if (!host) return "marketing";
+  const isLocal = host === "localhost" || host === "127.0.0.1" || host === "::1";
+  if (isLocal) return "admin";
   if (host.includes("admin.techivano.com")) return "admin";
   if (host.includes("nrcseam.techivano.com")) return "nrcs";
   return "marketing";

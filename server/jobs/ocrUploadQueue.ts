@@ -21,6 +21,9 @@ export interface OcrUploadJobPayload {
 let queue: Queue<OcrUploadJobPayload> | null = null;
 
 function getQueue() {
+  if (process.env.E2E === "1") {
+    throw new Error("OCR upload queue is disabled in E2E mode (Redis not used)");
+  }
   if (queue) return queue;
   queue = new Queue<OcrUploadJobPayload>(OCR_UPLOAD_QUEUE_NAME, {
     connection: { url: ENV.redisUrl },
@@ -71,6 +74,7 @@ function resolveOptionalEncryptionMetadata(payload: OcrUploadJobPayload): {
 }
 
 export async function enqueueUploadedDocumentForOcr(payload: OcrUploadJobPayload) {
+  if (process.env.E2E === "1") return;
   const rawTenantId = Number.isInteger(payload.tenantId) && payload.tenantId > 0
     ? payload.tenantId
     : payload.tenant_id;

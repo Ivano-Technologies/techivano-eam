@@ -22,6 +22,9 @@ const QUEUE_NAME = "eam-background-jobs";
 let backgroundQueue: Queue<BackgroundJobPayload, unknown, BackgroundJobName> | null = null;
 
 function getQueue(): Queue<BackgroundJobPayload, unknown, BackgroundJobName> {
+  if (process.env.E2E === "1") {
+    throw new Error("Background queue is disabled in E2E mode (Redis not used)");
+  }
   if (!backgroundQueue) {
     backgroundQueue = new Queue<BackgroundJobPayload, unknown, BackgroundJobName>(QUEUE_NAME, {
       connection: {

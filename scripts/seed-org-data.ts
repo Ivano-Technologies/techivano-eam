@@ -92,7 +92,6 @@ async function run() {
     .limit(1);
 
   if (memberForUser.some((m) => m.organizationId === orgId)) {
-    console.log("✓ User already in org; nothing to do");
     process.stdout.write(JSON.stringify({ orgId }) + "\n");
     return;
   }
