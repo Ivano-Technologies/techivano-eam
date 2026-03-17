@@ -53,6 +53,10 @@ export default function Login() {
   const [oauthLoading, setOauthLoading] = useState<"google" | "azure" | null>(null);
 
   const setSessionMutation = trpc.auth.setSession.useMutation();
+  const migrateLegacyMutation = trpc.auth.migrateLegacyPasswordUser.useMutation();
+  const { data: googleOAuthConfig } = trpc.system.googleOAuthStartUrl.useQuery(undefined, {
+    staleTime: 60_000,
+  });
   const passwordLoginMutation = trpc.auth.loginWithPassword.useMutation({
     onSuccess: () => {
       window.location.href = "/";
@@ -81,7 +85,15 @@ export default function Login() {
     if (useSupabaseAuth) {
       setLoading(true);
       try {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        let { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error && /invalid login credentials|invalid_credentials/i.test(error.message)) {
+          const migrated = await migrateLegacyMutation.mutateAsync({ email, password });
+          if (migrated.success) {
+            const retry = await supabase.auth.signInWithPassword({ email, password });
+            data = retry.data;
+            error = retry.error;
+          }
+        }
         if (error) {
           setMessage({ type: "error", text: error.message });
           return;
@@ -117,6 +129,14 @@ export default function Login() {
     if (!useSupabaseAuth) return;
     setMessage(null);
     setOauthLoading(provider);
+
+    if (provider === "google" && googleOAuthConfig?.url) {
+      const url = new URL(googleOAuthConfig.url, window.location.origin);
+      url.searchParams.set("remember", rememberMe ? "1" : "0");
+      window.location.href = url.toString();
+      return;
+    }
+
     try {
       const redirectTo = new URL("/auth/callback", window.location.origin);
       redirectTo.searchParams.set("remember", rememberMe ? "1" : "0");

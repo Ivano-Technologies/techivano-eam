@@ -9,6 +9,8 @@
  *   pnpm tsx scripts/promote-admin.ts admin@techivano.com
  */
 import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 import { getRootDb } from "../server/db";
 import { users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";

@@ -47,6 +47,9 @@ const rootEl = document.getElementById("root");
 if (!rootEl) {
   document.body.innerHTML = "<div style='min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f1f5f9;color:#475569;font-family:system-ui,sans-serif'><div style='text-align:center'><p style='margin:0 0 0.5rem'>Root element missing</p><p style='margin:0;font-size:0.875rem'>Expected &lt;div id=\"root\"&gt; in index.html</p></div></div>";
 } else {
+  if (import.meta.env.DEV && typeof globalThis !== "undefined" && !(globalThis as unknown as { __vite_plugin_react_preamble_installed__?: boolean }).__vite_plugin_react_preamble_installed__) {
+    console.warn("⚠️ React preamble missing — app may fail to hydrate");
+  }
   createRoot(rootEl).render(
     <Suspense fallback={<AppLoader />}>
       <AppProviders />

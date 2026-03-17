@@ -5,6 +5,7 @@ import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import superjson from "superjson";
 import App from "../App";
 import { getLoginUrl } from "../const";
+import { getImpersonationToken } from "../impersonation";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,10 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
+      headers() {
+        const token = getImpersonationToken();
+        return token ? { "x-impersonation": token } : {};
+      },
       fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),

@@ -14,7 +14,8 @@ import {
   assetEditHistory, telemetryPoints, telemetryAggregates, reportSnapshots, predictiveScores,
   warehouseTransferRecommendations, vendorPerformanceMetrics, vendorRiskScores,
   procurementRecommendations, purchaseOrders, supplyChainRiskScores, supplyChainRiskEvents,
-  fleetUnits, technicians, dispatchAssignments, executiveMetricsSnapshots, operationalKpiTrends
+  fleetUnits, technicians, dispatchAssignments, executiveMetricsSnapshots, operationalKpiTrends,
+  userSessions,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { logger } from "./_core/logger";
@@ -2507,6 +2508,68 @@ export async function getUserBySupabaseUserId(supabaseUserId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+/** Create a user session row (device/session tracking). Returns session id or null. */
+export async function createUserSession(params: {
+  userId: string;
+  userAgent?: string | null;
+  ip?: string | null;
+}): Promise<string | null> {
+  const database = getRootDb();
+  if (!database) return null;
+  const [row] = await database
+    .insert(userSessions)
+    .values({
+      userId: params.userId,
+      userAgent: params.userAgent ?? null,
+      ip: params.ip ?? null,
+    })
+    .returning({ id: userSessions.id });
+  return row?.id ?? null;
+}
+
+/** Update last_seen_at for a session. No-op if session not found. */
+export async function touchSessionLastSeen(sessionId: string): Promise<void> {
+  const database = getRootDb();
+  if (!database) return;
+  await database
+    .update(userSessions)
+    .set({ lastSeenAt: new Date() })
+    .where(eq(userSessions.id, sessionId));
+}
+
+/** Get session by id (for revoked check). */
+export async function getSessionById(sessionId: string) {
+  const database = getRootDb();
+  if (!database) return null;
+  const [row] = await database
+    .select()
+    .from(userSessions)
+    .where(eq(userSessions.id, sessionId))
+    .limit(1);
+  return row ?? null;
+}
+
+/** List sessions for a user (Supabase user id). */
+export async function listUserSessions(userId: string) {
+  const database = getRootDb();
+  if (!database) return [];
+  return database
+    .select()
+    .from(userSessions)
+    .where(eq(userSessions.userId, userId))
+    .orderBy(desc(userSessions.lastSeenAt));
+}
+
+/** Mark session as revoked. */
+export async function revokeSessionById(sessionId: string): Promise<void> {
+  const database = getRootDb();
+  if (!database) return;
+  await database
+    .update(userSessions)
+    .set({ revoked: true })
+    .where(eq(userSessions.id, sessionId));
+}
+
 /** Set supabase_user_id on an existing user (lazy migration / first Supabase login). */
 export async function setUserSupabaseId(userId: number, supabaseUserId: string): Promise<void> {
   const database = getRootDb();
@@ -2514,6 +2577,31 @@ export async function setUserSupabaseId(userId: number, supabaseUserId: string):
   await database
     .update(users)
     .set({ supabaseUserId, lastSignedIn: new Date() })
+    .where(eq(users.id, userId));
+}
+
+/** Mark user as MFA enrolled and set last verified; set mfa_enforced for global owners. */
+export async function setUserMfaEnrolled(userId: number, isGlobalOwner: boolean): Promise<void> {
+  const database = getRootDb();
+  if (!database) return;
+  const now = new Date();
+  await database
+    .update(users)
+    .set({
+      mfaEnabled: true,
+      mfaLastVerifiedAt: now,
+      ...(isGlobalOwner ? { mfaEnforced: true } : {}),
+    })
+    .where(eq(users.id, userId));
+}
+
+/** Refresh MFA last verified timestamp (e.g. after TOTP challenge at login or step-up). */
+export async function setUserMfaVerifiedAt(userId: number): Promise<void> {
+  const database = getRootDb();
+  if (!database) return;
+  await database
+    .update(users)
+    .set({ mfaLastVerifiedAt: new Date() })
     .where(eq(users.id, userId));
 }
 

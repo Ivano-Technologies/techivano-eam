@@ -16,6 +16,9 @@ function createContext(): TrpcContext {
       cookie: () => {},
       clearCookie: () => {},
     } as any,
+    tenantId: null,
+    organizationId: null,
+    membership: null,
   };
 }
 

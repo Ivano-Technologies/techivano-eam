@@ -1,6 +1,6 @@
 // @ts-nocheck — shared procedures for sub-routers (HIGH-11)
 import { TRPCError } from "@trpc/server";
-import { protectedOrgProcedure } from "../_core/trpc";
+import { protectedOrgProcedure, requireRole, requireMFA } from "../_core/trpc";
 import {
   analyticsService,
   complianceService,
@@ -15,19 +15,22 @@ import {
   warehouseIntelligenceService,
 } from "../modules";
 
-export const adminProcedure = protectedOrgProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-  }
-  return next({ ctx });
-});
+/** Org-scoped: any org member (viewer and above). Use for read-only. */
+export const viewerProcedure = protectedOrgProcedure.use(requireRole("viewer"));
 
-export const managerOrAdminProcedure = protectedOrgProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin" && ctx.user.role !== "manager") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Manager or Admin access required" });
-  }
-  return next({ ctx });
-});
+/** Org-scoped: member role and above. */
+export const memberProcedure = protectedOrgProcedure.use(requireRole("member"));
+
+/** Org-scoped: manager role and above (create/update domain objects). */
+export const managerProcedure = protectedOrgProcedure.use(requireRole("manager"));
+export const managerOrAdminProcedure = managerProcedure;
+
+/** Org-scoped: admin role and above (manage users, all resources). MFA required for global owners. */
+export const orgAdminProcedure = protectedOrgProcedure.use(requireRole("admin")).use(requireMFA);
+export const adminProcedure = orgAdminProcedure;
+
+/** Org-scoped: owner only (full control, billing, delete org). MFA required for global owners. */
+export const ownerProcedure = protectedOrgProcedure.use(requireRole("owner")).use(requireMFA);
 
 export function resolveTenantIdFromContext(ctx: { tenantId: number | null; organizationId: string | null }) {
   void analyticsService;

@@ -8,11 +8,15 @@ if (process.env.NODE_ENV === "development") {
   process.on("unhandledRejection", (reason, promise) => {
     console.error("[dev] Unhandled rejection (server will keep running):", reason);
   });
+  const hasCustomGoogle = Boolean(process.env.GOOGLE_OAUTH_CLIENT_ID?.trim());
+  console.log("[dev] Custom Google OAuth (continue to EAM):", hasCustomGoogle ? "enabled" : "not configured (using Supabase Google)");
 }
 
 import express from "express";
+import fs from "fs";
 import { createServer } from "http";
 import net from "net";
+import path from "path";
 import {
   CompleteMultipartUploadCommand,
   CreateMultipartUploadCommand,
@@ -28,9 +32,9 @@ import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
 import { appRouter } from "../routers";
-import { createContext, resolveOrganizationContext } from "./context";
+import { createContext, getAppVariantFromHost, getHostFromRequest, resolveOrganizationContext } from "./context";
 import { authenticateRequest } from "./authenticateRequest";
-import { serveStatic, setupVite } from "./vite";
+import { serveStatic, setupVite, setupViteModuleMiddleware } from "./vite";
 import { getBackgroundQueue } from "../jobs/queue";
 import { sdk } from "./sdk";
 import { enqueueWarehouseRebalanceJob } from "../jobs/queue";
@@ -63,6 +67,7 @@ import {
   decryptOrgDataKey,
   encryptBufferAesGcm,
 } from "./encryption";
+import { validateProductionEnv } from "./envValidation";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -164,8 +169,62 @@ async function s3BodyToBuffer(body: unknown): Promise<Buffer> {
 }
 
 async function startServer() {
+  validateProductionEnv();
+
   const app = express();
   const server = createServer(app);
+
+  let devVite: Awaited<ReturnType<typeof setupViteModuleMiddleware>>["vite"] | undefined;
+  // In development, handle /@vite/* and /src/* first so they never get HTML from any later middleware.
+  if (process.env.NODE_ENV === "development") {
+    const out = await setupViteModuleMiddleware(app, server);
+    devVite = out.vite;
+    app.use((req, res, next) => {
+      if (req.method !== "GET" && req.method !== "HEAD") return next();
+      const raw = (req.originalUrl ?? req.url ?? "").split("?")[0] ?? "";
+      let pathname: string;
+      try {
+        pathname = decodeURIComponent(raw);
+      } catch {
+        pathname = raw;
+      }
+      const isModule = pathname.startsWith("/@vite") || pathname.startsWith("/@react-refresh") || pathname.includes("@vite") || pathname.startsWith("/src/") || pathname.startsWith("/node_modules/") || pathname.startsWith("/@id/");
+      if (!isModule) return next();
+      return out.moduleMiddleware(req, res, next);
+    });
+  }
+
+  // CORS: allow configured origins (production). Same-origin or localhost in dev.
+  // Host-based app variant for single deployment (admin / nrcs / marketing) — RBAC and isolation
+  app.use((req: express.Request & { appVariant?: "admin" | "nrcs" | "marketing" }, _res, next) => {
+    const host = getHostFromRequest(req);
+    req.appVariant = getAppVariantFromHost(host);
+    next();
+  });
+
+  const allowedOriginsRaw = process.env.ALLOWED_ORIGINS ?? process.env.VITE_APP_URL ?? "";
+  const allowedOrigins = allowedOriginsRaw
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+  app.use((req, res, next) => {
+    const origin = req.headers.origin as string | undefined;
+    if (origin) {
+      if (process.env.NODE_ENV !== "production") {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+      } else if (allowedOrigins.length > 0 && allowedOrigins.includes(origin)) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+      }
+    }
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Organization-Id");
+    if (req.method === "OPTIONS") {
+      return res.status(204).end();
+    }
+    next();
+  });
+
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -972,6 +1031,25 @@ async function startServer() {
   });
   app.use("/api/trpc", trpcLimiter);
 
+  // Custom Google OAuth (same handlers as Vercel api/auth/google* for local testing)
+  try {
+    const googleHandler = (await import("../../api/auth/google")).default;
+    const googleCallbackHandler = (await import("../../api/auth/google/callback")).default;
+    app.get("/api/auth/google", (req, res) => googleHandler(req as express.Request, res as express.Response));
+    app.get("/api/auth/google/callback", async (req, res) => {
+      try {
+        await (googleCallbackHandler as (req: express.Request, res: express.Response) => Promise<void>)(req, res);
+      } catch (err) {
+        console.error("[api/auth/google/callback]", err);
+        res.statusCode = 500;
+        res.setHeader("Content-Type", "text/plain");
+        res.end("OAuth callback error");
+      }
+    });
+  } catch {
+    // api/auth may be unavailable in some setups
+  }
+
   // tRPC API
   app.use(
     "/api/trpc",
@@ -990,18 +1068,74 @@ async function startServer() {
   });
   app.use("/admin/queues", bullBoardAdapter.getRouter());
 
-  // development mode uses Vite, production mode uses static files
+  // API 404: any /api request not handled above
+  app.use("/api", (_req, res) => {
+    if (!res.headersSent) {
+      res.status(404).setHeader("Content-Type", "application/json").end(JSON.stringify({ error: "Not found" }));
+    }
+  });
+
+  // Serve SPA HTML only for exact app routes (never for /@vite/* or /src/*).
+  const spaPaths = ["/", "/login", "/signup", "/forgot-password", "/reset-password", "/set-password", "/auth/callback", "/verify-magic-link", "/welcome"];
   if (process.env.NODE_ENV === "development") {
-    await setupVite(app, server);
+    const projectRoot = path.resolve(import.meta.dirname ?? process.cwd(), "..", "..");
+    const clientIndex = path.join(projectRoot, "client", "index.html");
+    const fallbackIndex = path.join(import.meta.dirname ?? projectRoot, "public", "index.html");
+    let spaHtml: string | null = null;
+    for (const p of [clientIndex, fallbackIndex]) {
+      if (fs.existsSync(p)) {
+        try {
+          spaHtml = fs.readFileSync(p, "utf-8");
+          break;
+        } catch {
+          //
+        }
+      }
+    }
+    if (spaHtml) {
+      // Dev-only: inject @react-refresh + @vite/client so React hydrates. Never run in production.
+      const withVite = spaHtml.replace(/<head>/i, "<head><script type=\"module\">import RefreshRuntime from \"/@react-refresh\";RefreshRuntime.injectIntoGlobalHook(window);window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>type=>type;window.__vite_plugin_react_preamble_installed__=true;</script><script type=\"module\" src=\"/@vite/client\"></script>");
+      app.use((req, res, next) => {
+        if (req.method !== "GET" && req.method !== "HEAD") return next();
+        const raw = (req.originalUrl ?? req.url ?? "").split("?")[0] ?? "";
+        const pathname = raw ? decodeURIComponent(raw).replace(/%2F/g, "/") : "/";
+        if (!spaPaths.includes(pathname)) return next();
+        res.status(200).set({ "Content-Type": "text/html" }).end(withVite);
+      });
+    }
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    await setupVite(app, server, devVite);
   } else {
     serveStatic(app);
   }
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
+  // Global error handler (for next(err) from routes)
+  app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (res.headersSent) return;
+    const status = (err as { status?: number })?.status ?? 500;
+    const message = process.env.NODE_ENV === "production" ? "Internal server error" : (err instanceof Error ? err.message : String(err));
+    const payload: { error: string; stack?: string } = { error: message };
+    if (process.env.NODE_ENV !== "production" && err instanceof Error && err.stack) {
+      payload.stack = err.stack;
+    }
+    res.status(status).setHeader("Content-Type", "application/json").end(JSON.stringify(payload));
+  });
 
-  if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+  const preferredPort = parseInt(process.env.PORT || "3000", 10);
+  const startPort = Number.isNaN(preferredPort) ? 3000 : preferredPort;
+  let port: number;
+  if (process.env.PORT != null && String(process.env.PORT).trim() !== "") {
+    if (!(await isPortAvailable(preferredPort))) {
+      throw new Error(`Port ${preferredPort} is in use. Stop the process using it or unset PORT to auto-select.`);
+    }
+    port = preferredPort;
+  } else {
+    port = await findAvailablePort(startPort);
+    if (port !== preferredPort) {
+      console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+    }
   }
 
   server.listen(port, () => {

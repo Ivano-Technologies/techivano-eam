@@ -1,4 +1,8 @@
+import dotenv from "dotenv";
 import postgres from 'postgres';
+
+dotenv.config();
+dotenv.config({ path: ".env.local" });
 
 const DATABASE_URL = process.env.DATABASE_URL;
 

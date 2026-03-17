@@ -38,5 +38,8 @@ export function createTestContextWithOrg(
     res: {} as TrpcContext["res"],
     organizationId: TEST_ORG_ID,
     tenantId: TEST_TENANT_ID,
+    membership: { role: role === "admin" ? "admin" : "member", permissions: {} },
+    appVariant: "nrcs",
+    isGlobalOwner: false,
   };
 }

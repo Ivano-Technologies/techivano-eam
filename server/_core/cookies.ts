@@ -33,8 +33,8 @@ export type SessionCookieOptions = {
 };
 
 /**
- * Session cookie flags. In production, secure must be true or browsers may reject the cookie.
- * Values: httpOnly true, path "/", sameSite "lax", secure true in production or when x-forwarded-proto is https.
+ * Session cookie flags (security baseline).
+ * httpOnly: true, secure: true in prod, sameSite: "lax" to reduce CSRF.
  * We do not set domain so the cookie is host-scoped (admin.techivano.com and nrcseam.techivano.com do not share sessions).
  */
 export function getSessionCookieOptions(req: Request): SessionCookieOptions {

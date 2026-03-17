@@ -1,21 +1,21 @@
 // @ts-nocheck — inventory sub-router (HIGH-11 audit follow-up)
 import { z } from "zod";
-import { router, protectedOrgProcedure } from "../_core/trpc";
-import { adminProcedure, managerOrAdminProcedure } from "./_shared";
+import { router } from "../_core/trpc";
+import { adminProcedure, managerOrAdminProcedure, memberProcedure, viewerProcedure } from "./_shared";
 import * as db from "../db";
 
 export const inventoryRouter = router({
-  list: protectedOrgProcedure
+  list: viewerProcedure
     .input(z.object({ siteId: z.number().optional() }).optional())
     .query(async ({ input, ctx }) => {
       return await db.getAllInventoryItems(input?.siteId, ctx.organizationId ?? undefined);
     }),
-  lowStock: protectedOrgProcedure
+  lowStock: viewerProcedure
     .input(z.object({ siteId: z.number().optional() }).optional())
     .query(async ({ input }) => {
       return await db.getLowStockItems(input?.siteId);
     }),
-  transactions: protectedOrgProcedure
+  transactions: viewerProcedure
     .input(z.object({ itemId: z.number() }))
     .query(async ({ input }) => {
       return await db.getInventoryTransactions(input.itemId);
@@ -58,7 +58,7 @@ export const inventoryRouter = router({
       const { id, ...data } = input;
       return await db.updateInventoryItem(id, data);
     }),
-  addTransaction: protectedOrgProcedure
+  addTransaction: memberProcedure
     .input(z.object({
       itemId: z.number(),
       type: z.enum(["in", "out", "adjustment", "transfer"]),

@@ -7,6 +7,8 @@
  * Optional env: SUPABASE_PROJECT_REF or VITE_SUPABASE_URL (to derive ref)
  */
 import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 

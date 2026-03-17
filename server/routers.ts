@@ -5,7 +5,8 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions, getAuthSessionCookieOptions } from "./_core/cookies";
 import { invalidateUserCache } from "./_core/userCache";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router, protectedOrgProcedure } from "./_core/trpc";
+import { publicProcedure, router } from "./_core/trpc";
+import { adminProcedure, managerOrAdminProcedure, viewerProcedure } from "./routers/_shared";
 import * as db from "./db";
 import * as notificationHelper from "./notificationHelper";
 import { generatePDFReport, generateExcelReport } from "./reportGenerator";
@@ -38,6 +39,8 @@ import {
   warehouseIntelligenceService
 } from "./modules";
 import { authRouter } from "./routers/auth";
+import { adminImpersonationRouter } from "./routers/adminImpersonation";
+import { sessionsRouter } from "./routers/sessions";
 import { sitesRouter } from "./routers/sites";
 import { assetsRouter } from "./routers/assets";
 import { workOrdersRouter } from "./routers/workOrders";
@@ -47,21 +50,6 @@ import { nrcsRouter } from "./routers/nrcs";
 import { dashboardRouter } from "./routers/dashboard";
 import { maintenanceRouter } from "./routers/maintenance";
 import { inventoryRouter } from "./routers/inventory";
-
-// Role-based middleware
-const adminProcedure = protectedOrgProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-  }
-  return next({ ctx });
-});
-
-const managerOrAdminProcedure = protectedOrgProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin" && ctx.user.role !== "manager") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Manager or Admin access required" });
-  }
-  return next({ ctx });
-});
 
 function resolveTenantIdFromContext(ctx: { tenantId: number | null; organizationId: string | null }) {
   void analyticsService;
@@ -93,6 +81,8 @@ function resolveTenantIdFromContext(ctx: { tenantId: number | null; organization
 export const appRouter = router({
   system: systemRouter,
   auth: authRouter,
+  impersonation: adminImpersonationRouter,
+  sessions: sessionsRouter,
 
   // ============= SITES MANAGEMENT =============
   sites: sitesRouter,
@@ -130,7 +120,7 @@ export const appRouter = router({
         return { queued: true, ...queued };
       }),
 
-    recommendations: protectedOrgProcedure
+    recommendations: viewerProcedure
       .input(
         z.object({
           stockItemId: z.number().int().positive().optional(),
@@ -162,7 +152,7 @@ export const appRouter = router({
         return { queued: true, ...queued };
       }),
 
-    recommendations: protectedOrgProcedure
+    recommendations: viewerProcedure
       .input(
         z.object({
           stockItemId: z.number().int().positive().optional(),
@@ -216,7 +206,7 @@ export const appRouter = router({
         return { queued: true, ...queued };
       }),
 
-    risk: protectedOrgProcedure
+    risk: viewerProcedure
       .input(
         z.object({
           stockItemId: z.number().int().positive().optional(),
@@ -254,7 +244,7 @@ export const appRouter = router({
         return { queued: true, ...queued };
       }),
 
-    assignments: protectedOrgProcedure
+    assignments: viewerProcedure
       .input(
         z.object({
           facilityId: z.number().int().positive().optional(),
@@ -290,11 +280,11 @@ export const appRouter = router({
         return { queued: true, ...queued };
       }),
 
-    metrics: protectedOrgProcedure.query(async ({ ctx }) => {
+    metrics: viewerProcedure.query(async ({ ctx }) => {
       return db.getLatestExecutiveMetricsSnapshot(resolveTenantIdFromContext(ctx));
     }),
 
-    kpiTrends: protectedOrgProcedure
+    kpiTrends: viewerProcedure
       .input(
         z.object({
           metricName: z.string().optional(),
@@ -316,7 +306,7 @@ export const appRouter = router({
 
   // ============= TELEMETRY =============
   telemetry: router({
-    ingest: protectedOrgProcedure
+    ingest: viewerProcedure
       .input(z.object({
         assetId: z.number(),
         metric: z.string().min(1).max(64),
@@ -344,7 +334,7 @@ export const appRouter = router({
         return { id: id ?? 0, success: true };
       }),
 
-    ingestBatch: protectedOrgProcedure
+    ingestBatch: viewerProcedure
       .input(z.object({
         points: z.array(z.object({
           assetId: z.number(),
@@ -377,7 +367,7 @@ export const appRouter = router({
 
   // ============= VENDORS =============
   vendors: router({
-    list: protectedOrgProcedure.query(async ({ ctx }) => {
+    list: viewerProcedure.query(async ({ ctx }) => {
       return await db.getAllVendors(ctx.organizationId ?? undefined);
     }),
     
@@ -430,14 +420,14 @@ export const appRouter = router({
         return await bulkImportVendors(data, ctx.user.id, input.fileName, input.fileType, ctx.organizationId ?? undefined);
       }),
 
-    downloadTemplate: protectedOrgProcedure
+    downloadTemplate: viewerProcedure
       .input(z.object({ format: z.enum(['csv', 'excel']) }))
       .query(({ input }) => {
         const template = generateVendorsTemplate(input.format);
         return { template, format: input.format };
       }),
 
-    export: protectedOrgProcedure
+    export: viewerProcedure
       .input(z.object({ format: z.enum(['csv', 'excel']) }))
       .query(async ({ input, ctx }) => {
         const vendors = await db.getAllVendors(ctx.organizationId ?? undefined);
@@ -463,7 +453,7 @@ export const appRouter = router({
         return { queued: true, ...queued };
       }),
 
-    riskScores: protectedOrgProcedure
+    riskScores: viewerProcedure
       .input(
         z.object({
           limit: z.number().int().min(1).max(200).optional(),
@@ -479,7 +469,7 @@ export const appRouter = router({
 
   // ============= FINANCIAL TRANSACTIONS =============
   financial: router({
-    list: protectedOrgProcedure
+    list: viewerProcedure
       .input(z.object({
         assetId: z.number().optional(),
         workOrderId: z.number().optional(),
@@ -534,26 +524,26 @@ export const appRouter = router({
       }),
 
     // Lifecycle Cost Analysis
-    getAssetLifecycleCost: protectedOrgProcedure
+    getAssetLifecycleCost: viewerProcedure
       .input(z.object({ assetId: z.number() }))
       .query(async ({ input }) => {
         const { calculateAssetLifecycleCost } = await import('./lifecycleCost');
         return await calculateAssetLifecycleCost(input.assetId);
       }),
 
-    getCategoryCostSummary: protectedOrgProcedure
+    getCategoryCostSummary: viewerProcedure
       .query(async () => {
         const { getCategoryCostSummary } = await import('./lifecycleCost');
         return await getCategoryCostSummary();
       }),
 
-    getCostOptimizationRecommendations: protectedOrgProcedure
+    getCostOptimizationRecommendations: viewerProcedure
       .query(async () => {
         const { getCostOptimizationRecommendations } = await import('./lifecycleCost');
         return await getCostOptimizationRecommendations();
       }),
 
-    getCostAnalytics: protectedOrgProcedure
+    getCostAnalytics: viewerProcedure
       .input(z.object({ days: z.number().default(30) }))
       .query(async ({ input }) => {
         return await db.getCostAnalytics(input.days);
@@ -562,7 +552,7 @@ export const appRouter = router({
 
   // ============= COMPLIANCE =============
   compliance: router({
-    list: protectedOrgProcedure
+    list: viewerProcedure
       .input(z.object({
         assetId: z.number().optional(),
         status: z.string().optional(),
@@ -619,40 +609,40 @@ export const appRouter = router({
 
   // ============= NOTIFICATIONS =============
   notifications: router({
-    list: protectedOrgProcedure
+    list: viewerProcedure
       .input(z.object({ limit: z.number().optional() }))
       .query(async ({ ctx, input }) => {
         return await db.getUserNotifications(ctx.user.id, input.limit);
       }),
     
-    unreadCount: protectedOrgProcedure
+    unreadCount: viewerProcedure
       .query(async ({ ctx }) => {
         return await db.getUnreadNotificationCount(ctx.user.id);
       }),
     
-    markAsRead: protectedOrgProcedure
+    markAsRead: viewerProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         return await db.markNotificationAsRead(input.id);
       }),
     
-    markAllAsRead: protectedOrgProcedure
+    markAllAsRead: viewerProcedure
       .mutation(async ({ ctx }) => {
         return await db.markAllNotificationsAsRead(ctx.user.id);
       }),
     
-    delete: protectedOrgProcedure
+    delete: viewerProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         return await db.deleteNotification(input.id);
       }),
     
-    getPreferences: protectedOrgProcedure
+    getPreferences: viewerProcedure
       .query(async ({ ctx }) => {
         return await db.getUserNotificationPreferences(ctx.user.id);
       }),
     
-    updatePreferences: protectedOrgProcedure
+    updatePreferences: viewerProcedure
       .input(z.object({
         maintenanceDue: z.boolean().optional(),
         lowStock: z.boolean().optional(),
@@ -728,7 +718,7 @@ export const appRouter = router({
         return { queued: true, ...queued };
       }),
 
-    getRunById: protectedOrgProcedure
+    getRunById: viewerProcedure
       .input(z.object({
         runId: z.number().int().positive(),
       }))
@@ -737,7 +727,7 @@ export const appRouter = router({
         return getJobRunById(input.runId, tenantId);
       }),
 
-    listRecent: protectedOrgProcedure
+    listRecent: viewerProcedure
       .input(z.object({
         limit: z.number().int().min(1).max(100).optional(),
       }).optional())
@@ -750,7 +740,7 @@ export const appRouter = router({
   // Reports
   reports: router({
     // Asset Reports
-    assetInventory: protectedOrgProcedure
+    assetInventory: viewerProcedure
       .input(z.object({
         format: z.enum(['pdf', 'excel']),
         siteId: z.number().optional(),
@@ -794,7 +784,7 @@ export const appRouter = router({
       }),
 
     // Maintenance Reports
-    maintenanceSchedule: protectedOrgProcedure
+    maintenanceSchedule: viewerProcedure
       .input(z.object({
         format: z.enum(['pdf', 'excel']),
         siteId: z.number().optional(),
@@ -836,7 +826,7 @@ export const appRouter = router({
       }),
 
     // Work Order Reports
-    workOrders: protectedOrgProcedure
+    workOrders: viewerProcedure
       .input(z.object({
         format: z.enum(['pdf', 'excel']),
         siteId: z.number().optional(),
@@ -880,7 +870,7 @@ export const appRouter = router({
       }),
 
     // Financial Reports
-    financial: protectedOrgProcedure
+    financial: viewerProcedure
       .input(z.object({
         format: z.enum(['pdf', 'excel']),
         startDate: z.string().optional(),
@@ -920,7 +910,7 @@ export const appRouter = router({
       }),
 
     // Compliance Reports
-    compliance: protectedOrgProcedure
+    compliance: viewerProcedure
       .input(z.object({
         format: z.enum(['pdf', 'excel']),
         siteId: z.number().optional(),
@@ -962,7 +952,7 @@ export const appRouter = router({
 
   // Asset Photos Management
   photos: router({
-    create: protectedOrgProcedure
+    create: viewerProcedure
       .input(z.object({
         assetId: z.number().optional(),
         workOrderId: z.number().optional(),
@@ -979,19 +969,19 @@ export const appRouter = router({
         return { id: photoId };
       }),
 
-    listByAsset: protectedOrgProcedure
+    listByAsset: viewerProcedure
       .input(z.object({ assetId: z.number() }))
       .query(async ({ input }) => {
         return await db.getAssetPhotos(input.assetId);
       }),
 
-    listByWorkOrder: protectedOrgProcedure
+    listByWorkOrder: viewerProcedure
       .input(z.object({ workOrderId: z.number() }))
       .query(async ({ input }) => {
         return await db.getWorkOrderPhotos(input.workOrderId);
       }),
 
-    delete: protectedOrgProcedure
+    delete: viewerProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         await db.deleteAssetPhoto(input.id);
@@ -1001,11 +991,11 @@ export const appRouter = router({
 
   // Scheduled Reports Management
   scheduledReports: router({
-    list: protectedOrgProcedure.query(async () => {
+    list: viewerProcedure.query(async () => {
       return await db.getScheduledReports();
     }),
 
-    create: protectedOrgProcedure
+    create: viewerProcedure
       .input(z.object({
         name: z.string(),
         reportType: z.enum(['assetInventory', 'maintenanceSchedule', 'workOrders', 'financial', 'compliance']),
@@ -1025,7 +1015,7 @@ export const appRouter = router({
         return { id: reportId };
       }),
 
-    update: protectedOrgProcedure
+    update: viewerProcedure
       .input(z.object({
         id: z.number(),
         name: z.string().optional(),
@@ -1045,7 +1035,7 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    delete: protectedOrgProcedure
+    delete: viewerProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         await db.deleteScheduledReport(input.id);
@@ -1055,7 +1045,7 @@ export const appRouter = router({
 
   // ============= BULK IMPORT/EXPORT =============
   bulkOperations: router({
-    exportAssets: protectedOrgProcedure
+    exportAssets: viewerProcedure
       .query(async ({ ctx }) => {
         resolveTenantIdFromContext(ctx);
         const { exportAssets } = await import('./bulkImportExport');
@@ -1067,7 +1057,7 @@ export const appRouter = router({
         };
       }),
 
-    exportWorkOrders: protectedOrgProcedure
+    exportWorkOrders: viewerProcedure
       .query(async ({ ctx }) => {
         resolveTenantIdFromContext(ctx);
         const { exportWorkOrders } = await import('./bulkImportExport');
@@ -1079,7 +1069,7 @@ export const appRouter = router({
         };
       }),
 
-    exportInventory: protectedOrgProcedure
+    exportInventory: viewerProcedure
       .query(async ({ ctx }) => {
         resolveTenantIdFromContext(ctx);
         const { exportInventory } = await import('./bulkImportExport');
@@ -1091,7 +1081,7 @@ export const appRouter = router({
         };
       }),
 
-    getImportTemplate: protectedOrgProcedure
+    getImportTemplate: viewerProcedure
       .input(z.object({ entity: z.enum(['assets', 'workOrders', 'inventory']) }))
       .query(async ({ input, ctx }) => {
         resolveTenantIdFromContext(ctx);
@@ -1113,7 +1103,7 @@ export const appRouter = router({
         return await importAssets(buffer, ctx.user.id);
       }),
 
-    exportSites: protectedOrgProcedure
+    exportSites: viewerProcedure
       .query(async ({ ctx }) => {
         resolveTenantIdFromContext(ctx);
         const { exportSites } = await import('./bulkImportExport');
@@ -1134,7 +1124,7 @@ export const appRouter = router({
         return await importSites(buffer);
       }),
 
-    downloadSiteTemplate: protectedOrgProcedure
+    downloadSiteTemplate: viewerProcedure
       .query(async ({ ctx }) => {
         resolveTenantIdFromContext(ctx);
         const { generateSiteTemplate } = await import('./bulkImportExport');
@@ -1149,7 +1139,7 @@ export const appRouter = router({
 
   // ============= ASSET TRANSFERS =============
   transfers: router({
-    list: protectedOrgProcedure
+    list: viewerProcedure
       .input(z.object({
         status: z.string().optional(),
         assetId: z.number().optional(),
@@ -1159,13 +1149,13 @@ export const appRouter = router({
         return await db.getAllAssetTransfers(input);
       }),
 
-    getById: protectedOrgProcedure
+    getById: viewerProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         return await db.getAssetTransferById(input.id);
       }),
 
-    create: protectedOrgProcedure
+    create: viewerProcedure
       .input(z.object({
         assetId: z.number(),
         fromSiteId: z.number(),
@@ -1201,7 +1191,7 @@ export const appRouter = router({
         });
       }),
 
-    startTransfer: protectedOrgProcedure
+    startTransfer: viewerProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         return await db.updateAssetTransfer(input.id, {
@@ -1210,7 +1200,7 @@ export const appRouter = router({
         });
       }),
 
-    complete: protectedOrgProcedure
+    complete: viewerProcedure
       .input(z.object({ 
         id: z.number(),
         handoverChecklist: z.string().optional(),
@@ -1239,11 +1229,11 @@ export const appRouter = router({
 
   // ============= QUICKBOOKS INTEGRATION =============
   quickbooks: router({
-    getConfig: protectedOrgProcedure.query(async () => {
+    getConfig: viewerProcedure.query(async () => {
       return await db.getQuickBooksConfig();
     }),
     
-    saveConfig: protectedOrgProcedure
+    saveConfig: viewerProcedure
       .input(z.object({
         clientId: z.string(),
         clientSecret: z.string(),
@@ -1258,7 +1248,7 @@ export const appRouter = router({
         });
       }),
     
-    getAuthUrl: protectedOrgProcedure
+    getAuthUrl: viewerProcedure
       .input(z.object({
         clientId: z.string(),
         redirectUri: z.string(),
@@ -1268,7 +1258,7 @@ export const appRouter = router({
         return { url: getQuickBooksAuthUrl(input) };
       }),
     
-    exchangeCode: protectedOrgProcedure
+    exchangeCode: viewerProcedure
       .input(z.object({
         code: z.string(),
         realmId: z.string(),
@@ -1302,7 +1292,7 @@ export const appRouter = router({
         return { success: true };
       }),
     
-    syncTransactions: protectedOrgProcedure.mutation(async () => {
+    syncTransactions: viewerProcedure.mutation(async () => {
       const config = await db.getQuickBooksConfig();
       if (!config || !config.accessToken) {
         throw new Error('QuickBooks not authenticated');
@@ -1323,7 +1313,7 @@ export const appRouter = router({
       return result;
     }),
     
-    testConnection: protectedOrgProcedure.query(async () => {
+    testConnection: viewerProcedure.query(async () => {
       const config = await db.getQuickBooksConfig();
       if (!config || !config.accessToken) {
         return { connected: false, error: 'Not authenticated' };
@@ -1345,11 +1335,11 @@ export const appRouter = router({
 
   // ============= USER PREFERENCES =============
   userPreferences: router({
-    get: protectedOrgProcedure.query(async ({ ctx }) => {
+    get: viewerProcedure.query(async ({ ctx }) => {
       return await db.getUserPreferences(ctx.user.id);
     }),
     
-    update: protectedOrgProcedure
+    update: viewerProcedure
       .input(z.object({
         sidebarWidth: z.number().optional(),
         sidebarCollapsed: z.number().optional(),
@@ -1361,7 +1351,7 @@ export const appRouter = router({
         });
       }),
 
-    updateDashboardWidgets: protectedOrgProcedure
+    updateDashboardWidgets: viewerProcedure
       .input(z.object({
         widgets: z.record(z.string(), z.boolean()),
       }))
@@ -1436,7 +1426,7 @@ export const appRouter = router({
 
   // ============= DEPRECIATION =============
   depreciation: router({
-    calculate: protectedOrgProcedure
+    calculate: viewerProcedure
       .input(z.object({
         assetId: z.number(),
       }))
@@ -1462,7 +1452,7 @@ export const appRouter = router({
         });
       }),
     
-    summary: protectedOrgProcedure.query(async ({ ctx }) => {
+    summary: viewerProcedure.query(async ({ ctx }) => {
       const { calculateDepreciation } = require('./depreciation');
       const assets = await db.getAllAssets({ organizationId: ctx.organizationId ?? undefined });
       
@@ -1540,7 +1530,7 @@ export const appRouter = router({
 
   // ============= WORK ORDER TEMPLATES =============
   workOrderTemplates: router({
-    list: protectedOrgProcedure
+    list: viewerProcedure
       .input(z.object({
         isActive: z.boolean().optional(),
         type: z.enum(['corrective', 'preventive', 'inspection', 'emergency']).optional(),
@@ -1550,7 +1540,7 @@ export const appRouter = router({
         return await db.getWorkOrderTemplates(input || {});
       }),
 
-    getById: protectedOrgProcedure
+    getById: viewerProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         return await db.getWorkOrderTemplateById(input.id);
@@ -1604,7 +1594,7 @@ export const appRouter = router({
 
   // ============= AUDIT LOGS =============
   auditLogs: router({
-    list: protectedOrgProcedure
+    list: viewerProcedure
       .input(z.object({
         entityType: z.string().optional(),
         entityId: z.number().optional(),
@@ -1618,7 +1608,7 @@ export const appRouter = router({
 
   // ============= NRCS EXCEL TEMPLATES =============
   nrcsTemplates: router({
-    downloadTemplate: protectedOrgProcedure
+    downloadTemplate: viewerProcedure
       .query(async () => {
         const { generateNRCSAssetTemplate } = await import('./nrcsExcelTemplate');
         const buffer = await generateNRCSAssetTemplate();
@@ -1629,7 +1619,7 @@ export const appRouter = router({
         };
       }),
     
-    exportAssets: protectedOrgProcedure
+    exportAssets: viewerProcedure
       .query(async ({ ctx }) => {
         const assets = await db.getAllAssets({ organizationId: ctx.organizationId ?? undefined });
         const { exportAssetsToNRCSFormat } = await import('./nrcsExcelTemplate');
@@ -1641,7 +1631,7 @@ export const appRouter = router({
         };
       }),
     
-    importAssets: protectedOrgProcedure
+    importAssets: viewerProcedure
       .input(z.object({
         fileData: z.string(), // base64 encoded Excel file
       }))

@@ -1,15 +1,15 @@
 // @ts-nocheck — assets sub-router (HIGH-11)
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { router, protectedOrgProcedure } from "../_core/trpc";
-import { adminProcedure, managerOrAdminProcedure } from "./_shared";
+import { router } from "../_core/trpc";
+import { adminProcedure, managerOrAdminProcedure, viewerProcedure } from "./_shared";
 import * as db from "../db";
 import * as notificationHelper from "../notificationHelper";
 import { parseFileData, bulkImportAssets, generateAssetsTemplate } from "../bulkImport";
 import { exportToCSV, exportToExcel, formatAssetsForExport } from "../bulkExport";
 
 export const assetsRouter = router({
-  list: protectedOrgProcedure
+  list: viewerProcedure
     .input(
       z
         .object({
@@ -25,17 +25,17 @@ export const assetsRouter = router({
         organizationId: ctx.organizationId ?? undefined,
       });
     }),
-  getById: protectedOrgProcedure
+  getById: viewerProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return await db.getAssetById(input.id);
     }),
-  getByTag: protectedOrgProcedure
+  getByTag: viewerProcedure
     .input(z.object({ assetTag: z.string() }))
     .query(async ({ input }) => {
       return await db.getAssetByTag(input.assetTag);
     }),
-  search: protectedOrgProcedure
+  search: viewerProcedure
     .input(z.object({ searchTerm: z.string() }))
     .query(async ({ input }) => {
       return await db.searchAssets(input.searchTerm);
@@ -89,7 +89,7 @@ export const assetsRouter = router({
         organizationId: ctx.organizationId ?? undefined,
       });
     }),
-  generateQRCode: protectedOrgProcedure
+  generateQRCode: viewerProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const { generateAssetQRCode } = await import("../qrcode");
@@ -99,7 +99,7 @@ export const assetsRouter = router({
       await db.updateAsset(asset.id, { qrCode });
       return { qrCode };
     }),
-  generateBulkQRCodeLabels: protectedOrgProcedure
+  generateBulkQRCodeLabels: viewerProcedure
     .input(
       z.object({
         assetIds: z.array(z.number()),
@@ -132,7 +132,7 @@ export const assetsRouter = router({
         mimeType: "application/pdf",
       };
     }),
-  scanQRCode: protectedOrgProcedure
+  scanQRCode: viewerProcedure
     .input(z.object({ qrData: z.string() }))
     .query(async ({ input }) => {
       const { parseAssetQRCode } = await import("../qrcode");
@@ -143,7 +143,7 @@ export const assetsRouter = router({
       if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found" });
       return asset;
     }),
-  generateBarcode: protectedOrgProcedure
+  generateBarcode: viewerProcedure
     .input(
       z.object({
         id: z.number(),
@@ -162,7 +162,7 @@ export const assetsRouter = router({
       });
       return { barcode: barcodeValue, image: barcodeImage, format: input.format };
     }),
-  scanBarcode: protectedOrgProcedure
+  scanBarcode: viewerProcedure
     .input(z.object({ barcode: z.string() }))
     .query(async ({ input }) => {
       const asset = await db.getAssetByBarcode(input.barcode);
@@ -241,7 +241,7 @@ export const assetsRouter = router({
       });
       return await db.updateAsset(id, data);
     }),
-  getExpiringWarranties: protectedOrgProcedure.query(async () => {
+  getExpiringWarranties: viewerProcedure.query(async () => {
     return await db.getExpiringWarranties();
   }),
   sendWarrantyAlert: managerOrAdminProcedure
@@ -369,13 +369,13 @@ export const assetsRouter = router({
         ctx.organizationId ?? undefined
       );
     }),
-  downloadTemplate: protectedOrgProcedure
+  downloadTemplate: viewerProcedure
     .input(z.object({ format: z.enum(["csv", "excel"]) }))
     .query(({ input }) => {
       const template = generateAssetsTemplate(input.format);
       return { template, format: input.format };
     }),
-  export: protectedOrgProcedure
+  export: viewerProcedure
     .input(z.object({ format: z.enum(["csv", "excel"]) }))
     .query(async ({ input, ctx }) => {
       const assets = await db.getAllAssets({
@@ -392,7 +392,7 @@ export const assetsRouter = router({
         filename: `assets_export.${input.format === "csv" ? "csv" : "xlsx"}`,
       };
     }),
-  getEditHistory: protectedOrgProcedure
+  getEditHistory: viewerProcedure
     .input(z.object({ assetId: z.number() }))
     .query(async ({ input }) => {
       return await db.getAssetEditHistory(input.assetId);

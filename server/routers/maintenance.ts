@@ -1,12 +1,12 @@
 // @ts-nocheck — maintenance sub-router (HIGH-11 audit follow-up)
 import { z } from "zod";
-import { router, protectedOrgProcedure } from "../_core/trpc";
-import { managerOrAdminProcedure, resolveTenantIdFromContext } from "./_shared";
+import { router } from "../_core/trpc";
+import { managerOrAdminProcedure, resolveTenantIdFromContext, viewerProcedure } from "./_shared";
 import * as db from "../db";
 import { enqueuePmEvaluationJob, enqueuePredictiveScoringJob } from "../jobs/queue";
 
 export const maintenanceRouter = router({
-  list: protectedOrgProcedure
+  list: viewerProcedure
     .input(z.object({
       assetId: z.number().optional(),
       isActive: z.boolean().optional(),
@@ -14,7 +14,7 @@ export const maintenanceRouter = router({
     .query(async ({ input, ctx }) => {
       return await db.getAllMaintenanceSchedules({ ...input, organizationId: ctx.organizationId ?? undefined });
     }),
-  upcoming: protectedOrgProcedure
+  upcoming: viewerProcedure
     .input(z.object({ days: z.number().default(30) }))
     .query(async ({ input }) => {
       return await db.getUpcomingMaintenance(input.days);
@@ -66,15 +66,15 @@ export const maintenanceRouter = router({
       });
       return await db.updateMaintenanceSchedule(id, data);
     }),
-  getPredictions: protectedOrgProcedure.query(async () => {
+  getPredictions: viewerProcedure.query(async () => {
     const { getAllMaintenancePredictions } = await import("../predictiveMaintenance");
     return await getAllMaintenancePredictions();
   }),
-  getHighPriorityPredictions: protectedOrgProcedure.query(async () => {
+  getHighPriorityPredictions: viewerProcedure.query(async () => {
     const { getHighPriorityPredictions } = await import("../predictiveMaintenance");
     return await getHighPriorityPredictions();
   }),
-  getAssetPrediction: protectedOrgProcedure
+  getAssetPrediction: viewerProcedure
     .input(z.object({ assetId: z.number() }))
     .query(async ({ input }) => {
       const { analyzeAssetMaintenancePattern } = await import("../predictiveMaintenance");

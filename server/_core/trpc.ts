@@ -2,12 +2,29 @@ import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
+import { createRequirePermission, createRequireRole } from "./rbac";
+import { createRequireMFA } from "./requireMFA";
+import { createRequireRecentAuth } from "./requireRecentAuth";
 import { runWithTenantContext } from "./tenantContext";
 import { runWithTenantDb } from "../db";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
 });
+
+/** RBAC: org-scoped role/permission middleware. Use after protectedOrgProcedure. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const requireRole = createRequireRole(t as any);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const requirePermission = createRequirePermission(t as any);
+
+/** MFA: enforced for global owners on admin/owner procedures. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const requireMFA = createRequireMFA(t as any) as any;
+
+/** Step-up: require MFA verified within maxAgeMinutes (default 10). Use for highest-risk actions. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const requireRecentAuth = createRequireRecentAuth(t as any, 10) as any;
 
 export const router = t.router;
 
@@ -76,5 +93,16 @@ const requireAdmin = t.middleware(async opts => {
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
 
-/** Admin-only procedures; still run with tenant context when organizationId is set. */
-export const adminProcedure = protectedProcedure.use(requireAdmin);
+/** Admin-only procedures; MFA required for global owners. */
+export const adminProcedure = protectedProcedure.use(requireAdmin).use(requireMFA);
+
+/** Global owner only (email in GLOBAL_OWNER_EMAILS). Use for impersonation, not org-scoped owner. */
+const requireGlobalOwner = t.middleware(async (opts) => {
+  const { ctx, next } = opts;
+  if (!ctx.isGlobalOwner) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Global owner access required" });
+  }
+  return next({ ctx });
+});
+
+export const globalOwnerProcedure = protectedProcedure.use(requireGlobalOwner).use(requireMFA);

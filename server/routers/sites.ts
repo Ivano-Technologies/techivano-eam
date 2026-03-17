@@ -1,7 +1,7 @@
 // @ts-nocheck — sites sub-router (HIGH-11)
 import { z } from "zod";
-import { router, protectedOrgProcedure } from "../_core/trpc";
-import { adminProcedure, managerOrAdminProcedure } from "./_shared";
+import { router } from "../_core/trpc";
+import { adminProcedure, managerOrAdminProcedure, viewerProcedure } from "./_shared";
 import * as db from "../db";
 import {
   parseFileData,
@@ -11,10 +11,10 @@ import {
 import { exportToCSV, exportToExcel, formatSitesForExport } from "../bulkExport";
 
 export const sitesRouter = router({
-  list: protectedOrgProcedure.query(async ({ ctx }) => {
+  list: viewerProcedure.query(async ({ ctx }) => {
     return await db.getAllSites(ctx.organizationId ?? undefined);
   }),
-  getById: protectedOrgProcedure
+  getById: viewerProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return await db.getSiteById(input.id);
@@ -88,13 +88,13 @@ export const sitesRouter = router({
         ctx.organizationId ?? undefined
       );
     }),
-  downloadTemplate: protectedOrgProcedure
+  downloadTemplate: viewerProcedure
     .input(z.object({ format: z.enum(["csv", "excel"]) }))
     .query(({ input }) => {
       const template = generateSitesTemplate(input.format);
       return { template, format: input.format };
     }),
-  export: protectedOrgProcedure
+  export: viewerProcedure
     .input(z.object({ format: z.enum(["csv", "excel"]) }))
     .query(async ({ input, ctx }) => {
       const sites = await db.getAllSites(ctx.organizationId ?? undefined);

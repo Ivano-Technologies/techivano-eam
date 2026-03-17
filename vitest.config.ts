@@ -1,6 +1,8 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
 import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 import { alias } from "./config/aliases";
 
 const templateRoot = path.resolve(import.meta.dirname);

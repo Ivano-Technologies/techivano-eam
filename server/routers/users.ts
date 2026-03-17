@@ -1,7 +1,8 @@
 // @ts-nocheck — users sub-router (HIGH-11)
 import { z } from "zod";
-import { router, protectedOrgProcedure } from "../_core/trpc";
-import { adminProcedure } from "./_shared";
+import { TRPCError } from "@trpc/server";
+import { adminProcedure, router } from "../_core/trpc";
+import { memberProcedure } from "./_shared";
 import * as db from "../db";
 import { invalidateUserCache } from "../_core/userCache";
 
@@ -58,12 +59,18 @@ export const usersRouter = router({
         role: z.enum(["admin", "manager", "technician", "user"]),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      if (input.userId === ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Cannot change your own role",
+        });
+      }
       const updated = await db.updateUserRole(input.userId, input.role);
       await invalidateUserCache(updated?.supabaseUserId ?? undefined);
       return updated;
     }),
-  completeOnboarding: protectedOrgProcedure.mutation(async ({ ctx }) => {
+  completeOnboarding: memberProcedure.mutation(async ({ ctx }) => {
     await db.updateUser(ctx.user.id, { hasCompletedOnboarding: true });
     await invalidateUserCache(ctx.user.supabaseUserId ?? undefined);
     return { success: true };

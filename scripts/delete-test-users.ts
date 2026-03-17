@@ -6,6 +6,8 @@
  *   pnpm tsx scripts/delete-test-users.ts
  */
 import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 import { getRootDb } from "../server/db";
 import { users } from "../drizzle/schema";
 import { eq, inArray, ne } from "drizzle-orm";

@@ -1,16 +1,17 @@
 // @ts-nocheck — NRCS reference data sub-router (HIGH-11 audit follow-up)
 import { z } from "zod";
-import { router, protectedOrgProcedure } from "../_core/trpc";
+import { router } from "../_core/trpc";
+import { viewerProcedure } from "./_shared";
 import * as db from "../db";
 
 export const nrcsRouter = router({
-  getBranchCodes: protectedOrgProcedure.query(async () => {
+  getBranchCodes: viewerProcedure.query(async () => {
     return await db.getAllBranchCodes();
   }),
-  getCategoryCodes: protectedOrgProcedure.query(async () => {
+  getCategoryCodes: viewerProcedure.query(async () => {
     return await db.getAllCategoryCodes();
   }),
-  getSubCategories: protectedOrgProcedure
+  getSubCategories: viewerProcedure
     .input(z.object({ type: z.enum(["Asset", "Inventory"]).optional() }).optional())
     .query(async ({ input }) => {
       if (input?.type) {
@@ -18,7 +19,7 @@ export const nrcsRouter = router({
       }
       return await db.getAllSubCategories();
     }),
-  generateAssetCode: protectedOrgProcedure
+  generateAssetCode: viewerProcedure
     .input(z.object({
       branchCode: z.string(),
       categoryCode: z.string(),
@@ -26,7 +27,7 @@ export const nrcsRouter = router({
     .query(async ({ input }) => {
       return await db.generateAssetCode(input.branchCode, input.categoryCode);
     }),
-  getDepreciationSummary: protectedOrgProcedure
+  getDepreciationSummary: viewerProcedure
     .input(
       z
         .object({
@@ -144,7 +145,7 @@ export const nrcsRouter = router({
         futureDepreciation,
       };
     }),
-  getAssetsByCategory: protectedOrgProcedure.query(async ({ ctx }) => {
+  getAssetsByCategory: viewerProcedure.query(async ({ ctx }) => {
     const assets = await db.getAllAssets({ organizationId: ctx.organizationId ?? undefined });
     const categoryCodes = await db.getAllCategoryCodes();
 

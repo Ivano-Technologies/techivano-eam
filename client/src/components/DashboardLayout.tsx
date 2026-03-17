@@ -22,7 +22,7 @@ import {
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
-import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan, Search, AlertTriangle, BarChart3, History, ArrowRightLeft, Truck, Gauge } from "lucide-react";
+import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan, Search, AlertTriangle, BarChart3, History, ArrowRightLeft, Truck, Gauge, Monitor } from "lucide-react";
 import { NairaIcon } from "./icons/NairaIcon";
 import { useLocation } from "wouter";
 import { CSSProperties, Suspense, useEffect, useRef, useState } from "react";
@@ -38,11 +38,13 @@ import { PWAInstallButton } from "./PWAInstallButton";
 import { MobileBottomTabBar } from "./MobileBottomTabBar";
 import { MobileDrawer } from "./MobileDrawer";
 import { OnboardingTour } from "./OnboardingTour";
+import { ImpersonationBanner } from "./ImpersonationBanner";
 
 const allMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: false, sortOrder: 0 },
   { icon: Settings, label: "Dashboard Settings", path: "/dashboard-settings", adminOnly: false },
   { icon: Settings, label: "Theme Settings", path: "/settings/theme", adminOnly: false },
+  { icon: Monitor, label: "Sessions", path: "/settings/sessions", adminOnly: false },
   { icon: Package, label: "Assets", path: "/assets", adminOnly: false },
   { icon: Map, label: "Asset Map", path: "/asset-map", adminOnly: false },
   { icon: Scan, label: "Asset Scanner", path: "/scanner", adminOnly: false },
@@ -94,7 +96,7 @@ const PRESET_WIDTHS = {
   wide: 360,
 };
 
-const PUBLIC_AUTH_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/verify-magic-link", "/auth/callback"];
+const PUBLIC_AUTH_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/set-password", "/verify-magic-link", "/auth/callback", "/mfa/setup", "/mfa/verify"];
 
 export default function DashboardLayout({
   children,
@@ -190,19 +192,36 @@ export default function DashboardLayout({
     );
   }
 
+  const u = user as { mfaRequired?: boolean; mfaReverifyRequired?: boolean } | null;
+  if (u?.mfaRequired) {
+    if (typeof window !== "undefined" && window.location.pathname !== "/mfa/setup") {
+      window.location.replace("/mfa/setup");
+    }
+    return <DashboardLayoutSkeleton />;
+  }
+  if (u?.mfaReverifyRequired) {
+    if (typeof window !== "undefined" && window.location.pathname !== "/mfa/verify") {
+      window.location.replace("/mfa/verify");
+    }
+    return <DashboardLayoutSkeleton />;
+  }
+
   return (
-    <SidebarProvider
-      defaultOpen={!isMobile}
-      style={
-        {
-          "--sidebar-width": `${sidebarWidth}px`,
-        } as CSSProperties
-      }
-    >
-      <DashboardLayoutContent setSidebarWidth={setSidebarWidth} sidebarWidth={sidebarWidth}>
-        {children}
-      </DashboardLayoutContent>
-    </SidebarProvider>
+    <>
+      {user?.isImpersonating && <ImpersonationBanner />}
+      <SidebarProvider
+        defaultOpen={!isMobile}
+        style={
+          {
+            "--sidebar-width": `${sidebarWidth}px`,
+          } as CSSProperties
+        }
+      >
+        <DashboardLayoutContent setSidebarWidth={setSidebarWidth} sidebarWidth={sidebarWidth}>
+          {children}
+        </DashboardLayoutContent>
+      </SidebarProvider>
+    </>
   );
 }
 

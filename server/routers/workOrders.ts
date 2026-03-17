@@ -1,11 +1,12 @@
 // @ts-nocheck — workOrders sub-router (HIGH-11)
 import { z } from "zod";
-import { router, protectedOrgProcedure } from "../_core/trpc";
+import { router } from "../_core/trpc";
+import { managerProcedure, viewerProcedure } from "./_shared";
 import * as db from "../db";
 import * as notificationHelper from "../notificationHelper";
 
 export const workOrdersRouter = router({
-  list: protectedOrgProcedure
+  list: viewerProcedure
     .input(
       z
         .object({
@@ -21,12 +22,12 @@ export const workOrdersRouter = router({
         organizationId: ctx.organizationId ?? undefined,
       });
     }),
-  getById: protectedOrgProcedure
+  getById: viewerProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return await db.getWorkOrderById(input.id);
     }),
-  getByAssetId: protectedOrgProcedure
+  getByAssetId: viewerProcedure
     .input(z.object({ assetId: z.number() }))
     .query(async ({ input }) => {
       const [workOrders, summary] = await Promise.all([
@@ -35,7 +36,7 @@ export const workOrdersRouter = router({
       ]);
       return { workOrders, summary };
     }),
-  create: protectedOrgProcedure
+  create: managerProcedure
     .input(
       z.object({
         workOrderNumber: z.string().min(1),
@@ -74,7 +75,7 @@ export const workOrdersRouter = router({
       }
       return workOrder;
     }),
-  update: protectedOrgProcedure
+  update: managerProcedure
     .input(
       z.object({
         id: z.number(),

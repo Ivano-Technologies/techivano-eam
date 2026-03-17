@@ -10,6 +10,8 @@
  *   pnpm tsx scripts/delete-all-users-except.ts ivanonigeria@gmail.com
  */
 import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 import { getRootDb } from "../server/db";
 import { users } from "../drizzle/schema";
 import { eq, inArray, ne } from "drizzle-orm";

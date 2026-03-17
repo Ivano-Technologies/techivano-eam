@@ -10,6 +10,7 @@ import { sql } from 'drizzle-orm';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
+dotenv.config({ path: ".env.local" });
 
 const client = postgres(process.env.DATABASE_URL, { prepare: false });
 const db = drizzle(client);

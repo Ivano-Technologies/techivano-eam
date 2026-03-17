@@ -1,9 +1,10 @@
 // @ts-nocheck — dashboard sub-router (HIGH-11 audit follow-up)
-import { router, protectedOrgProcedure } from "../_core/trpc";
+import { router } from "../_core/trpc";
+import { viewerProcedure } from "./_shared";
 import * as db from "../db";
 
 export const dashboardRouter = router({
-  stats: protectedOrgProcedure.query(async () => {
+  stats: viewerProcedure.query(async () => {
     return await db.getDashboardStats();
   }),
 });

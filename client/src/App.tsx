@@ -1,10 +1,11 @@
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
+import { getAppVariant } from "@/lib/appVariant";
 
 const DashboardLayout = lazy(() => import("./components/DashboardLayout"));
 const Marketing = lazy(() => import("./pages/Marketing"));
@@ -14,8 +15,11 @@ const Signup = lazy(() => import("./pages/Signup"));
 const Login = lazy(() => import("./pages/Login"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const SetPassword = lazy(() => import("./pages/SetPassword"));
 const VerifyMagicLink = lazy(() => import("./pages/VerifyMagicLink"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+const MfaSetup = lazy(() => import("./pages/MfaSetup"));
+const MfaVerify = lazy(() => import("./pages/MfaVerify"));
 const Welcome = lazy(() => import("@/pages/Welcome"));
 const PendingUsers = lazy(() => import("./pages/PendingUsers"));
 const Home = lazy(() => import("./pages/Home"));
@@ -51,6 +55,7 @@ const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const ThemeSettings = lazy(() => import("./pages/ThemeSettings"));
 const Profile = lazy(() => import("./pages/Profile"));
+const Sessions = lazy(() => import("./pages/Sessions"));
 const SmartScanner = lazy(() => import("./pages/SmartScanner"));
 const BiometricSetup = lazy(() => import("./pages/BiometricSetup"));
 const DepreciationDashboard = lazy(() => import("./pages/DepreciationDashboard"));
@@ -77,8 +82,11 @@ function Router() {
         <Route path="/login" component={Login} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
+        <Route path="/set-password" component={SetPassword} />
         <Route path="/verify-magic-link" component={VerifyMagicLink} />
         <Route path="/auth/callback" component={AuthCallback} />
+        <Route path="/mfa/setup" component={MfaSetup} />
+        <Route path="/mfa/verify" component={MfaVerify} />
         <Route path="/welcome" component={Welcome} />
       <Route path="/" component={Home} />
       <Route path="/assets" component={Assets} />
@@ -86,6 +94,7 @@ function Router() {
         <Route path="/scanner" component={AssetScanner} />
         <Route path="/offline-queue" component={OfflineQueue} />
         <Route path="/settings/theme" component={ThemeSettings} />
+        <Route path="/settings/sessions" component={Sessions} />
         <Route path="/profile" component={Profile} />
         <Route path="/biometric-setup" component={BiometricSetup} />
         <Route path="/smart-scanner" component={SmartScanner} />
@@ -129,18 +138,9 @@ function Router() {
   );
 }
 
-/** True when host is techivano.com or www.techivano.com (apex marketing). */
-function useIsApexHost() {
-  const [isApex, setIsApex] = useState(false);
-  useEffect(() => {
-    const host = window.location.hostname.toLowerCase();
-    setIsApex(host === "techivano.com" || host === "www.techivano.com");
-  }, []);
-  return isApex;
-}
-
 function App() {
-  const isApex = useIsApexHost();
+  const appVariant = getAppVariant();
+  const isMarketing = appVariant === "marketing";
 
   return (
     <ErrorBoundary>
@@ -148,7 +148,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <PWAInstallPrompt />
-          {isApex ? (
+          {isMarketing ? (
             <Suspense fallback={<PageFallback />}>
               <Marketing />
             </Suspense>

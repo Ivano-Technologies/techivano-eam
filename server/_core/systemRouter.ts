@@ -4,6 +4,12 @@ import { adminProcedure, publicProcedure, router } from "./trpc";
 import { isEmailConfigured, isForgeEmailConfigured, isResendConfigured, isSmtpConfigured } from "../emailService";
 
 export const systemRouter = router({
+  /** Custom Google OAuth start URL when GOOGLE_OAUTH_CLIENT_ID is set (Google shows "continue to EAM"); else null. */
+  googleOAuthStartUrl: publicProcedure.query(() => {
+    const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID?.trim();
+    return { url: clientId ? "/api/auth/google" : null };
+  }),
+
   /** Phase 70: Email configuration status (read-only, for admin UI). */
   emailConfig: adminProcedure.query(() => ({
     resendConfigured: isResendConfigured(),

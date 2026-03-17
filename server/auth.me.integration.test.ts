@@ -12,6 +12,9 @@ function createAnonymousContext(): TrpcContext {
     user: null,
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
     res: {} as TrpcContext["res"],
+    tenantId: null,
+    organizationId: null,
+    membership: null,
   };
 }
 

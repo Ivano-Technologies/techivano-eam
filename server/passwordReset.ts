@@ -72,16 +72,22 @@ export async function resetPassword(token: string, newPassword: string): Promise
   const db = getRootDb();
   if (!db) throw new Error('Database not available');
   
-  // Hash new password
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) return false;
+
   const passwordHash = await hashPassword(newPassword);
   
-  // Update user password
   await db
     .update(users)
     .set({ passwordHash })
     .where(eq(users.id, userId));
   
-  // Delete used token
+  const supabaseUserId = (user as { supabaseUserId?: string | null }).supabaseUserId;
+  if (typeof supabaseUserId === 'string' && supabaseUserId) {
+    const { updateAuthUserPassword } = await import('./supabaseAdmin');
+    await updateAuthUserPassword(supabaseUserId, newPassword);
+  }
+  
   await db.delete(passwordResetTokens).where(eq(passwordResetTokens.token, token));
   
   return true;

@@ -6,6 +6,8 @@
  * Uses Express Request/Response types explicitly so TS does not pick Web API Request/Response.
  */
 import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local", override: true });
 import express, {
   type Request as ExpressRequest,
   type Response as ExpressResponse,

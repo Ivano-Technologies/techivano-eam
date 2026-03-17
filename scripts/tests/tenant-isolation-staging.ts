@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import postgres from "postgres";
 
 dotenv.config();
+dotenv.config({ path: ".env.local" });
 
 type CheckStatus = "PASS" | "FAIL" | "SKIP";
 

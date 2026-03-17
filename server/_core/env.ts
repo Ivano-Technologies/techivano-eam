@@ -29,6 +29,22 @@ function allowedSignupDomains(): string[] {
   return raw.split(",").map((d) => d.trim().toLowerCase()).filter(Boolean);
 }
 
+/** Comma-separated list of global owner emails (must retain password, elevated to owner). Default: techivano global owners. */
+function globalOwnerEmails(): string[] {
+  const raw = process.env.GLOBAL_OWNER_EMAILS;
+  if (raw === undefined || raw === "") {
+    return ["kezieokpala@gmail.com", "ivanonigeria@gmail.com", "kezie@ivanotechnologies.com"];
+  }
+  return raw.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+}
+
+/** True if email is in GLOBAL_OWNER_EMAILS (case-insensitive). Used for password strength and owner elevation. */
+export function isGlobalOwnerEmail(email: string | null | undefined): boolean {
+  if (!email || typeof email !== "string") return false;
+  const set = new Set(globalOwnerEmails());
+  return set.has(email.trim().toLowerCase());
+}
+
 export const ENV = {
   /** Base URL of the app (e.g. https://techivano.com). Used for reset links, magic links, QR. */
   appUrl: appUrl(),
@@ -71,4 +87,7 @@ export const ENV = {
   allowedDomainsNrcs: process.env.ALLOWED_DOMAINS_NRCS
     ? process.env.ALLOWED_DOMAINS_NRCS.split(",").map((d) => d.trim().toLowerCase()).filter(Boolean)
     : ["redcrossnigeria.org", "ifrc.org", "gmail.com", "icloud.com", "yahoo.com", "outlook.com", "hotmail.com"],
+
+  /** Global owner emails (comma-separated). These accounts require password and 12+ char passwords; always elevated to owner. */
+  globalOwnerEmails: globalOwnerEmails(),
 };

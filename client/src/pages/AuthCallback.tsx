@@ -27,7 +27,32 @@ export default function AuthCallback() {
       const hashParams = new URLSearchParams(
         window.location.hash?.replace(/^#/, "") || ""
       );
-      const accessToken = hashParams.get("access_token");
+      const accessTokenFromHash = hashParams.get("access_token");
+      const accessTokenFromQuery = params.get("access_token");
+      const accessToken = accessTokenFromQuery ?? accessTokenFromHash;
+
+      if (accessTokenFromQuery) {
+        try {
+          const result = await setSessionMutation.mutateAsync({
+            accessToken: accessTokenFromQuery,
+            rememberMe,
+          });
+          if (!cancelled) {
+            window.history.replaceState(null, "", window.location.pathname);
+            const r = result as { requiresPasswordSetup?: boolean; mandatoryForOwner?: boolean };
+            if (r.requiresPasswordSetup) {
+              const q = r.mandatoryForOwner ? "?from=oauth&mandatory=1" : "?from=oauth";
+              setLocation(`/set-password${q}`);
+            } else {
+              setLocation("/");
+            }
+          }
+          return;
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "Failed to set session");
+          return;
+        }
+      }
 
       if (code) {
         const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
@@ -38,11 +63,19 @@ export default function AuthCallback() {
         }
         if (data?.session?.access_token) {
           try {
-            await setSessionMutation.mutateAsync({
+            const result = await setSessionMutation.mutateAsync({
               accessToken: data.session.access_token,
               rememberMe,
             });
-            if (!cancelled) setLocation("/");
+            if (!cancelled) {
+              const r = result as { requiresPasswordSetup?: boolean; mandatoryForOwner?: boolean };
+              if (r.requiresPasswordSetup) {
+                const q = r.mandatoryForOwner ? "?from=oauth&mandatory=1" : "?from=oauth";
+                setLocation(`/set-password${q}`);
+              } else {
+                setLocation("/");
+              }
+            }
             return;
           } catch (e) {
             setError(e instanceof Error ? e.message : "Failed to set session");
@@ -51,10 +84,21 @@ export default function AuthCallback() {
         }
       }
 
-      if (accessToken) {
+      if (accessTokenFromHash) {
         try {
-          await setSessionMutation.mutateAsync({ accessToken, rememberMe });
-          if (!cancelled) setLocation("/");
+          const result = await setSessionMutation.mutateAsync({
+            accessToken: accessTokenFromHash,
+            rememberMe,
+          });
+          if (!cancelled) {
+            const r = result as { requiresPasswordSetup?: boolean; mandatoryForOwner?: boolean };
+            if (r.requiresPasswordSetup) {
+              const q = r.mandatoryForOwner ? "?from=oauth&mandatory=1" : "?from=oauth";
+              setLocation(`/set-password${q}`);
+            } else {
+              setLocation("/");
+            }
+          }
           return;
         } catch (e) {
           setError(e instanceof Error ? e.message : "Failed to set session");
@@ -66,11 +110,19 @@ export default function AuthCallback() {
       if (cancelled) return;
       if (session?.access_token) {
         try {
-          await setSessionMutation.mutateAsync({
+          const result = await setSessionMutation.mutateAsync({
             accessToken: session.access_token,
-              rememberMe,
+            rememberMe,
           });
-          if (!cancelled) setLocation("/");
+          if (!cancelled) {
+            const r = result as { requiresPasswordSetup?: boolean; mandatoryForOwner?: boolean };
+            if (r.requiresPasswordSetup) {
+              const q = r.mandatoryForOwner ? "?from=oauth&mandatory=1" : "?from=oauth";
+              setLocation(`/set-password${q}`);
+            } else {
+              setLocation("/");
+            }
+          }
           return;
         } catch (e) {
           setError(e instanceof Error ? e.message : "Failed to set session");

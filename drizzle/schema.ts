@@ -12,6 +12,7 @@ import {
   index,
   uniqueIndex,
   serial,
+  jsonb,
 } from "drizzle-orm/pg-core";
 
 function mysqlTable(name: string, columns: any, extraConfig?: any) {
@@ -70,6 +71,10 @@ export const users = mysqlTable("users", {
   hasCompletedOnboarding: boolean("has_completed_onboarding").default(false).notNull(),
   /** Supabase Auth user id (auth.users.id). Links app user to Supabase Auth. */
   supabaseUserId: uuid("supabase_user_id"),
+  /** MFA (TOTP): enabled by user; enforced for global owners. */
+  mfaEnabled: boolean("mfa_enabled").default(false).notNull(),
+  mfaEnforced: boolean("mfa_enforced").default(false).notNull(),
+  mfaLastVerifiedAt: pgTimestamp("mfa_last_verified_at", { withTimezone: true }),
 }, (table) => ({
   supabaseUserIdUnique: uniqueIndex("uq_users_supabase_user_id").on(table.supabaseUserId),
 }));
@@ -861,6 +866,11 @@ export const organizations = mysqlTable(
  * Organization membership (Supabase migration 20260309133000).
  * Table name must be "organization_members" (snake_case) to match existing DB.
  * user_id maps to auth.users(id); no FK in migration (cross-schema).
+ *
+ * RBAC roles (CHECK in DB): owner | admin | manager | member | viewer.
+ * owner: full control, billing, delete org; admin: manage users, all resources;
+ * manager: create/update domain objects; member: standard usage; viewer: read-only.
+ * permissions: JSONB for one-off overrides/feature flags.
  */
 export const organizationMembers = mysqlTable(
   "organization_members",
@@ -871,6 +881,7 @@ export const organizationMembers = mysqlTable(
       .references(() => organizations.id, { onDelete: "cascade" }),
     userId: uuid("user_id").notNull(),
     role: text("role").notNull().default("member"),
+    permissions: jsonb("permissions").notNull().default({}),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: pgTimestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: pgTimestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -1173,6 +1184,61 @@ export const authTokens = mysqlTable("auth_tokens", {
 
 export type AuthToken = typeof authTokens.$inferSelect;
 export type InsertAuthToken = typeof authTokens.$inferInsert;
+
+/**
+ * User sessions for TTL, idle timeout, and "log out other devices".
+ * user_id is Supabase auth.users.id (JWT sub).
+ */
+export const userSessions = mysqlTable(
+  "user_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull(),
+    userAgent: text("user_agent"),
+    ip: text("ip"),
+    createdAt: pgTimestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    lastSeenAt: pgTimestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
+    revoked: boolean("revoked").default(false).notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("idx_user_sessions_user_id").on(table.userId),
+    lastSeenIdx: index("idx_user_sessions_last_seen_at").on(table.lastSeenAt),
+  })
+);
+
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = typeof userSessions.$inferInsert;
+
+/**
+ * Security audit log: tamper-resistant, server-only log for auth/MFA/impersonation/session.
+ * Uses getRootDb() so entries can be written outside tenant context.
+ */
+export const securityAuditLog = pgTable(
+  "security_audit_log",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id"),
+    orgId: uuid("org_id"),
+    action: text("action").notNull(),
+    entity: text("entity"),
+    entityId: text("entity_id"),
+    metadata: jsonb("metadata").default({}).notNull(),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    createdAt: pgTimestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    /** Tamper-evident chain: sha256(previousHash + serializedEntry). */
+    hash: text("hash"),
+  },
+  (table) => ({
+    userIdIdx: index("idx_security_audit_log_user_id").on(table.userId),
+    orgIdIdx: index("idx_security_audit_log_org_id").on(table.orgId),
+    actionIdx: index("idx_security_audit_log_action").on(table.action),
+    createdAtIdx: index("idx_security_audit_log_created_at").on(table.createdAt),
+  })
+);
+
+export type SecurityAuditLog = typeof securityAuditLog.$inferSelect;
+export type InsertSecurityAuditLog = typeof securityAuditLog.$inferInsert;
 
 export const pendingUsers = mysqlTable("pending_users", {
   id: int("id").autoincrement().primaryKey(),

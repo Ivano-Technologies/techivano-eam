@@ -6,6 +6,8 @@
  * Exit 0 if healthy, non-zero if unavailable.
  */
 import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 import Redis from "ioredis";
 import { Queue } from "bullmq";
 

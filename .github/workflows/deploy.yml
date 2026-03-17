@@ -1,0 +1,89 @@
+# Single Vercel project: push to main → run auth E2E → deploy once → all domains updated.
+# Domains: admin.techivano.com, nrcseam.techivano.com, techivano.com (host-based routing in app).
+# Requires: VERCEL_TOKEN; E2E/Supabase secrets for test job.
+name: Techivano Auto Deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      E2E_AUTH_EMAIL: ${{ secrets.E2E_AUTH_EMAIL }}
+      E2E_AUTH_PASSWORD: ${{ secrets.E2E_AUTH_PASSWORD }}
+      E2E_BASE_URL: http://localhost:33123
+      PORT: "33123"
+      CI: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - run: corepack enable
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      - name: Start server
+        run: pnpm start &
+
+      - name: Wait for server
+        run: npx wait-on http://localhost:33123/login
+
+      - name: Install Playwright
+        run: pnpm exec playwright install --with-deps
+
+      - name: Run zero-regression pipeline (auth + RBAC E2E)
+        run: pnpm run test:e2e:auth:full
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+
+      - name: Deploy to Vercel (single project, all domains)
+        run: npx vercel deploy . --prod --yes --token="$VERCEL_TOKEN"

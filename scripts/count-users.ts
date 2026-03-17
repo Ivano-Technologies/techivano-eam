@@ -3,6 +3,8 @@
  * Run: pnpm tsx scripts/count-users.ts
  */
 import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 import { getRootDb } from "../server/db";
 import { users } from "../drizzle/schema";
 import { sql } from "drizzle-orm";
