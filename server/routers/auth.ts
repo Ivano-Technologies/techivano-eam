@@ -341,7 +341,7 @@ export const authRouter = router({
       const { resetPassword, verifyResetToken } = await import("../passwordReset");
       const userId = await verifyResetToken(input.token);
       if (userId) {
-        const u = await db.getUserById(userId);
+        const u = await db.getRootUserById(userId);
         if (u?.email && isGlobalOwnerEmail(u.email) && input.newPassword.length < 12) {
           throw new TRPCError({
             code: "BAD_REQUEST",

@@ -2211,6 +2211,14 @@ export async function getUserById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+/** Get user by id from root DB (no tenant context). Use for auth flows like password reset. */
+export async function getRootUserById(id: number) {
+  const database = getRootDb();
+  if (!database) return undefined;
+  const result = await database.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 export async function updateUser(id: number, data: Partial<InsertUser>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

@@ -19,6 +19,7 @@ function createContext(): TrpcContext {
     tenantId: null,
     organizationId: null,
     membership: null,
+    appVariant: "nrcs",
   };
 }
 
