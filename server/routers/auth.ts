@@ -92,14 +92,18 @@ export const authRouter = router({
       );
       const supabaseUserId = u.supabaseUserId;
       if (typeof supabaseUserId === "string") {
-        const sessionId = await db.createUserSession({
-          userId: supabaseUserId,
-          userAgent: ctx.req.headers["user-agent"],
-          ip: ctx.req.ip,
-        });
-        if (sessionId) {
-          const sessionCookieOpts = getAuthSessionCookieOptions(ctx.req, { rememberMe: input.rememberMe });
-          ctx.res.cookie(SESSION_COOKIE_NAME, sessionId, { ...sessionCookieOpts, httpOnly: true, path: "/", sameSite: sessionCookieOpts.sameSite, secure: sessionCookieOpts.secure, ...(sessionCookieOpts.maxAge != null && { maxAge: sessionCookieOpts.maxAge }) });
+        try {
+          const sessionId = await db.createUserSession({
+            userId: supabaseUserId,
+            userAgent: ctx.req.headers["user-agent"],
+            ip: ctx.req.ip,
+          });
+          if (sessionId) {
+            const sessionCookieOpts = getAuthSessionCookieOptions(ctx.req, { rememberMe: input.rememberMe });
+            ctx.res.cookie(SESSION_COOKIE_NAME, sessionId, { ...sessionCookieOpts, httpOnly: true, path: "/", sameSite: sessionCookieOpts.sameSite, secure: sessionCookieOpts.secure, ...(sessionCookieOpts.maxAge != null && { maxAge: sessionCookieOpts.maxAge }) });
+          }
+        } catch {
+          // user_sessions table may not be migrated yet; session tracking is non-critical
         }
       }
       let requiresPasswordSetup = false;
