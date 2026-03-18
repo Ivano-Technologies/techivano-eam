@@ -259,10 +259,25 @@ async function startServer() {
         }
         const accessToken = data.session.access_token;
 
-        const { getUserFromSupabaseToken } = await import("./supabaseAuth");
+        const { getUserFromSupabaseToken, verifySupabaseToken } = await import("./supabaseAuth");
+
+        const tokenPayload = await verifySupabaseToken(accessToken);
+        if (!tokenPayload) {
+          const hasJwtSecret = Boolean(process.env.SUPABASE_JWT_SECRET);
+          return res.status(401).json({
+            error: "JWT verification failed",
+            hasJwtSecret,
+            tokenPrefix: accessToken.substring(0, 20) + "...",
+          });
+        }
+
         const user = await getUserFromSupabaseToken(accessToken);
         if (!user) {
-          return res.status(401).json({ error: "App user not found" });
+          return res.status(401).json({
+            error: "App user not found (JWT valid, DB lookup failed)",
+            sub: tokenPayload.sub,
+            email: tokenPayload.email,
+          });
         }
 
         const { COOKIE_NAME, SESSION_COOKIE_NAME } = await import("@shared/const");
