@@ -71,6 +71,41 @@
       "when": 1772810800000,
       "tag": "0038_supabase_auth_user_id",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1772814400000,
+      "tag": "0039_mfa_users",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1772818000000,
+      "tag": "0040_user_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1772821600000,
+      "tag": "0041_security_audit_log",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1772825200000,
+      "tag": "0042_security_audit_log_hash",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "5",
+      "when": 1772828800000,
+      "tag": "0043_add_permissions_to_org_members",
+      "breakpoints": true
     }
   ]
 }

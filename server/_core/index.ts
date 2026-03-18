@@ -309,13 +309,17 @@ async function startServer() {
 
         const supabaseUserId = (user as Record<string, unknown>).supabaseUserId;
         if (typeof supabaseUserId === "string") {
-          const sessionId = await createUserSession({
-            userId: supabaseUserId,
-            userAgent: req.headers["user-agent"],
-            ip: req.ip,
-          });
-          if (sessionId) {
-            res.cookie(SESSION_COOKIE_NAME, sessionId, cookieOpts);
+          try {
+            const sessionId = await createUserSession({
+              userId: supabaseUserId,
+              userAgent: req.headers["user-agent"],
+              ip: req.ip,
+            });
+            if (sessionId) {
+              res.cookie(SESSION_COOKIE_NAME, sessionId, cookieOpts);
+            }
+          } catch {
+            // user_sessions table may not exist yet; non-fatal for dev-login
           }
         }
         return res.json({ success: true });
