@@ -3,6 +3,8 @@ import { test, expect } from "@playwright/test";
 /**
  * E2E: Auth pages and Supabase sign-in.
  * - E2E_BASE_URL: EAM app URL; must match the dev server port (e.g. http://localhost:3003 when server says "Server running on http://localhost:3003/").
+ *   For auth E2E against a deployed subdomain, set E2E_BASE_URL to that host (e.g. E2E_BASE_URL=https://nrcseam.techivano.com).
+ *   Default https://techivano.com may serve the marketing page; use a subdomain or localhost so the login form is present.
  * - E2E_AUTH_EMAIL, E2E_AUTH_PASSWORD: optional; when set, sign-in and logout tests run.
  *
  * MFA: Use an E2E_AUTH_EMAIL that is NOT a global owner (see server _core/env GLOBAL_OWNER_EMAILS),
@@ -13,6 +15,7 @@ import { test, expect } from "@playwright/test";
  *
  * Bash:  E2E_BASE_URL=http://localhost:3003 pnpm test:e2e:auth
  * PowerShell: $env:E2E_BASE_URL="http://localhost:3003"; pnpm test:e2e:auth
+ * Subdomain: E2E_BASE_URL=https://nrcseam.techivano.com E2E_AUTH_EMAIL=... E2E_AUTH_PASSWORD=... pnpm test:e2e:auth
  * Or: pnpm test:e2e:auth:local (port 3000), pnpm test:e2e:auth:fresh (starts server on 31998).
  */
 const base = process.env.E2E_BASE_URL ?? "https://techivano.com";

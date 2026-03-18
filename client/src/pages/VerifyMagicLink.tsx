@@ -26,7 +26,7 @@ export default function VerifyMagicLink() {
       method: "POST",
       credentials: "include",
     })
-      .then((res) => res.json())
+      .then((res) => res.json().catch(() => ({})))
       .then((data) => {
         if (data.success) {
           setStatus("success");
@@ -36,12 +36,17 @@ export default function VerifyMagicLink() {
           }, 2000);
         } else {
           setStatus("error");
-          setMessage(data.message || "Verification failed");
+          setMessage(
+            data.message ||
+              "This sign-in link is no longer supported. Please use the sign-in page and choose \"Send magic link\" to receive a new link."
+          );
         }
       })
       .catch(() => {
         setStatus("error");
-        setMessage("Failed to verify magic link. Please try again.");
+        setMessage(
+          "Unable to verify this link. Please go to the sign-in page and use \"Send magic link\" to receive a new link."
+        );
       });
   }, [setLocation]);
 

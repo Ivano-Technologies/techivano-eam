@@ -134,6 +134,7 @@ export const authRouter = router({
       const { createSignupRequest } = await import("../magicLinkAuth");
       return await createSignupRequest(input.email, input.name);
     }),
+  /** @deprecated Prefer client-side Supabase magic link (signInWithOtp) on the login page. This sends an app-generated link; verification no longer sets a session cookie (Option A). */
   requestMagicLink: publicProcedure
     .input(z.object({ email: z.string().email() }))
     .mutation(async ({ input }) => {
