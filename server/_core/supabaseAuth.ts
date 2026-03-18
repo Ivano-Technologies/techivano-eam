@@ -3,11 +3,12 @@
  * Uses request-level identity cache (Redis) to avoid repeated DB lookups per request.
  * @see docs/SUPABASE_AUTH_MIGRATION_PLAN.md
  *
- * JWT verification: Supabase uses HS256. Set SUPABASE_JWT_SECRET from Dashboard → API → JWT Secret.
- * Optional: SUPABASE_JWT_ISSUER (e.g. https://<project-ref>.supabase.co/auth/v1) and
- * SUPABASE_JWT_AUDIENCE (e.g. "authenticated") — must match Dashboard → API → JWT Settings if set.
+ * JWT verification strategy (ordered):
+ *   1. HS256 with SUPABASE_JWT_SECRET (legacy)
+ *   2. JWKS from Supabase auth endpoint (new signing keys, typically RS256)
+ * Optional: SUPABASE_JWT_ISSUER and SUPABASE_JWT_AUDIENCE for extra claim checks.
  */
-import { jwtVerify } from "jose";
+import { jwtVerify, createRemoteJWKSet } from "jose";
 import * as db from "../db";
 import { ENV } from "./env";
 import { getCachedUser, setUserInCache } from "./userCache";
@@ -18,35 +19,60 @@ export type SupabaseTokenPayload = {
   email?: string;
 };
 
-const alg = "HS256";
+let _jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+
+function getJWKS(): ReturnType<typeof createRemoteJWKSet> | null {
+  if (_jwks) return _jwks;
+  const supabaseUrl = (process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, "");
+  if (!supabaseUrl) return null;
+  _jwks = createRemoteJWKSet(new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`));
+  return _jwks;
+}
+
+function extractPayload(jwtPayload: Record<string, unknown>): SupabaseTokenPayload | null {
+  const sub = jwtPayload.sub;
+  if (typeof sub !== "string" || !sub) return null;
+  const email = typeof jwtPayload.email === "string" ? jwtPayload.email : undefined;
+  return { sub, email };
+}
 
 /**
  * Verify Supabase access token (JWT) and return payload or null.
- * Validates exp, nbf (jose default), algorithms: ["HS256"], and optional iss/aud when configured.
+ * Tries HS256 with legacy secret first, then JWKS (RS256) for projects that
+ * migrated to Supabase's new JWT signing keys.
  */
 export async function verifySupabaseToken(
   token: string | undefined | null
 ): Promise<SupabaseTokenPayload | null> {
   if (!token?.trim()) return null;
-  if (!ENV.supabaseJwtSecret) return null;
 
-  try {
-    const secret = new TextEncoder().encode(ENV.supabaseJwtSecret);
-    const options: Parameters<typeof jwtVerify>[2] = {
-      algorithms: [alg],
-      clockTolerance: 10,
-    };
-    if (ENV.supabaseJwtIssuer) options.issuer = ENV.supabaseJwtIssuer;
-    if (ENV.supabaseJwtAudience) options.audience = ENV.supabaseJwtAudience;
+  const baseOptions: { clockTolerance: number; issuer?: string; audience?: string } = {
+    clockTolerance: 10,
+  };
+  if (ENV.supabaseJwtIssuer) baseOptions.issuer = ENV.supabaseJwtIssuer;
+  if (ENV.supabaseJwtAudience) baseOptions.audience = ENV.supabaseJwtAudience;
 
-    const { payload } = await jwtVerify(token, secret, options);
-    const sub = payload.sub;
-    if (typeof sub !== "string" || !sub) return null;
-    const email = typeof payload.email === "string" ? payload.email : undefined;
-    return { sub, email };
-  } catch {
-    return null;
+  if (ENV.supabaseJwtSecret) {
+    try {
+      const secret = new TextEncoder().encode(ENV.supabaseJwtSecret);
+      const { payload } = await jwtVerify(token, secret, { ...baseOptions, algorithms: ["HS256"] });
+      return extractPayload(payload as Record<string, unknown>);
+    } catch {
+      // HS256 failed — fall through to JWKS
+    }
   }
+
+  const jwks = getJWKS();
+  if (jwks) {
+    try {
+      const { payload } = await jwtVerify(token, jwks, baseOptions);
+      return extractPayload(payload as Record<string, unknown>);
+    } catch {
+      // JWKS verification also failed
+    }
+  }
+
+  return null;
 }
 
 /**
