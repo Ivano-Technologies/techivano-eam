@@ -27,9 +27,22 @@ export default function AuthCallback() {
       const hashParams = new URLSearchParams(
         window.location.hash?.replace(/^#/, "") || ""
       );
+
+      const hashError = hashParams.get("error_description") || hashParams.get("error");
+      const queryError = params.get("error_description") || params.get("error");
+      if (hashError || queryError) {
+        const errorCode = hashParams.get("error_code") || params.get("error_code") || "";
+        const desc = decodeURIComponent(hashError || queryError || "Unknown error");
+        const friendly =
+          errorCode === "otp_expired"
+            ? "This magic link has expired. Please request a new one."
+            : desc;
+        if (!cancelled) setError(friendly);
+        return;
+      }
+
       const accessTokenFromHash = hashParams.get("access_token");
       const accessTokenFromQuery = params.get("access_token");
-      const accessToken = accessTokenFromQuery ?? accessTokenFromHash;
 
       if (accessTokenFromQuery) {
         try {
