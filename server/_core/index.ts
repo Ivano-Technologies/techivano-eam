@@ -289,7 +289,7 @@ async function startServer() {
         }
 
         if (!user) {
-          user = await provisionUserFromSupabase({ sub: payload.sub, email: payload.email });
+          user = (await provisionUserFromSupabase({ sub: payload.sub, email: payload.email })) ?? undefined;
         }
 
         if (!user) {
