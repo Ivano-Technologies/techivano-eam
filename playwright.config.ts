@@ -5,6 +5,7 @@ import { defineConfig, devices } from "@playwright/test";
 const baseURL = process.env.E2E_BASE_URL ?? "https://techivano.com";
 
 export default defineConfig({
+  globalSetup: "./tests/global.setup.ts",
   testDir: "./tests/e2e",
   timeout: 60_000,
   fullyParallel: false,
@@ -14,6 +15,7 @@ export default defineConfig({
   reporter: "list",
   use: {
     baseURL,
+    storageState: "tests/storageState.json",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
