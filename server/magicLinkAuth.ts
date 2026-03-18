@@ -76,7 +76,7 @@ export async function verifyMagicLinkToken(token: string): Promise<number | null
  * Send magic link email to user
  */
 export async function sendMagicLink(email: string, token: string): Promise<boolean> {
-  const magicLink = `${BASE_URL}/auth/verify?token=${token}`;
+  const magicLink = `${BASE_URL}/verify-magic-link?token=${token}`;
 
   const htmlBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">

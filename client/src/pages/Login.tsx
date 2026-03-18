@@ -51,6 +51,10 @@ export default function Login() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<"google" | "azure" | null>(null);
+  const [showMagicLinkForm, setShowMagicLinkForm] = useState(false);
+  const [magicLinkEmail, setMagicLinkEmail] = useState("");
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [magicLinkLoading, setMagicLinkLoading] = useState(false);
 
   const setSessionMutation = trpc.auth.setSession.useMutation();
   const migrateLegacyMutation = trpc.auth.migrateLegacyPasswordUser.useMutation();
@@ -167,6 +171,32 @@ export default function Login() {
     }
   };
 
+  const handleSendMagicLink = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!useSupabaseAuth || !magicLinkEmail.trim()) return;
+    setMessage(null);
+    setMagicLinkLoading(true);
+    try {
+      const redirectTo = `${window.location.origin}/auth/callback`;
+      const { error } = await supabase.auth.signInWithOtp({
+        email: magicLinkEmail.trim(),
+        options: { emailRedirectTo: redirectTo },
+      });
+      if (error) {
+        setMessage({ type: "error", text: error.message });
+        return;
+      }
+      setMagicLinkSent(true);
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to send magic link. Please try again.",
+      });
+    } finally {
+      setMagicLinkLoading(false);
+    }
+  };
+
   const formColor = "#252525"; // match card; unified dark with page bg
   const textMuted = "#9ca3af";
   const buttonBorder = "rgba(255,255,255,0.12)"; // slightly light grey border on buttons
@@ -234,6 +264,84 @@ export default function Login() {
           Or
         </span>
       </div>
+
+      {showMagicLinkForm ? (
+        <div className="space-y-4 mb-6">
+          {magicLinkSent ? (
+            <>
+              <Alert>
+                <AlertDescription>Check your email for the sign-in link. Click the link to sign in.</AlertDescription>
+              </Alert>
+              <button
+                type="button"
+                className="text-xs underline"
+                style={{ color: textMuted }}
+                onClick={() => {
+                  setShowMagicLinkForm(false);
+                  setMagicLinkSent(false);
+                  setMagicLinkEmail("");
+                }}
+              >
+                Use password or try another email
+              </button>
+            </>
+          ) : (
+            <form onSubmit={handleSendMagicLink} className="space-y-4">
+              <Label htmlFor="magic-email" className="text-white font-medium text-xs">
+                Email for magic link
+              </Label>
+              <Input
+                id="magic-email"
+                type="email"
+                value={magicLinkEmail}
+                onChange={(e) => setMagicLinkEmail(e.target.value)}
+                placeholder="you@example.com"
+                disabled={magicLinkLoading}
+                required
+                className="border-white/20 text-white placeholder:text-gray-400 text-xs"
+                style={{ backgroundColor: formColor }}
+              />
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  className="flex-1 text-white text-xs"
+                  style={{ backgroundColor: formColor, borderColor: buttonBorder, borderWidth: 1 }}
+                  disabled={magicLinkLoading}
+                >
+                  {magicLinkLoading ? (
+                    <>
+                      <ButtonLoader className="mr-2" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send magic link"
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="text-xs"
+                  style={{ borderColor: buttonBorder, color: textMuted }}
+                  onClick={() => setShowMagicLinkForm(false)}
+                >
+                  Back
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
+      ) : (
+        <div className="mb-4">
+          <button
+            type="button"
+            className="text-xs underline"
+            style={{ color: textMuted }}
+            onClick={() => setShowMagicLinkForm(true)}
+          >
+            Sign in with magic link
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {message && (

@@ -1,13 +1,12 @@
 import { Request, Response } from "express";
 import { verifyMagicLinkToken } from "../magicLinkAuth";
 import * as db from "../db";
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./cookies";
-import jwt from "jsonwebtoken";
-import { ENV } from "./env";
 
 /**
- * Handle magic link verification endpoint
+ * Handle magic link verification endpoint.
+ * Option A (Supabase magic link only): this endpoint no longer sets a session cookie.
+ * Old app-generated magic links return a deprecation message; users should use the
+ * sign-in page "Send magic link" (Supabase) for passwordless sign-in.
  */
 export async function handleMagicLinkVerification(req: Request, res: Response) {
   try {
@@ -17,64 +16,42 @@ export async function handleMagicLinkVerification(req: Request, res: Response) {
       return res.status(400).json({
         success: false,
         message: "Missing verification token",
+        deprecated: true,
       });
     }
 
-    // Verify token and get user ID
     const userId = await verifyMagicLinkToken(token);
 
     if (!userId) {
       return res.status(400).json({
         success: false,
         message: "Invalid or expired magic link",
+        deprecated: true,
       });
     }
 
-    // Get user details
-    type UserShape = { id: number; email?: string; name?: string; role?: string };
-    const user = (await db.getUserById(userId)) as UserShape | null;
-
+    const user = await db.getRootUserById(userId);
     if (!user) {
       return res.status(404).json({
         success: false,
         message: "User not found",
+        deprecated: true,
       });
     }
 
-    // Create session token using JWT
-    const sessionToken = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
-      ENV.cookieSecret,
-      { expiresIn: "7d" }
-    );
-
-    // Set session cookie
-    const cookieOptions = getSessionCookieOptions(req);
-    res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
-
-    // Update last signed in (optional - can be added to db.ts later)
-    // await db.updateUserLastSignedIn(user.id);
-
+    // Do not set a cookie; session is Supabase-only. Direct user to new flow.
     return res.json({
-      success: true,
-      message: "Successfully authenticated",
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
+      success: false,
+      message:
+        "This sign-in link is no longer supported. Please go to the sign-in page and use \"Send magic link\" to receive a new link.",
+      deprecated: true,
     });
   } catch (error) {
     console.error("Magic link verification error:", error);
     return res.status(500).json({
       success: false,
       message: "Verification failed",
+      deprecated: true,
     });
   }
 }

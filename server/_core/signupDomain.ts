@@ -18,7 +18,7 @@ export function getAllowedSignupDomainsForRequest(req?: RequestLike | null): str
   if (!req) return ENV.allowedSignupDomains;
   const host = getHost(req);
   if (host === "admin.techivano.com") return ENV.allowedDomainsAdmin;
-  if (host === "nrcs.techivano.com") return ENV.allowedDomainsNrcs;
+  if (host === "nrcseam.techivano.com") return ENV.allowedDomainsNrcs;
   return ENV.allowedSignupDomains;
 }
 
