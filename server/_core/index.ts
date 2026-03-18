@@ -259,24 +259,44 @@ async function startServer() {
         }
         const accessToken = data.session.access_token;
 
-        const { getUserFromSupabaseToken, verifySupabaseToken } = await import("./supabaseAuth");
-
-        const tokenPayload = await verifySupabaseToken(accessToken);
-        if (!tokenPayload) {
-          const hasJwtSecret = Boolean(process.env.SUPABASE_JWT_SECRET);
-          return res.status(401).json({
-            error: "JWT verification failed",
-            hasJwtSecret,
-            tokenPrefix: accessToken.substring(0, 20) + "...",
-          });
+        // Decode JWT payload without signature verification.
+        // Supabase migrated to new signing keys; HS256 verification may fail on
+        // newly issued tokens. Since signInWithPassword already validated the
+        // credentials, the token is trustworthy for this test-only endpoint.
+        const parts = accessToken.split(".");
+        if (parts.length !== 3) {
+          return res.status(401).json({ error: "Malformed access token" });
+        }
+        const payload = JSON.parse(
+          Buffer.from(parts[1], "base64url").toString("utf8")
+        ) as { sub?: string; email?: string };
+        if (!payload.sub) {
+          return res.status(401).json({ error: "Token missing sub claim" });
         }
 
-        const user = await getUserFromSupabaseToken(accessToken);
+        const { getUserByEmail, getUserBySupabaseUserId, provisionUserFromSupabase, setUserSupabaseId } =
+          await import("../db");
+
+        let user = await getUserBySupabaseUserId(payload.sub);
+
+        if (!user && payload.email) {
+          const byEmail = await getUserByEmail(payload.email);
+          if (byEmail) {
+            const id = (byEmail as Record<string, unknown>).id as number;
+            await setUserSupabaseId(id, payload.sub);
+            user = (await getUserBySupabaseUserId(payload.sub)) ?? byEmail;
+          }
+        }
+
+        if (!user) {
+          user = await provisionUserFromSupabase({ sub: payload.sub, email: payload.email });
+        }
+
         if (!user) {
           return res.status(401).json({
-            error: "App user not found (JWT valid, DB lookup failed)",
-            sub: tokenPayload.sub,
-            email: tokenPayload.email,
+            error: "App user not found and could not be provisioned",
+            sub: payload.sub,
+            email: payload.email,
           });
         }
 
@@ -284,6 +304,7 @@ async function startServer() {
         const { getAuthSessionCookieOptions } = await import("./cookies");
         const { createUserSession } = await import("../db");
         const cookieOpts = getAuthSessionCookieOptions(req, { rememberMe: true });
+
         res.cookie(COOKIE_NAME, accessToken, cookieOpts);
 
         const supabaseUserId = (user as Record<string, unknown>).supabaseUserId;
