@@ -26,7 +26,7 @@ export default defineConfig({
       ? {
           command: "pnpm dev",
           url: baseURL,
-          reuseExistingServer: !process.env.CI,
+          reuseExistingServer: true,
           timeout: 120_000,
           env: { ...process.env, PORT: baseURL.match(/:(\d+)/)?.[1] ?? "3020" },
         }
