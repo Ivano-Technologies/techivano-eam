@@ -238,6 +238,57 @@ async function startServer() {
     });
   });
 
+  // E2E dev-login: sets real auth cookies for Playwright session injection.
+  // Only registered when E2E credentials are present (CI / local dev, never production).
+  if (process.env.E2E_AUTH_EMAIL && process.env.E2E_AUTH_PASSWORD) {
+    const e2eEmail = process.env.E2E_AUTH_EMAIL;
+    const e2ePassword = process.env.E2E_AUTH_PASSWORD;
+    app.post("/api/dev-login", async (req, res) => {
+      const email = e2eEmail;
+      const password = e2ePassword;
+      try {
+        const { createClient } = await import("@supabase/supabase-js");
+        const supabaseUrl =
+          process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? "";
+        const supabaseAnonKey =
+          process.env.VITE_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? "";
+        const sb = createClient(supabaseUrl, supabaseAnonKey);
+        const { data, error } = await sb.auth.signInWithPassword({ email, password });
+        if (error || !data.session) {
+          return res.status(401).json({ error: error?.message ?? "No session" });
+        }
+        const accessToken = data.session.access_token;
+
+        const { getUserFromSupabaseToken } = await import("./supabaseAuth");
+        const user = await getUserFromSupabaseToken(accessToken);
+        if (!user) {
+          return res.status(401).json({ error: "App user not found" });
+        }
+
+        const { COOKIE_NAME, SESSION_COOKIE_NAME } = await import("@shared/const");
+        const { getAuthSessionCookieOptions } = await import("./cookies");
+        const { createUserSession } = await import("../db");
+        const cookieOpts = getAuthSessionCookieOptions(req, { rememberMe: true });
+        res.cookie(COOKIE_NAME, accessToken, cookieOpts);
+
+        const supabaseUserId = (user as Record<string, unknown>).supabaseUserId;
+        if (typeof supabaseUserId === "string") {
+          const sessionId = await createUserSession({
+            userId: supabaseUserId,
+            userAgent: req.headers["user-agent"],
+            ip: req.ip,
+          });
+          if (sessionId) {
+            res.cookie(SESSION_COOKIE_NAME, sessionId, cookieOpts);
+          }
+        }
+        return res.json({ success: true });
+      } catch (err) {
+        return res.status(500).json({ error: (err as Error).message });
+      }
+    });
+  }
+
   // Legacy Manus OAuth callback deprecated — redirect to app login (Supabase Auth)
   app.get("/api/oauth/callback", (_req, res) => {
     res.redirect(302, "/login");

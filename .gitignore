@@ -113,4 +113,5 @@ supabase/migrations_archive
 test-results/
 playwright-report/
 playwright/.cache/
+tests/storageState.json
 .env*.local
