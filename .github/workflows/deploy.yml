@@ -1,4 +1,4 @@
-# Single Vercel project: push to main → run unit tests + smoke → deploy once → all domains updated.
+# Single Vercel project: push to main → run unit tests + smoke + auth E2E → deploy once → all domains updated.
 # Domains: admin.techivano.com, nrcseam.techivano.com, techivano.com (host-based routing in app).
 # Requires: VERCEL_TOKEN; E2E/Supabase secrets for test job.
 name: Techivano Auto Deploy
@@ -64,6 +64,19 @@ jobs:
         run: |
           code=$(curl -sS -o /dev/null -w "%{http_code}" http://localhost:33123/login)
           if [ "$code" != "200" ]; then echo "Smoke test failed: /login returned $code"; exit 1; fi
+
+      - name: Install Playwright
+        run: pnpm exec playwright install --with-deps
+
+      - name: Run zero-regression pipeline (auth + RBAC E2E)
+        run: pnpm run test:e2e:auth:full
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
 
   deploy:
     runs-on: ubuntu-latest
