@@ -67,6 +67,7 @@ import {
   decryptOrgDataKey,
   encryptBufferAesGcm,
 } from "./encryption";
+import { ENV } from "./env";
 import { validateProductionEnv } from "./envValidation";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -202,7 +203,7 @@ async function startServer() {
     next();
   });
 
-  const allowedOriginsRaw = process.env.ALLOWED_ORIGINS ?? process.env.VITE_APP_URL ?? "";
+  const allowedOriginsRaw = process.env.ALLOWED_ORIGINS ?? ENV.appUrl ?? "";
   const allowedOrigins = allowedOriginsRaw
     .split(",")
     .map((o) => o.trim())
@@ -248,11 +249,7 @@ async function startServer() {
       const password = e2ePassword;
       try {
         const { createClient } = await import("@supabase/supabase-js");
-        const supabaseUrl =
-          process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? "";
-        const supabaseAnonKey =
-          process.env.VITE_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? "";
-        const sb = createClient(supabaseUrl, supabaseAnonKey);
+        const sb = createClient(ENV.supabaseUrl, ENV.supabaseAnonKey);
         const { data, error } = await sb.auth.signInWithPassword({ email, password });
         if (error || !data.session) {
           return res.status(401).json({ error: error?.message ?? "No session" });
@@ -329,7 +326,7 @@ async function startServer() {
     });
   }
 
-  // Legacy Manus OAuth callback deprecated — redirect to app login (Supabase Auth)
+  // Legacy OAuth callback deprecated — redirect to app login (Supabase Auth)
   app.get("/api/oauth/callback", (_req, res) => {
     res.redirect(302, "/login");
   });

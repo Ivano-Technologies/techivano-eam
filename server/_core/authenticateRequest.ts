@@ -1,6 +1,6 @@
 /**
  * Central auth helper: read app_session_id (or Bearer), verify Supabase JWT, resolve user.
- * Supabase Auth is the only supported auth provider; legacy Manus/app JWT is disabled.
+ * Supabase Auth is the only supported auth provider.
  * Never trust frontend-reported auth method — see docs/FINAL_AUTH_POLICY.md.
  * @see docs/SUPABASE_AUTH_MIGRATION_PLAN.md
  */

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { supabase } from "@/lib/supabase";
-import { AuthPageLayout, AuthLogo, ManusStyleAuthFooter } from "@/components/AuthPageLayout";
+import { AuthPageLayout, AuthLogo, AuthFooter } from "@/components/AuthPageLayout";
 import { useAuthBranding } from "@/hooks/useAuthBranding";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -90,11 +90,11 @@ export default function MfaSetup() {
   if (loading) {
     return (
       <AuthPageLayout
-        variant="manusDark"
+        variant="authDark"
         icon={<AuthLogo branding={branding} />}
         title="Set up two-factor authentication"
         description="Loading…"
-        footer={<ManusStyleAuthFooter branding={branding} />}
+        footer={<AuthFooter branding={branding} />}
       >
         <div className="text-sm text-muted-foreground">Please wait.</div>
       </AuthPageLayout>
@@ -103,12 +103,12 @@ export default function MfaSetup() {
 
   return (
     <AuthPageLayout
-      variant="manusDark"
+      variant="authDark"
       icon={<AuthLogo branding={branding} />}
       title="Set up two-factor authentication"
       description="Scan the QR code with your authenticator app (Google Authenticator, 1Password, etc.), then enter the 6-digit code."
       maxWidth="sm"
-      footer={<ManusStyleAuthFooter branding={branding} />}
+      footer={<AuthFooter branding={branding} />}
     >
       <div className="space-y-4">
         {error && (

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { AlertCircle } from "lucide-react";
-import { AuthPageLayout, AuthLogo, ManusStyleAuthFooter } from "@/components/AuthPageLayout";
+import { AuthPageLayout, AuthLogo, AuthFooter } from "@/components/AuthPageLayout";
 import { PasswordStrength, PasswordRequirements } from "@/components/PasswordStrength";
 import { useAuthBranding } from "@/hooks/useAuthBranding";
 
@@ -61,11 +61,11 @@ export default function SetPassword() {
   if (meLoading || !user) {
     return (
       <AuthPageLayout
-        variant="manusDark"
+        variant="authDark"
         icon={<AuthLogo branding={branding} />}
         title="Loading..."
         description="Please wait."
-        footer={<ManusStyleAuthFooter branding={branding} />}
+        footer={<AuthFooter branding={branding} />}
       >
         <div className="text-sm text-muted-foreground">Please wait.</div>
       </AuthPageLayout>
@@ -78,7 +78,7 @@ export default function SetPassword() {
 
   return (
     <AuthPageLayout
-      variant="manusDark"
+      variant="authDark"
       icon={<AuthLogo branding={branding} />}
       title={fromOauth ? "Set a password" : "Set password"}
       description={
@@ -86,7 +86,7 @@ export default function SetPassword() {
           ? "Set a password for account recovery and signing in with email when needed."
           : "Choose a password for your account."
       }
-      footer={<ManusStyleAuthFooter branding={branding} />}
+      footer={<AuthFooter branding={branding} />}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">

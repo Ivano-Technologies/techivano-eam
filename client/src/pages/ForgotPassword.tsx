@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft } from "lucide-react";
-import { AuthPageLayout, AuthLogo, ManusStyleAuthFooter } from "@/components/AuthPageLayout";
+import { AuthPageLayout, AuthLogo, AuthFooter } from "@/components/AuthPageLayout";
 import { useAuthBranding } from "@/hooks/useAuthBranding";
 
 export default function ForgotPassword() {
@@ -27,7 +27,7 @@ export default function ForgotPassword() {
   if (submitted) {
     return (
       <AuthPageLayout
-        variant="manusDark"
+        variant="authDark"
         icon={<AuthLogo branding={branding} />}
         title="Check Your Email"
         description={
@@ -35,7 +35,7 @@ export default function ForgotPassword() {
             If an account exists with <strong>{email}</strong>, you will receive a password reset link shortly.
           </>
         }
-        footer={<ManusStyleAuthFooter branding={branding} />}
+        footer={<AuthFooter branding={branding} />}
       >
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground text-center">
@@ -54,10 +54,10 @@ export default function ForgotPassword() {
 
   return (
     <AuthPageLayout
-      variant="manusDark"
+      variant="authDark"
       icon={<AuthLogo branding={branding} />}
       title="Forgot Password?"
-      footer={<ManusStyleAuthFooter branding={branding} />}
+      footer={<AuthFooter branding={branding} />}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
@@ -89,7 +89,7 @@ export default function ForgotPassword() {
         </Button>
 
         <div className="flex justify-end mt-12">
-          <Link href="/login" className="text-xs">
+          <Link href="/login" className="text-xs underline text-[#9ca3af] hover:text-[#DC2626] transition-colors">
             Back to Login
           </Link>
         </div>

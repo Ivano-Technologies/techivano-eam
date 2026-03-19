@@ -1,72 +1,59 @@
 /**
- * Supabase Auth callback — exchange code for session and set app cookie via tRPC.
- * Route: /auth/callback. Supabase redirects here with ?code=... (PKCE) or hash.
+ * Supabase Auth callback — PKCE-only flow.
+ * Supabase redirects here with ?code=... (magic link). We exchange code for session,
+ * set app cookie via tRPC, then redirect. No hash or legacy paths.
  */
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
-import { AuthPageLayout, AuthLogo, ManusStyleAuthFooter } from "@/components/AuthPageLayout";
+import { AuthPageLayout, AuthLogo, AuthFooter } from "@/components/AuthPageLayout";
 import { useAuthBranding } from "@/hooks/useAuthBranding";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+
+const FALLBACK_MSG = "We're having trouble signing you in. Please try again.";
+
+function messageFromError(e: unknown): string {
+  const msg = e instanceof Error ? e.message : "";
+  if (/is not valid JSON|Unexpected token|A server e/i.test(msg)) return FALLBACK_MSG;
+  return msg || FALLBACK_MSG;
+}
 
 export default function AuthCallback() {
   const branding = useAuthBranding();
   const [, setLocation] = useLocation();
   const [error, setError] = useState<string | null>(null);
-  const setSessionMutation = trpc.auth.setSession.useMutation();
+  const setSession = trpc.auth.setSession.useMutation();
 
   useEffect(() => {
     let cancelled = false;
 
-    async function handleCallback() {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get("code");
-      const rememberMe = params.get("remember") !== "0";
-      const hashParams = new URLSearchParams(
-        window.location.hash?.replace(/^#/, "") || ""
-      );
+    async function run() {
+      // Supabase can send errors/code in query (?...) or hash (#...) depending on flow
+      const queryParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      const get = (key: string) => queryParams.get(key) ?? hashParams.get(key);
+      const code = get("code");
+      const rememberMe = get("remember") !== "0";
 
-      const hashError = hashParams.get("error_description") || hashParams.get("error");
-      const queryError = params.get("error_description") || params.get("error");
-      if (hashError || queryError) {
-        const errorCode = hashParams.get("error_code") || params.get("error_code") || "";
-        const desc = decodeURIComponent(hashError || queryError || "Unknown error");
+      const errDesc = get("error_description") || get("error");
+      const errCode = get("error_code");
+      if (errDesc || get("error")) {
+        const text = errDesc ? decodeURIComponent(errDesc.replace(/\+/g, " ")) : "Sign-in failed.";
         const friendly =
-          errorCode === "otp_expired"
+          errCode === "otp_expired"
             ? "This magic link has expired. Please request a new one."
-            : desc;
-        if (!cancelled) setError(friendly);
+            : text;
+        if (!cancelled) {
+          setError(friendly);
+          window.history.replaceState(null, "", window.location.pathname);
+        }
         return;
       }
 
-      const accessTokenFromHash = hashParams.get("access_token");
-      const accessTokenFromQuery = params.get("access_token");
-
-      if (accessTokenFromQuery) {
-        try {
-          const result = await setSessionMutation.mutateAsync({
-            accessToken: accessTokenFromQuery,
-            rememberMe,
-          });
-          if (!cancelled) {
-            window.history.replaceState(null, "", window.location.pathname);
-            const r = result as { requiresPasswordSetup?: boolean; mandatoryForOwner?: boolean };
-            if (r.requiresPasswordSetup) {
-              const q = r.mandatoryForOwner ? "?from=oauth&mandatory=1" : "?from=oauth";
-              setLocation(`/set-password${q}`);
-            } else {
-              setLocation("/");
-            }
-          }
-          return;
-        } catch (e) {
-          setError(e instanceof Error ? e.message : "Failed to set session");
-          return;
-        }
-      }
-
+      // Prefer PKCE code exchange; fallback to access_token in hash (implicit flow, e.g. link opened in different browser)
+      let token: string | null = null;
       if (code) {
         const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         if (cancelled) return;
@@ -74,92 +61,50 @@ export default function AuthCallback() {
           setError(exchangeError.message);
           return;
         }
-        if (data?.session?.access_token) {
-          try {
-            const result = await setSessionMutation.mutateAsync({
-              accessToken: data.session.access_token,
-              rememberMe,
-            });
-            if (!cancelled) {
-              const r = result as { requiresPasswordSetup?: boolean; mandatoryForOwner?: boolean };
-              if (r.requiresPasswordSetup) {
-                const q = r.mandatoryForOwner ? "?from=oauth&mandatory=1" : "?from=oauth";
-                setLocation(`/set-password${q}`);
-              } else {
-                setLocation("/");
-              }
-            }
-            return;
-          } catch (e) {
-            setError(e instanceof Error ? e.message : "Failed to set session");
-            return;
-          }
+        token = data?.session?.access_token ?? null;
+      } else {
+        const accessTokenFromHash = hashParams.get("access_token");
+        if (accessTokenFromHash) {
+          token = accessTokenFromHash;
         }
       }
 
-      if (accessTokenFromHash) {
-        try {
-          const result = await setSessionMutation.mutateAsync({
-            accessToken: accessTokenFromHash,
-            rememberMe,
-          });
-          if (!cancelled) {
-            const r = result as { requiresPasswordSetup?: boolean; mandatoryForOwner?: boolean };
-            if (r.requiresPasswordSetup) {
-              const q = r.mandatoryForOwner ? "?from=oauth&mandatory=1" : "?from=oauth";
-              setLocation(`/set-password${q}`);
-            } else {
-              setLocation("/");
-            }
-          }
-          return;
-        } catch (e) {
-          setError(e instanceof Error ? e.message : "Failed to set session");
-          return;
+      if (!token) {
+        if (!cancelled) {
+          setError(
+            "No sign-in code received. Open the link from your email in the same browser where you requested it, or request a new link."
+          );
         }
+        return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (cancelled) return;
-      if (session?.access_token) {
-        try {
-          const result = await setSessionMutation.mutateAsync({
-            accessToken: session.access_token,
-            rememberMe,
-          });
-          if (!cancelled) {
-            const r = result as { requiresPasswordSetup?: boolean; mandatoryForOwner?: boolean };
-            if (r.requiresPasswordSetup) {
-              const q = r.mandatoryForOwner ? "?from=oauth&mandatory=1" : "?from=oauth";
-              setLocation(`/set-password${q}`);
-            } else {
-              setLocation("/");
-            }
-          }
-          return;
-        } catch (e) {
-          setError(e instanceof Error ? e.message : "Failed to set session");
-          return;
+      try {
+        const result = await setSession.mutateAsync({ accessToken: token, rememberMe });
+        if (cancelled) return;
+        window.history.replaceState(null, "", window.location.pathname);
+        const r = result as { requiresPasswordSetup?: boolean; mandatoryForOwner?: boolean };
+        if (r.requiresPasswordSetup) {
+          const q = r.mandatoryForOwner ? "?from=oauth&mandatory=1" : "?from=oauth";
+          setLocation(`/set-password${q}`);
+        } else {
+          setLocation("/");
         }
+      } catch (e) {
+        setError(messageFromError(e));
       }
-
-      setError("No session received. Please try signing in again.");
     }
 
-    handleCallback();
-    return () => {
-      cancelled = true;
-    };
+    run();
   }, [setLocation]);
 
   if (error) {
     return (
       <AuthPageLayout
-        variant="manusDark"
+        variant="authDark"
         icon={<AuthLogo branding={branding} />}
         title=""
         description={error}
-        footer={<ManusStyleAuthFooter branding={branding} />}
+        footer={<AuthFooter branding={branding} />}
       >
         <Button asChild className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white">
           <a href="/login">Return to sign in</a>
@@ -170,11 +115,11 @@ export default function AuthCallback() {
 
   return (
     <AuthPageLayout
-      variant="manusDark"
+      variant="authDark"
       icon={<AuthLogo branding={branding} />}
       title="Completing sign-in..."
-      description="Please wait while we set up your session."
-      footer={<ManusStyleAuthFooter branding={branding} />}
+      description="Please wait."
+      footer={<AuthFooter branding={branding} />}
     >
       <div className="flex justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden />

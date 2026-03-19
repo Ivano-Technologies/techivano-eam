@@ -1,34 +1,22 @@
 import { trpc } from "@/lib/trpc";
-import { UNAUTHED_ERR_MSG } from "@shared/const";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { httpBatchLink, TRPCClientError } from "@trpc/client";
+import { httpBatchLink } from "@trpc/client";
 import superjson from "superjson";
 import App from "../App";
-import { getLoginUrl } from "../const";
 import { getImpersonationToken } from "../impersonation";
 
 const queryClient = new QueryClient();
 
-const redirectToLoginIfUnauthorized = (error: unknown) => {
-  if (!(error instanceof TRPCClientError)) return;
-  if (typeof window === "undefined") return;
-  if (error.message !== UNAUTHED_ERR_MSG) return;
-  window.location.href = getLoginUrl();
-};
-
+// 401 redirect is handled by AuthRefreshHandler (tries session refresh first, then redirects)
 queryClient.getQueryCache().subscribe((event) => {
   if (event.type === "updated" && event.action.type === "error" && "query" in event) {
-    const error = event.query.state.error;
-    redirectToLoginIfUnauthorized(error);
-    console.error("[API Query Error]", error);
+    console.error("[API Query Error]", event.query.state.error);
   }
 });
 
 queryClient.getMutationCache().subscribe((event) => {
   if (event.type === "updated" && event.action.type === "error" && "mutation" in event) {
-    const error = event.mutation.state.error;
-    redirectToLoginIfUnauthorized(error);
-    console.error("[API Mutation Error]", error);
+    console.error("[API Mutation Error]", event.mutation.state.error);
   }
 });
 
@@ -41,11 +29,22 @@ const trpcClient = trpc.createClient({
         const token = getImpersonationToken();
         return token ? { "x-impersonation": token } : {};
       },
-      fetch(input, init) {
-        return globalThis.fetch(input, {
+      async fetch(input, init) {
+        const res = await globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
         });
+        if (!res.ok) {
+          const text = await res.clone().text();
+          const looksLikeHtml =
+            text.trim().startsWith("<") ||
+            text.includes("A server error") ||
+            (!text.trim().startsWith("{") && !text.trim().startsWith("["));
+          if (looksLikeHtml) {
+            throw new Error("We're having trouble signing you in. Please try again.");
+          }
+        }
+        return res;
       },
     }),
   ],

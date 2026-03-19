@@ -9,8 +9,8 @@ export function validateProductionEnv(): void {
   const critical = [
     "DATABASE_URL",
     "SUPABASE_JWT_SECRET",
-    "VITE_SUPABASE_URL",
-    "VITE_SUPABASE_ANON_KEY",
+    "SUPABASE_URL",
+    "SUPABASE_ANON_KEY",
   ];
   for (const key of critical) {
     const v = process.env[key];

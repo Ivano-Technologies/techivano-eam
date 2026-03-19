@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { AlertCircle } from "lucide-react";
-import { AuthPageLayout, AuthLogo, ManusStyleAuthFooter } from "@/components/AuthPageLayout";
+import { AuthPageLayout, AuthLogo, AuthFooter } from "@/components/AuthPageLayout";
 import { PasswordStrength, PasswordRequirements } from "@/components/PasswordStrength";
 import { useAuthBranding } from "@/hooks/useAuthBranding";
 
@@ -61,11 +61,11 @@ export default function ResetPassword() {
   if (success) {
     return (
       <AuthPageLayout
-        variant="manusDark"
+        variant="authDark"
         icon={<AuthLogo branding={branding} />}
         title="Password Reset Successful"
         description="Your password has been reset successfully. Redirecting to login..."
-        footer={<ManusStyleAuthFooter branding={branding} />}
+        footer={<AuthFooter branding={branding} />}
       >
         <Link href="/login">
           <Button className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white">Go to Login</Button>
@@ -77,18 +77,18 @@ export default function ResetPassword() {
   if (!token || error.includes("Invalid or expired")) {
     return (
       <AuthPageLayout
-        variant="manusDark"
+        variant="authDark"
         icon={<AuthLogo branding={branding} />}
         title="Invalid or Expired Link"
         description="This link is invalid or has expired. Request a new reset link below or go back to login."
-        footer={<ManusStyleAuthFooter branding={branding} />}
+        footer={<AuthFooter branding={branding} />}
       >
         <div className="space-y-3">
           <Link href="/forgot-password">
             <Button className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white">Request new reset link</Button>
           </Link>
           <div className="flex justify-end pt-2">
-            <Link href="/login" className="text-xs">
+            <Link href="/login" className="text-xs underline text-[#9ca3af] hover:text-[#DC2626] transition-colors">
               Back to Login
             </Link>
           </div>
@@ -99,10 +99,10 @@ export default function ResetPassword() {
 
   return (
     <AuthPageLayout
-      variant="manusDark"
+      variant="authDark"
       icon={<AuthLogo branding={branding} />}
       title="Set New Password"
-      footer={<ManusStyleAuthFooter branding={branding} />}
+      footer={<AuthFooter branding={branding} />}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
@@ -154,7 +154,7 @@ export default function ResetPassword() {
           </Button>
 
           <div className="flex justify-end pt-5">
-            <Link href="/login" className="text-xs">
+            <Link href="/login" className="text-xs underline text-[#9ca3af] hover:text-[#DC2626] transition-colors">
               Back to Login
             </Link>
           </div>

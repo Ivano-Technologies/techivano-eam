@@ -1,20 +1,16 @@
 /**
- * Host-based app variant for single Vercel project with multiple domains.
- * admin.techivano.com → Admin EAM
- * nrcseam.techivano.com → NRCS EAM
- * techivano.com (apex) → Marketing
+ * Single EAM app at techivano.com. Marketing and admin/nrcseam subdomains disabled.
+ * All hosts serve NRCS EAM; auth is simplified to one site (techivano.com).
  */
 export type AppVariant = "admin" | "nrcs" | "marketing";
 
 export function getAppVariant(): AppVariant {
-  const host = typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
-  if (host === "localhost" || host === "127.0.0.1" || host === "::1") return "admin";
-  if (host.includes("admin.techivano.com")) return "admin";
-  if (host.includes("nrcseam.techivano.com")) return "nrcs";
-  return "marketing";
+  // Always EAM app; marketing (Next.js) and subdomain variants disabled.
+  return "nrcs";
 }
 
-/** True when host is techivano.com or www (apex marketing). */
+/** True when host is techivano.com or www (main EAM site). */
 export function isApexHost(): boolean {
-  return getAppVariant() === "marketing";
+  const host = typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
+  return host === "techivano.com" || host === "www.techivano.com";
 }

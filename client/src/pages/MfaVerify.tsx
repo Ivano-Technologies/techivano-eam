@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { supabase } from "@/lib/supabase";
-import { AuthPageLayout, AuthLogo, ManusStyleAuthFooter } from "@/components/AuthPageLayout";
+import { AuthPageLayout, AuthLogo, AuthFooter } from "@/components/AuthPageLayout";
 import { useAuthBranding } from "@/hooks/useAuthBranding";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -83,11 +83,11 @@ export default function MfaVerify() {
   if (loading) {
     return (
       <AuthPageLayout
-        variant="manusDark"
+        variant="authDark"
         icon={<AuthLogo branding={branding} />}
         title="Verify your identity"
         description="Loading…"
-        footer={<ManusStyleAuthFooter branding={branding} />}
+        footer={<AuthFooter branding={branding} />}
       >
         <div className="text-sm text-muted-foreground">Please wait.</div>
       </AuthPageLayout>
@@ -97,11 +97,11 @@ export default function MfaVerify() {
   if (!factorId) {
     return (
       <AuthPageLayout
-        variant="manusDark"
+        variant="authDark"
         icon={<AuthLogo branding={branding} />}
         title="Verify your identity"
         description={error || "No authenticator set up."}
-        footer={<ManusStyleAuthFooter branding={branding} />}
+        footer={<AuthFooter branding={branding} />}
       >
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">{error || "No authenticator set up."}</p>
@@ -115,11 +115,11 @@ export default function MfaVerify() {
 
   return (
     <AuthPageLayout
-      variant="manusDark"
+      variant="authDark"
       icon={<AuthLogo branding={branding} />}
       title="Verify your identity"
       description="Enter the 6-digit code from your authenticator app."
-      footer={<ManusStyleAuthFooter branding={branding} />}
+      footer={<AuthFooter branding={branding} />}
     >
       <div className="space-y-4">
         {error && (

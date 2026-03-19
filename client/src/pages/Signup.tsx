@@ -5,11 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox, RedCheckIcon } from "@/components/ui/checkbox";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { trpc } from "@/lib/trpc";
+import { env } from "@/lib/env";
 import { ButtonLoader } from "@/components/ButtonLoader";
-import { AuthPageLayout, AuthLogo, ManusStyleAuthFooter } from "@/components/AuthPageLayout";
+import { AuthPageLayout, AuthLogo, AuthFooter } from "@/components/AuthPageLayout";
 import { PasswordStrength, PasswordRequirements } from "@/components/PasswordStrength";
 import { useAuthBranding } from "@/hooks/useAuthBranding";
+
+const turnstileSiteKey = env.TURNSTILE_SITE_KEY?.trim() ?? "";
 
 export default function Signup() {
   const branding = useAuthBranding();
@@ -20,6 +24,7 @@ export default function Signup() {
   const [designation, setDesignation] = useState("");
   const [password, setPassword] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const signupMutation = trpc.auth.signupWithPassword.useMutation({
@@ -63,11 +68,16 @@ export default function Signup() {
       setMessage({ type: "error", text: "You must agree to the Terms of Use and Privacy Policy" });
       return;
     }
+    if (turnstileSiteKey && !turnstileToken) {
+      setMessage({ type: "error", text: "Please complete the verification check." });
+      return;
+    }
 
     signupMutation.mutate({
       email: email.trim(),
       name: name.trim(),
       password,
+      turnstileToken: turnstileToken || undefined,
       agency: organization.trim() || undefined,
       jobTitle: designation.trim() || undefined,
     });
@@ -77,10 +87,10 @@ export default function Signup() {
 
   return (
     <AuthPageLayout
-      variant="manusDark"
+      variant="authDark"
       icon={<AuthLogo branding={branding} />}
       title={branding === "ivano" ? "Register for Techivano" : "Register for NRCS EAM"}
-      footer={<ManusStyleAuthFooter branding={branding} />}
+      footer={<AuthFooter branding={branding} />}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {message && (
@@ -174,20 +184,30 @@ export default function Signup() {
           />
           <label htmlFor="terms" className="text-xs cursor-pointer leading-tight" style={{ color: "#9ca3af" }}>
             I agree to the{" "}
-            <Link href="/legal/terms">
+            <Link href="/legal/terms" className="underline text-[#9ca3af] hover:text-[#DC2626] transition-colors">
               Terms of Use
             </Link>{" "}
             and{" "}
-            <Link href="/legal/privacy">
+            <Link href="/legal/privacy" className="underline text-[#9ca3af] hover:text-[#DC2626] transition-colors">
               Privacy Policy
             </Link>
           </label>
         </div>
 
+        {turnstileSiteKey && (
+          <TurnstileWidget
+            siteKey={turnstileSiteKey}
+            theme="dark"
+            scale={0.7}
+            onVerify={setTurnstileToken}
+            onExpire={() => setTurnstileToken(null)}
+          />
+        )}
+
         <Button
           type="submit"
           className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white"
-          disabled={isPending}
+          disabled={isPending || (!!turnstileSiteKey && !turnstileToken)}
         >
           {isPending ? (
             <>
@@ -201,7 +221,7 @@ export default function Signup() {
 
         <div className="text-center text-xs text-muted-foreground">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium">
+          <Link href="/login" className="font-medium underline text-[#9ca3af] hover:text-[#DC2626] transition-colors">
             Sign In
           </Link>
         </div>

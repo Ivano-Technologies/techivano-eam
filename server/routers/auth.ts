@@ -6,6 +6,7 @@ import { getSessionCookieOptions, getAuthSessionCookieOptions } from "../_core/c
 import type { MembershipContext } from "../_core/context";
 import { isGlobalOwnerEmail } from "../_core/env";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
+import { verifyTurnstileToken } from "../_core/turnstile";
 import { logSecurityAudit } from "../audit/logSecurityAudit";
 import * as db from "../db";
 
@@ -44,6 +45,20 @@ export const authRouter = router({
       impersonatorId: opts.ctx.impersonatorId ?? null,
     } as MeResponse;
   }),
+  /** Verify Cloudflare Turnstile token (bot protection). Call before magic link or OAuth. */
+  verifyTurnstile: publicProcedure
+    .input(z.object({ token: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await verifyTurnstileToken(input.token, ctx.req.ip ?? undefined);
+      if (!result.success) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Verification failed. Please try again.",
+        });
+      }
+      return { success: true } as const;
+    }),
+
   logout: publicProcedure.mutation(async ({ ctx }) => {
     const cookieOptions = getSessionCookieOptions(ctx.req);
     const cookieHeader = ctx.req.headers.cookie;
@@ -159,6 +174,7 @@ export const authRouter = router({
       email: z.string().email(),
       name: z.string().min(1),
       password: z.string().min(8, "Password must be at least 8 characters"),
+      turnstileToken: z.string().optional(),
       jobTitle: z.string().optional(),
       phoneNumber: z.string().optional(),
       phoneCountryCode: z.string().optional(),
@@ -171,6 +187,16 @@ export const authRouter = router({
       supervisorEmail: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
+      const { ENV } = await import("../_core/env");
+      if (ENV.turnstileSecretKey) {
+        const result = await verifyTurnstileToken(input.turnstileToken ?? null, ctx.req.ip ?? undefined);
+        if (!result.success) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Verification failed. Please try again.",
+          });
+        }
+      }
       const { isAllowedSignupEmail } = await import("../_core/signupDomain");
       if (!isAllowedSignupEmail(input.email, ctx.req)) {
         const domain = input.email.split("@")[1] ?? "unknown";

@@ -105,26 +105,28 @@ export function getHostFromRequest(req: { headers: Record<string, string | strin
   return host;
 }
 
-/** Resolve app variant from host for single Vercel project with multiple domains. */
-export function getAppVariantFromHost(host: string): AppVariant {
-  if (!host) return "marketing";
-  const isLocal = host === "localhost" || host === "127.0.0.1" || host === "::1";
-  if (isLocal) return "admin";
-  if (host.includes("admin.techivano.com")) return "admin";
-  if (host.includes("nrcseam.techivano.com")) return "nrcs";
-  return "marketing";
+/** Single EAM app at techivano.com; marketing and admin/nrcseam subdomains disabled. */
+export function getAppVariantFromHost(_host: string): AppVariant {
+  return "nrcs";
 }
 
-/** Resolve organizationId and tenantId from host (admin.techivano.com → Ivano, nrcseam.techivano.com → NRCS). */
+/** Resolve organizationId and tenantId. Main site techivano.com (and localhost) use NRCS org. */
 function getOrganizationContextFromHost(host: string): { organizationId: string | null; tenantId: number | null } {
   if (!host) return { organizationId: null, tenantId: null };
-  if (host === "admin.techivano.com" && ENV.hostOrgAdmin) {
-    const organizationId = ENV.hostOrgAdmin;
+  const isMainSite =
+    host === "techivano.com" ||
+    host === "www.techivano.com" ||
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    host.includes("nrcseam.techivano.com");
+  if (isMainSite && ENV.hostOrgNrcs) {
+    const organizationId = ENV.hostOrgNrcs;
     const tenantId = tenantIdFromCanonicalOrganizationId(organizationId);
     return { organizationId, tenantId };
   }
-  if (host === "nrcseam.techivano.com" && ENV.hostOrgNrcs) {
-    const organizationId = ENV.hostOrgNrcs;
+  if (host.includes("admin.techivano.com") && ENV.hostOrgAdmin) {
+    const organizationId = ENV.hostOrgAdmin;
     const tenantId = tenantIdFromCanonicalOrganizationId(organizationId);
     return { organizationId, tenantId };
   }

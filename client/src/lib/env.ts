@@ -15,4 +15,7 @@ export const env = {
     import.meta.env.VITE_SUPABASE_ANON_KEY ||
       import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   ),
-}
+
+  /** Cloudflare Turnstile site key (public). When set, login/signup require verification. */
+  TURNSTILE_SITE_KEY: getEnv("TURNSTILE_SITE_KEY", import.meta.env.VITE_TURNSTILE_SITE_KEY),
+};

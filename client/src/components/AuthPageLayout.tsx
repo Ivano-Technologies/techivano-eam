@@ -9,14 +9,10 @@ import { Link } from "wouter";
 const AUTH_LOGO_SIZE_PX = 50;
 
 const AUTH_ACCENT = "#DC2626"; // NRCS red, matches existing auth cards
-const MANUS_BG = "#f8f8f7";
-// Manus dark theme — near-black page background like reference
-const MANUS_DARK_BG = "#0d0d0d";
-/** Form card background — kept as-is (matches form elements) */
-const MANUS_DARK_CARD = "#252525";
-const MANUS_DARK_ELEMENT = "#363636";
-const MANUS_DARK_TEXT = "#ffffff";
-const MANUS_DARK_TEXT_MUTED = "#9ca3af";
+const AUTH_BG_LIGHT = "#f8f8f7";
+const AUTH_DARK_BG = "#0d0d0d";
+const AUTH_DARK_CARD = "#252525";
+const AUTH_DARK_TEXT_MUTED = "#9ca3af";
 /** Charcoal grey for "Powered by Techivano" and other footer branding */
 const AUTH_FOOTER_CHARCOAL = "#3d3d3d";
 
@@ -30,9 +26,9 @@ type AuthPageLayoutProps = {
   cardClassName?: string;
   /** Max width of the card: "sm" (md) | "lg" (2xl) */
   maxWidth?: "sm" | "lg";
-  /** "manus" = light; "manusDark" = dark card + dotted bg, Manus account-screen style */
-  variant?: "default" | "manus" | "manusDark";
-  /** Footer content when variant is manus or manusDark */
+  /** "authLight" = light card; "authDark" = dark card + dotted bg (default for auth pages). "manus"/"manusDark" accepted for backward compatibility. */
+  variant?: "default" | "authLight" | "authDark" | "manus" | "manusDark";
+  /** Footer content when variant is authLight or authDark */
   footer?: ReactNode;
 };
 
@@ -47,31 +43,32 @@ export function AuthPageLayout({
   footer,
 }: AuthPageLayoutProps) {
   const maxWidthClass = maxWidth === "lg" ? "max-w-2xl" : "max-w-md";
-  const isManus = variant === "manus" || variant === "manusDark";
-  const isManusDark = variant === "manusDark";
+  const effectiveVariant = variant === "manus" ? "authLight" : variant === "manusDark" ? "authDark" : variant;
+  const isAuthThemed = effectiveVariant === "authLight" || effectiveVariant === "authDark";
+  const isAuthDark = effectiveVariant === "authDark";
 
   return (
     <div
       className={
-        isManus
+        isAuthThemed
           ? "min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden"
           : "min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-gray-50 via-gray-100 to-slate-200 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900"
       }
       style={
-        isManusDark
-          ? { backgroundColor: MANUS_DARK_BG }
-          : isManus
-            ? { backgroundColor: MANUS_BG }
+        isAuthDark
+          ? { backgroundColor: AUTH_DARK_BG }
+          : isAuthThemed
+            ? { backgroundColor: AUTH_BG_LIGHT }
             : undefined
       }
     >
-      {/* Manus dark: dot grid — grey base, then coloured-dot "blobs" that move to create floating shape illusion */}
-      {isManusDark && (
+      {/* authDark: dot grid — grey base, then coloured-dot "blobs" that move to create floating shape illusion */}
+      {isAuthDark && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
           {/* Base: grey dots (static) */}
           <div
             className="absolute inset-0 auth-dots-base"
-            style={{ color: `${MANUS_DARK_TEXT_MUTED}44` }}
+            style={{ color: `${AUTH_DARK_TEXT_MUTED}44` }}
           />
           {/* Moving blobs: same dot grid in different hues, each revealed only inside a moving circle */}
           <div
@@ -92,7 +89,7 @@ export function AuthPageLayout({
           />
         </div>
       )}
-      {!isManus && (
+      {!isAuthThemed && (
         <div
           className="absolute inset-0 opacity-[0.04] dark:opacity-[0.06] pointer-events-none"
           style={{
@@ -103,48 +100,48 @@ export function AuthPageLayout({
         />
       )}
       <div
-        className={`w-full ${maxWidthClass} relative ${isManusDark ? "auth-card-dark rounded-xl" : isManus ? "rounded-lg border border-gray-200/80 shadow-sm" : "animate-in fade-in slide-in-from-bottom-4 duration-300 rounded-xl border-2 shadow-2xl glass dark:glass-dark"} ${cardClassName}`}
+        className={`w-full ${maxWidthClass} relative ${isAuthDark ? "auth-card-dark rounded-xl" : isAuthThemed ? "rounded-lg border border-gray-200/80 shadow-sm" : "animate-in fade-in slide-in-from-bottom-4 duration-300 rounded-xl border-2 shadow-2xl glass dark:glass-dark"} ${cardClassName}`}
         style={
-          isManusDark
-            ? { backgroundColor: MANUS_DARK_CARD }
-            : !isManus
+          isAuthDark
+            ? { backgroundColor: AUTH_DARK_CARD }
+            : !isAuthThemed
               ? { borderColor: AUTH_ACCENT }
               : undefined
         }
       >
-        <div className={`${isManus ? "p-8 sm:p-10" : "p-6 sm:p-8"} ${isManusDark ? "auth-card-content-dark" : ""}`}>
+        <div className={`${isAuthThemed ? "p-8 sm:p-10" : "p-6 sm:p-8"} ${isAuthDark ? "auth-card-content-dark" : ""}`}>
           {(icon || title) && (
             <header className="text-center mb-6">
               {icon && (
                 <div
-                  className={`flex justify-center items-center mb-4 ${isManusDark ? "mx-auto shrink-0" : ""}`}
-                  style={isManusDark ? { width: AUTH_LOGO_SIZE_PX, height: AUTH_LOGO_SIZE_PX, minWidth: AUTH_LOGO_SIZE_PX, minHeight: AUTH_LOGO_SIZE_PX } : undefined}
+                  className={`flex justify-center items-center mb-4 ${isAuthDark ? "mx-auto shrink-0" : ""}`}
+                  style={isAuthDark ? { width: AUTH_LOGO_SIZE_PX, height: AUTH_LOGO_SIZE_PX, minWidth: AUTH_LOGO_SIZE_PX, minHeight: AUTH_LOGO_SIZE_PX } : undefined}
                   aria-hidden
                 >
                   {icon}
                 </div>
               )}
               <h1
-                className={`font-bold tracking-tight ${isManusDark ? "text-xl sm:text-2xl auth-title" : isManus ? "text-xl sm:text-2xl" : "text-2xl"} ${isManusDark ? "text-white" : "text-foreground"}`}
+                className={`font-bold tracking-tight ${isAuthDark ? "text-xl sm:text-2xl auth-title" : isAuthThemed ? "text-xl sm:text-2xl" : "text-2xl"} ${isAuthDark ? "text-white" : "text-foreground"}`}
               >
                 {title}
               </h1>
               {description && (
-                <div className={`mt-2 text-sm auth-description ${isManusDark ? "text-[#9ca3af]" : "text-muted-foreground"}`}>
+                <div className={`mt-2 text-sm auth-description ${isAuthDark ? "text-[#9ca3af]" : "text-muted-foreground"}`}>
                   {description}
                 </div>
               )}
             </header>
           )}
-          <div className={isManusDark ? "auth-dark" : ""}>
+          <div className={isAuthDark ? "auth-dark" : ""}>
             {children}
           </div>
         </div>
       </div>
-      {isManus && footer !== undefined && (
+      {isAuthThemed && footer !== undefined && (
         <footer
-          className={`w-full max-w-md mt-8 px-4 text-center text-xs ${isManusDark ? "auth-footer-dark" : ""}`}
-          style={isManusDark ? { color: MANUS_DARK_TEXT_MUTED } : undefined}
+          className={`w-full max-w-md mt-8 px-4 text-center text-xs ${isAuthDark ? "auth-footer-dark" : ""}`}
+          style={isAuthDark ? { color: AUTH_DARK_TEXT_MUTED } : undefined}
         >
           {footer}
         </footer>
@@ -188,17 +185,17 @@ export function AuthLogo({ branding = "nrcs" }: { branding?: "nrcs" | "ivano" })
   );
 }
 
-/** Default Manus-style footer: Powered by, Terms, Privacy, copyright. Use branding="ivano" for admin subdomain. */
-export function ManusStyleAuthFooter({ branding = "nrcs" }: { branding?: "nrcs" | "ivano" }) {
+/** Auth pages footer: Powered by, Terms, Privacy, copyright. Use branding="ivano" for admin subdomain. */
+export function AuthFooter({ branding = "nrcs" }: { branding?: "nrcs" | "ivano" }) {
   const year = new Date().getFullYear();
   const copyright = branding === "ivano" ? `©${year} Techivano` : `©${year} NRCS EAM`;
   return (
     <>
       <p className="auth-footer-powered font-medium" style={{ color: AUTH_FOOTER_CHARCOAL }}>Powered by Techivano</p>
       <p className="mt-2 auth-footer-links">
-        <Link href="/legal/terms" className="hover:underline">Terms of Service</Link>
+        <Link href="/legal/terms" className="hover:underline text-[#3d3d3d] hover:text-[#DC2626] transition-colors">Terms of Service</Link>
         {" . "}
-        <Link href="/legal/privacy" className="hover:underline">Privacy Policy</Link>
+        <Link href="/legal/privacy" className="hover:underline text-[#3d3d3d] hover:text-[#DC2626] transition-colors">Privacy Policy</Link>
         {" . " + copyright}
       </p>
     </>

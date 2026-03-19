@@ -3,12 +3,10 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { AuthRefreshHandler } from "./components/AuthRefreshHandler";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
-import { getAppVariant } from "@/lib/appVariant";
-
 const DashboardLayout = lazy(() => import("./components/DashboardLayout"));
-const Marketing = lazy(() => import("./pages/Marketing"));
 
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const Signup = lazy(() => import("./pages/Signup"));
@@ -139,28 +137,21 @@ function Router() {
 }
 
 function App() {
-  const appVariant = getAppVariant();
-  const isMarketing = appVariant === "marketing";
-
+  // Marketing site disabled; single EAM app at techivano.com for all hosts.
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
+        <AuthRefreshHandler />
         <TooltipProvider>
           <Toaster />
           <PWAInstallPrompt />
-          {isMarketing ? (
-            <Suspense fallback={<PageFallback />}>
-              <Marketing />
-            </Suspense>
-          ) : (
-            <Suspense fallback={<PageFallback />}>
-              <DashboardLayout>
-                <Suspense fallback={<PageFallback />}>
-                  <Router />
-                </Suspense>
-              </DashboardLayout>
-            </Suspense>
-          )}
+          <Suspense fallback={<PageFallback />}>
+            <DashboardLayout>
+              <Suspense fallback={<PageFallback />}>
+                <Router />
+              </Suspense>
+            </DashboardLayout>
+          </Suspense>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
