@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { Html5Qrcode } from "html5-qrcode";
+import type { Html5Qrcode } from "html5-qrcode";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ export default function AssetScanner() {
     notes: "",
   });
   const [isScanning, setIsScanning] = useState(false);
+  const [isLoadingScanner, setIsLoadingScanner] = useState(false);
   const html5QrcodeRef = useRef<Html5Qrcode | null>(null);
   const { coordinates, loading: gpsLoading, captureLocation, hasLocation } = useGeolocation();
   const { vibrateSuccess, vibrateError } = useHaptic();
@@ -101,8 +102,10 @@ ${updateForm.notes}`
 
   const startCameraScanning = async () => {
     try {
+      setIsLoadingScanner(true);
       if (!html5QrcodeRef.current) {
-        html5QrcodeRef.current = new Html5Qrcode("qr-reader");
+        const { Html5Qrcode: Html5QrcodeClass } = await import("html5-qrcode");
+        html5QrcodeRef.current = new Html5QrcodeClass("qr-reader");
       }
 
       setIsScanning(true);
@@ -126,6 +129,8 @@ ${updateForm.notes}`
       toast.error("Failed to start camera. Please check permissions.");
       setIsScanning(false);
       setScanMode("manual");
+    } finally {
+      setIsLoadingScanner(false);
     }
   };
 
@@ -204,7 +209,7 @@ ${updateForm.notes}`
               <div className="space-y-3">
                 <div id="qr-reader" className="w-full rounded-lg overflow-hidden border bg-black"></div>
                 <p className="text-sm text-center text-muted-foreground">
-                  {isScanning ? "Point camera at QR code or barcode..." : "Starting camera..."}
+                  {isLoadingScanner ? "Loading scanner..." : isScanning ? "Point camera at QR code or barcode..." : "Starting camera..."}
                 </p>
                 <Button onClick={() => setScanMode("manual")} variant="outline" className="w-full">
                   Switch to Manual Entry

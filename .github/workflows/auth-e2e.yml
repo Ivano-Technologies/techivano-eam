@@ -1,6 +1,6 @@
 # Deploy-blocking: Auth E2E must pass before merge. Broken login → CI fails → deploy blocked.
-# Full pipeline (test:e2e:auth:full) requires: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-# VITE_SUPABASE_ANON_KEY, DATABASE_URL, E2E_AUTH_EMAIL, E2E_AUTH_PASSWORD.
+# Requires: Redis (service), CLERK_SECRET_KEY, VITE_CLERK_PUBLISHABLE_KEY, SUPABASE_*,
+# DATABASE_URL, E2E_AUTH_EMAIL, E2E_AUTH_PASSWORD. Add missing secrets in repo Settings → Secrets.
 name: Auth E2E
 
 on:
@@ -12,8 +12,18 @@ jobs:
   auth-test:
     runs-on: ubuntu-latest
 
+    services:
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
+
     env:
+      REDIS_URL: redis://127.0.0.1:6379
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       SUPABASE_JWT_SECRET: ${{ secrets.SUPABASE_JWT_SECRET }}

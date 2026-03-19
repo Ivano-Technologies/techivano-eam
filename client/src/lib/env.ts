@@ -5,6 +5,11 @@ function getEnv(name: string, value: string | undefined): string {
 }
 
 export const env = {
+  CLERK_PUBLISHABLE_KEY: getEnv(
+    "CLERK_PUBLISHABLE_KEY",
+    import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+  ),
+
   SUPABASE_URL: getEnv(
     "SUPABASE_URL",
     import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL
@@ -15,4 +20,7 @@ export const env = {
     import.meta.env.VITE_SUPABASE_ANON_KEY ||
       import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   ),
-}
+
+  /** Cloudflare Turnstile site key (public). When set, login/signup require verification. */
+  TURNSTILE_SITE_KEY: getEnv("TURNSTILE_SITE_KEY", import.meta.env.VITE_TURNSTILE_SITE_KEY),
+};

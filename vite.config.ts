@@ -3,7 +3,6 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig } from "vite";
-import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 import { VitePWA } from "vite-plugin-pwa";
 import { visualizer } from "rollup-plugin-visualizer";
 import { alias } from "./config/aliases";
@@ -13,7 +12,6 @@ const plugins = [
   react(),
   tailwindcss(),
   jsxLocPlugin(),
-  vitePluginManusRuntime(),
   ...(process.env.ANALYZE === "true"
     ? [
         visualizer({
@@ -47,7 +45,7 @@ const plugins = [
     workbox: {
       maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB (app-logo.png ~2.25MB); JS chunks not precached
       // Precache only critical assets; avoid **/*.js to prevent precaching all large chunks
-      globPatterns: ['**/*.css', '**/*.html', '**/*.ico', '**/*.png', '**/*.svg', '**/*.woff2', '**/manifest.webmanifest', '**/registerSW.js'],
+      globPatterns: ['**/*.css', '**/*.html', '**/*.ico', '**/*.png', '**/manifest.webmanifest', '**/registerSW.js'],
       runtimeCaching: [
         {
           urlPattern: /^\/api\//,
@@ -122,6 +120,7 @@ export default defineConfig({
           "framer-motion": ["framer-motion"],
           "lucide-react": ["lucide-react"],
           "date-fns": ["date-fns"],
+          // Lazy-loaded only when user starts camera on SmartScanner/AssetScanner
           "html5-qrcode": ["html5-qrcode"],
         },
       },
@@ -133,15 +132,7 @@ export default defineConfig({
     watch: {
       ignored: ["**/.env", "**/.env.local", "**/.env.*.local"],
     },
-    allowedHosts: [
-      ".manuspre.computer",
-      ".manus.computer",
-      ".manus-asia.computer",
-      ".manuscomputer.ai",
-      ".manusvm.computer",
-      "localhost",
-      "127.0.0.1",
-    ],
+    allowedHosts: ["localhost", "127.0.0.1"],
     fs: {
       strict: true,
       deny: ["**/.*"],

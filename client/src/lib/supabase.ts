@@ -6,4 +6,11 @@ import { env } from "./env"
 const url = env.SUPABASE_URL || "https://placeholder.supabase.co"
 const key = env.SUPABASE_ANON_KEY || "placeholder-anon-key"
 
-export const supabase: SupabaseClient = createClient(url, key)
+// PKCE flow is required so magic link and OAuth redirects include ?code=... for exchangeCodeForSession.
+// Without flowType: 'pkce', Supabase may redirect without the code, causing "No sign-in code received".
+export const supabase: SupabaseClient = createClient(url, key, {
+  auth: {
+    flowType: "pkce",
+    detectSessionInUrl: false, // we handle the callback manually in AuthCallback
+  },
+})

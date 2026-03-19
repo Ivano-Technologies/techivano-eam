@@ -1,14 +1,15 @@
 /**
  * Central auth helper: read app_session_id (or Bearer), verify Supabase JWT, resolve user.
- * Supabase Auth is the only supported auth provider; legacy Manus/app JWT is disabled.
+ * Supabase Auth is the only supported auth provider.
  * Never trust frontend-reported auth method — see docs/FINAL_AUTH_POLICY.md.
  * @see docs/SUPABASE_AUTH_MIGRATION_PLAN.md
  */
 import { parse as parseCookie } from "cookie";
 import type { Request } from "express";
 import type { User } from "../../drizzle/schema";
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, DEV_BYPASS_COOKIE_NAME } from "@shared/const";
 import { getUserFromSupabaseToken, looksLikeSupabaseJwt } from "./supabaseAuth";
+import { getUserFromClerkToken, looksLikeClerkJwt } from "./clerkAuth";
 import { logger } from "./logger";
 
 export function getSessionToken(req: Request): string | undefined {
@@ -24,7 +25,7 @@ export function getSessionToken(req: Request): string | undefined {
   return undefined;
 }
 
-type AuthMethod = "supabase" | "none";
+type AuthMethod = "clerk" | "supabase" | "none";
 
 function logAuthMetrics(method: AuthMethod, user: User | null, latencyMs: number): void {
   const meta: Record<string, unknown> = {
@@ -41,12 +42,57 @@ function logAuthMetrics(method: AuthMethod, user: User | null, latencyMs: number
 /**
  * Authenticate request using Supabase JWT only (app_session_id or Authorization Bearer).
  * Returns User or null. No legacy auth; Supabase is the sole provider.
+ * In development, supports dev bypass cookie (app_dev_bypass) for admin dashboard access.
  */
 export async function authenticateRequest(req: Request): Promise<User | null> {
   const start = performance.now();
+
+  if (process.env.NODE_ENV === "development") {
+    const cookieHeader = req.headers.cookie;
+    if (typeof cookieHeader === "string") {
+      const cookies = parseCookie(cookieHeader);
+      const devByPassId = cookies[DEV_BYPASS_COOKIE_NAME];
+      if (devByPassId) {
+        const userId = parseInt(devByPassId, 10);
+        if (Number.isInteger(userId) && userId > 0) {
+          const { getUserByIdRoot } = await import("../db");
+          const user = await getUserByIdRoot(userId);
+          if (user) {
+            logAuthMetrics("none", user as User, performance.now() - start);
+            return user as User;
+          }
+        }
+      }
+    }
+  }
+
   const token = getSessionToken(req);
   try {
-    if (token && looksLikeSupabaseJwt(token)) {
+    const hasToken = Boolean(token?.length);
+    const likeClerk = hasToken && looksLikeClerkJwt(token);
+    const likeSupabase = hasToken && looksLikeSupabaseJwt(token);
+    // #region agent log
+    fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f9971d" },
+      body: JSON.stringify({
+        sessionId: "f9971d",
+        location: "authenticateRequest.ts:auth-branch",
+        message: "auth token check",
+        data: { hasToken, likeClerk, likeSupabase },
+        timestamp: Date.now(),
+        hypothesisId: "H1",
+      }),
+    }).catch(() => {});
+    // #endregion
+    if (token && likeClerk) {
+      const user = await getUserFromClerkToken(token);
+      if (user) {
+        logAuthMetrics("clerk", user as User, performance.now() - start);
+        return user as User;
+      }
+    }
+    if (token && likeSupabase) {
       const user = await getUserFromSupabaseToken(token);
       if (user) {
         logAuthMetrics("supabase", user as User, performance.now() - start);
@@ -55,7 +101,7 @@ export async function authenticateRequest(req: Request): Promise<User | null> {
     }
     logAuthMetrics("none", null, performance.now() - start);
     return null;
-  } catch {
+  } catch (err) {
     logAuthMetrics("none", null, performance.now() - start);
     return null;
   }

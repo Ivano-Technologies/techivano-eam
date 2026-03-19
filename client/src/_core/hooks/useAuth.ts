@@ -36,6 +36,16 @@ export function useAuth(options?: UseAuthOptions) {
       }
       throw error;
     } finally {
+      if (typeof window !== "undefined") {
+        const clerk = (window as Window & { Clerk?: { signOut: () => Promise<void> } }).Clerk;
+        if (clerk?.signOut) {
+          try {
+            await clerk.signOut();
+          } catch {
+            // ignore sign-out sync errors
+          }
+        }
+      }
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
     }
@@ -43,7 +53,7 @@ export function useAuth(options?: UseAuthOptions) {
 
   const state = useMemo(() => {
     localStorage.setItem(
-      "manus-runtime-user-info",
+      "app-user-info",
       JSON.stringify(meQuery.data)
     );
     return {

@@ -23,7 +23,7 @@ let _jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 
 function getJWKS(): ReturnType<typeof createRemoteJWKSet> | null {
   if (_jwks) return _jwks;
-  const supabaseUrl = (process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, "");
+  const supabaseUrl = ENV.supabaseUrl;
   if (!supabaseUrl) return null;
   _jwks = createRemoteJWKSet(new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`));
   return _jwks;

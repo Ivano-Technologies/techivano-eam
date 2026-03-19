@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Html5Qrcode } from "html5-qrcode";
+import type { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Package, Box, Wrench, Camera, History } from "lucide-react";
@@ -10,6 +10,7 @@ import { useHaptic } from "@/hooks/useHaptic";
 export default function SmartScanner() {
   const [, setLocation] = useLocation();
   const [isScanning, setIsScanning] = useState(false);
+  const [isLoadingScanner, setIsLoadingScanner] = useState(false);
   const [scanner, setScanner] = useState<Html5Qrcode | null>(null);
   const { vibrateSuccess, vibrateError } = useHaptic();
 
@@ -66,12 +67,14 @@ export default function SmartScanner() {
 
   const startScanning = async () => {
     try {
+      setIsLoadingScanner(true);
       // Request camera permissions explicitly
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
       // Stop the test stream immediately
       stream.getTracks().forEach(track => track.stop());
-      
-      const html5QrCode = new Html5Qrcode("qr-reader");
+      // Lazy-load scanner library only when starting camera (~335 KB chunk)
+      const { Html5Qrcode: Html5QrcodeClass } = await import("html5-qrcode");
+      const html5QrCode = new Html5QrcodeClass("qr-reader");
       setScanner(html5QrCode);
       
       await html5QrCode.start(
@@ -87,19 +90,22 @@ export default function SmartScanner() {
       
       setIsScanning(true);
       toast.success("Camera started successfully");
-    } catch (err: any) {
+    } catch (err: unknown) {
       vibrateError();
       console.error("Camera error:", err);
       
-      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+      const errObj = err as Error & { name?: string };
+      if (errObj.name === "NotAllowedError" || errObj.name === "PermissionDeniedError") {
         toast.error("Camera permission denied. Please allow camera access in your browser settings.");
-      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+      } else if (errObj.name === "NotFoundError" || errObj.name === "DevicesNotFoundError") {
         toast.error("No camera found on this device.");
-      } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+      } else if (errObj.name === "NotReadableError" || errObj.name === "TrackStartError") {
         toast.error("Camera is already in use by another application.");
       } else {
         toast.error("Failed to start camera. Please check your browser permissions.");
       }
+    } finally {
+      setIsLoadingScanner(false);
     }
   };
 
@@ -170,7 +176,9 @@ export default function SmartScanner() {
             {!isScanning && (
               <div className="text-white text-center p-6">
                 <Camera className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p className="text-sm opacity-75">Camera will appear here</p>
+                <p className="text-sm opacity-75">
+                  {isLoadingScanner ? "Loading scanner..." : "Camera will appear here"}
+                </p>
               </div>
             )}
           </div>
@@ -190,7 +198,7 @@ export default function SmartScanner() {
         <Button
           className="w-full h-16 text-lg bg-blue-600 hover:bg-blue-700"
           onClick={scanAsset}
-          disabled={isScanning}
+          disabled={isScanning || isLoadingScanner}
         >
           <Package className="mr-3 h-6 w-6" />
           Scan Asset
@@ -199,7 +207,7 @@ export default function SmartScanner() {
         <Button
           className="w-full h-16 text-lg bg-green-600 hover:bg-green-700"
           onClick={scanInventory}
-          disabled={isScanning}
+          disabled={isScanning || isLoadingScanner}
         >
           <Box className="mr-3 h-6 w-6" />
           Scan Inventory
@@ -208,7 +216,7 @@ export default function SmartScanner() {
         <Button
           className="w-full h-16 text-lg bg-orange-600 hover:bg-orange-700"
           onClick={scanWorkOrder}
-          disabled={isScanning}
+          disabled={isScanning || isLoadingScanner}
         >
           <Wrench className="mr-3 h-6 w-6" />
           Scan Work Order

@@ -62,7 +62,7 @@ export default function EmailNotifications() {
             Email configuration
           </CardTitle>
           <CardDescription>
-            SMTP and Forge (Manus) are configured via environment variables. See .env.example or docs for SMTP_HOST, SMTP_PORT, EMAIL_FROM, or BUILT_IN_FORGE_*.
+            SMTP and Forge are configured via environment variables. See .env.example or docs for SMTP_HOST, SMTP_PORT, EMAIL_FROM, or BUILT_IN_FORGE_*.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-4">
@@ -75,7 +75,7 @@ export default function EmailNotifications() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Forge (Manus) configured:</span>
+            <span className="text-sm text-muted-foreground">Forge configured:</span>
             {emailConfig?.forgeConfigured ? (
               <span className="flex items-center gap-1 text-sm text-green-600"><CheckCircle2 className="h-4 w-4" /> Yes</span>
             ) : (

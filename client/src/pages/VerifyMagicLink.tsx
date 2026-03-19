@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
-import { AuthPageLayout, AuthLogo, ManusStyleAuthFooter } from "@/components/AuthPageLayout";
+import { AuthPageLayout, AuthLogo, AuthFooter } from "@/components/AuthPageLayout";
 import { useAuthBranding } from "@/hooks/useAuthBranding";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -53,11 +53,11 @@ export default function VerifyMagicLink() {
   if (status === "verifying") {
     return (
       <AuthPageLayout
-        variant="manusDark"
+        variant="authDark"
         icon={<AuthLogo branding={branding} />}
         title="Verifying..."
         description="Please wait while we verify your magic link."
-        footer={<ManusStyleAuthFooter branding={branding} />}
+        footer={<AuthFooter branding={branding} />}
       >
         <div className="flex justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-[#9ca3af]" aria-hidden />
@@ -69,11 +69,11 @@ export default function VerifyMagicLink() {
   if (status === "success") {
     return (
       <AuthPageLayout
-        variant="manusDark"
+        variant="authDark"
         icon={<AuthLogo branding={branding} />}
         title="Success!"
         description={message}
-        footer={<ManusStyleAuthFooter branding={branding} />}
+        footer={<AuthFooter branding={branding} />}
       >
         <div className="flex justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-[#9ca3af]" aria-hidden />
@@ -84,11 +84,11 @@ export default function VerifyMagicLink() {
 
   return (
     <AuthPageLayout
-      variant="manusDark"
+      variant="authDark"
       icon={<AuthLogo branding={branding} />}
       title=""
       description={message}
-      footer={<ManusStyleAuthFooter branding={branding} />}
+      footer={<AuthFooter branding={branding} />}
     >
       <Button asChild className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white">
         <Link href="/login">Return to sign in</Link>

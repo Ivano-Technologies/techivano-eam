@@ -67,6 +67,7 @@ import {
   decryptOrgDataKey,
   encryptBufferAesGcm,
 } from "./encryption";
+import { ENV } from "./env";
 import { validateProductionEnv } from "./envValidation";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -202,7 +203,7 @@ async function startServer() {
     next();
   });
 
-  const allowedOriginsRaw = process.env.ALLOWED_ORIGINS ?? process.env.VITE_APP_URL ?? "";
+  const allowedOriginsRaw = process.env.ALLOWED_ORIGINS ?? ENV.appUrl ?? "";
   const allowedOrigins = allowedOriginsRaw
     .split(",")
     .map((o) => o.trim())
@@ -246,13 +247,23 @@ async function startServer() {
     app.post("/api/dev-login", async (req, res) => {
       const email = e2eEmail;
       const password = e2ePassword;
+      // #region agent log
+      fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f9971d" },
+        body: JSON.stringify({
+          sessionId: "f9971d",
+          location: "index.ts:dev-login-entry",
+          message: "dev-login called",
+          data: { hasSupabaseUrl: Boolean(ENV.supabaseUrl), hasAnonKey: Boolean(ENV.supabaseAnonKey) },
+          timestamp: Date.now(),
+          hypothesisId: "H2",
+        }),
+      }).catch(() => {});
+      // #endregion
       try {
         const { createClient } = await import("@supabase/supabase-js");
-        const supabaseUrl =
-          process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? "";
-        const supabaseAnonKey =
-          process.env.VITE_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? "";
-        const sb = createClient(supabaseUrl, supabaseAnonKey);
+        const sb = createClient(ENV.supabaseUrl, ENV.supabaseAnonKey);
         const { data, error } = await sb.auth.signInWithPassword({ email, password });
         if (error || !data.session) {
           return res.status(401).json({ error: error?.message ?? "No session" });
@@ -307,6 +318,21 @@ async function startServer() {
 
         res.cookie(COOKIE_NAME, accessToken, cookieOpts);
 
+        // #region agent log
+        fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f9971d" },
+          body: JSON.stringify({
+            sessionId: "f9971d",
+            location: "index.ts:dev-login-success",
+            message: "dev-login cookie set",
+            data: { userId: (user as Record<string, unknown>).id },
+            timestamp: Date.now(),
+            hypothesisId: "H2",
+          }),
+        }).catch(() => {});
+        // #endregion
+
         const supabaseUserId = (user as Record<string, unknown>).supabaseUserId;
         if (typeof supabaseUserId === "string") {
           try {
@@ -329,7 +355,39 @@ async function startServer() {
     });
   }
 
-  // Legacy Manus OAuth callback deprecated — redirect to app login (Supabase Auth)
+  // Dev-only: bypass auth and open admin dashboard (hostname GM AMPD; only in development).
+  if (process.env.NODE_ENV === "development") {
+    app.get("/api/dev-hostname", (_req, res) => {
+      const os = require("node:os");
+      res.json({ hostname: os.hostname() });
+    });
+    app.post("/api/dev-admin-login", async (req, res) => {
+      try {
+        const host = req.get("host") ?? "";
+        const isLocal = /^localhost(:\d+)?$/i.test(host) || /^127\.0\.0\.1(:\d+)?$/.test(host);
+        if (!isLocal) {
+          return res.status(403).json({ error: "Dev admin login only allowed from localhost" });
+        }
+        const { getDevAdminUser } = await import("../db");
+        const { DEV_BYPASS_COOKIE_NAME } = await import("@shared/const");
+        const { getSessionCookieOptions } = await import("./cookies");
+        const devAdmin = await getDevAdminUser(process.env.DEV_ADMIN_EMAIL ?? null);
+        if (!devAdmin) {
+          return res.status(503).json({
+            error: "No dev admin user found. Set DEV_ADMIN_EMAIL or ensure at least one user has role admin.",
+          });
+        }
+        const userId = (devAdmin as { id: number }).id;
+        const cookieOpts = { ...getSessionCookieOptions(req), maxAge: 24 * 60 * 60, httpOnly: true, path: "/" };
+        res.cookie(DEV_BYPASS_COOKIE_NAME, String(userId), cookieOpts);
+        return res.json({ success: true });
+      } catch (err) {
+        return res.status(500).json({ error: (err as Error).message });
+      }
+    });
+  }
+
+  // Legacy OAuth callback deprecated — redirect to app login (Supabase Auth)
   app.get("/api/oauth/callback", (_req, res) => {
     res.redirect(302, "/login");
   });

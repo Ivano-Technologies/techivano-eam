@@ -13,12 +13,19 @@ function getHost(req: RequestLike): string {
   return (value ?? "").split(":")[0].trim().toLowerCase();
 }
 
-/** Allowed signup domains for the request's host (admin / nrcs subdomain or default). */
+/** Allowed signup domains. Main site techivano.com (and localhost) use NRCS; admin subdomain disabled. */
 export function getAllowedSignupDomainsForRequest(req?: RequestLike | null): string[] {
   if (!req) return ENV.allowedSignupDomains;
   const host = getHost(req);
   if (host === "admin.techivano.com") return ENV.allowedDomainsAdmin;
-  if (host === "nrcseam.techivano.com") return ENV.allowedDomainsNrcs;
+  const isMainSite =
+    host === "techivano.com" ||
+    host === "www.techivano.com" ||
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    host === "nrcseam.techivano.com";
+  if (isMainSite) return ENV.allowedDomainsNrcs;
   return ENV.allowedSignupDomains;
 }
 

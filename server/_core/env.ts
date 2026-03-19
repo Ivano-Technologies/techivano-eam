@@ -10,9 +10,10 @@ function booleanFromEnv(name: string, fallback: boolean) {
   return raw === "1" || raw.toLowerCase() === "true";
 }
 
-/** Public app URL for password reset links, magic links, QR codes (no trailing slash). */
+/** Public app URL for password reset links, magic links, QR codes (no trailing slash). Prefer APP_URL on server. */
 function appUrl(): string {
   const raw =
+    process.env.APP_URL ??
     process.env.VITE_APP_URL ??
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
   return raw.replace(/\/$/, "");
@@ -48,8 +49,13 @@ export function isGlobalOwnerEmail(email: string | null | undefined): boolean {
 export const ENV = {
   /** Base URL of the app (e.g. https://techivano.com). Used for reset links, magic links, QR. */
   appUrl: appUrl(),
-  appId: process.env.VITE_APP_ID ?? "",
+  appId: process.env.VITE_APP_ID ?? process.env.APP_ID ?? "",
   cookieSecret: process.env.JWT_SECRET ?? "",
+  /** Supabase project URL. Prefer SUPABASE_URL on server (VITE_* are build-time client vars). */
+  supabaseUrl: (process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, ""),
+  /** Supabase anon key for server-side auth client (e.g. dev-login). Prefer SUPABASE_ANON_KEY. */
+  supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY ?? "",
+  clerkSecretKey: process.env.CLERK_SECRET_KEY ?? "",
   supabaseJwtSecret: process.env.SUPABASE_JWT_SECRET ?? "",
   supabaseJwtIssuer: process.env.SUPABASE_JWT_ISSUER ?? "",
   supabaseJwtAudience: process.env.SUPABASE_JWT_AUDIENCE ?? "",
@@ -90,4 +96,7 @@ export const ENV = {
 
   /** Global owner emails (comma-separated). These accounts require password and 12+ char passwords; always elevated to owner. */
   globalOwnerEmails: globalOwnerEmails(),
+
+  /** Cloudflare Turnstile: secret key for server-side verification. When set, login/signup require a valid Turnstile token. */
+  turnstileSecretKey: process.env.TURNSTILE_SECRET_KEY ?? "",
 };
