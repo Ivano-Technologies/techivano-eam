@@ -57,10 +57,6 @@
       "command": "npx",
       "args": ["-y", "@playwright/mcp@latest"]
     },
-    "upstash": {
-      "command": "npx",
-      "args": ["-y", "@upstash/mcp-server@latest", "--email", "${UPSTASH_EMAIL}", "--api-key", "${UPSTASH_API_KEY}"]
-    },
     "firecrawl": {
       "command": "npx",
       "args": ["-y", "firecrawl-mcp"],
