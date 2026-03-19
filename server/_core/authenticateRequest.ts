@@ -68,14 +68,31 @@ export async function authenticateRequest(req: Request): Promise<User | null> {
 
   const token = getSessionToken(req);
   try {
-    if (token && looksLikeClerkJwt(token)) {
+    const hasToken = Boolean(token?.length);
+    const likeClerk = hasToken && looksLikeClerkJwt(token);
+    const likeSupabase = hasToken && looksLikeSupabaseJwt(token);
+    // #region agent log
+    fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f9971d" },
+      body: JSON.stringify({
+        sessionId: "f9971d",
+        location: "authenticateRequest.ts:auth-branch",
+        message: "auth token check",
+        data: { hasToken, likeClerk, likeSupabase },
+        timestamp: Date.now(),
+        hypothesisId: "H1",
+      }),
+    }).catch(() => {});
+    // #endregion
+    if (token && likeClerk) {
       const user = await getUserFromClerkToken(token);
       if (user) {
         logAuthMetrics("clerk", user as User, performance.now() - start);
         return user as User;
       }
     }
-    if (token && looksLikeSupabaseJwt(token)) {
+    if (token && likeSupabase) {
       const user = await getUserFromSupabaseToken(token);
       if (user) {
         logAuthMetrics("supabase", user as User, performance.now() - start);
@@ -84,7 +101,7 @@ export async function authenticateRequest(req: Request): Promise<User | null> {
     }
     logAuthMetrics("none", null, performance.now() - start);
     return null;
-  } catch {
+  } catch (err) {
     logAuthMetrics("none", null, performance.now() - start);
     return null;
   }

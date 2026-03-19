@@ -105,6 +105,7 @@ export async function getUserFromClerkToken(token: string | undefined | null): P
 
 export function looksLikeClerkJwt(token: string | undefined | null): boolean {
   const payload = token ? decodePayload(token) : null;
-  return Boolean(payload && typeof payload.sub === "string" && typeof payload.iss === "string");
+  const iss = payload && typeof payload.iss === "string" ? payload.iss : "";
+  return Boolean(payload && typeof payload.sub === "string" && iss.includes("clerk"));
 }
 

@@ -247,6 +247,20 @@ async function startServer() {
     app.post("/api/dev-login", async (req, res) => {
       const email = e2eEmail;
       const password = e2ePassword;
+      // #region agent log
+      fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f9971d" },
+        body: JSON.stringify({
+          sessionId: "f9971d",
+          location: "index.ts:dev-login-entry",
+          message: "dev-login called",
+          data: { hasSupabaseUrl: Boolean(ENV.supabaseUrl), hasAnonKey: Boolean(ENV.supabaseAnonKey) },
+          timestamp: Date.now(),
+          hypothesisId: "H2",
+        }),
+      }).catch(() => {});
+      // #endregion
       try {
         const { createClient } = await import("@supabase/supabase-js");
         const sb = createClient(ENV.supabaseUrl, ENV.supabaseAnonKey);
@@ -303,6 +317,21 @@ async function startServer() {
         const cookieOpts = getAuthSessionCookieOptions(req, { rememberMe: true });
 
         res.cookie(COOKIE_NAME, accessToken, cookieOpts);
+
+        // #region agent log
+        fetch("http://127.0.0.1:7731/ingest/be035081-9291-42da-b573-2615178ac1de", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f9971d" },
+          body: JSON.stringify({
+            sessionId: "f9971d",
+            location: "index.ts:dev-login-success",
+            message: "dev-login cookie set",
+            data: { userId: (user as Record<string, unknown>).id },
+            timestamp: Date.now(),
+            hypothesisId: "H2",
+          }),
+        }).catch(() => {});
+        // #endregion
 
         const supabaseUserId = (user as Record<string, unknown>).supabaseUserId;
         if (typeof supabaseUserId === "string") {
