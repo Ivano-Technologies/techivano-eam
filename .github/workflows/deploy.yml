@@ -1,6 +1,6 @@
 # Single Vercel project: push to main → run unit tests + smoke + auth E2E → deploy once → all domains updated.
 # Domains: admin.techivano.com, nrcseam.techivano.com, techivano.com (host-based routing in app).
-# Requires: VERCEL_TOKEN; E2E/Supabase secrets for test job.
+# Requires: VERCEL_TOKEN; Redis service + REDIS_URL; CLERK_* for /login E2E; Supabase + DATABASE + E2E creds.
 name: Techivano Auto Deploy
 
 on:
@@ -15,7 +15,16 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
+
     env:
+      REDIS_URL: redis://127.0.0.1:6379
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
