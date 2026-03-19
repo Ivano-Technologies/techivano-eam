@@ -1,11 +1,10 @@
 /**
- * Supabase Auth callback — PKCE-only flow.
- * Supabase redirects here with ?code=... (magic link). We exchange code for session,
- * set app cookie via tRPC, then redirect. No hash or legacy paths.
+ * Clerk OAuth/email-link callback.
+ * Clerk completes the auth redirect; then we sync an app session cookie via auth.setSession.
  */
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { supabase } from "@/lib/supabase";
+import { AuthenticateWithRedirectCallback, useAuth } from "@clerk/clerk-react";
 import { trpc } from "@/lib/trpc";
 import { AuthPageLayout, AuthLogo, AuthFooter } from "@/components/AuthPageLayout";
 import { useAuthBranding } from "@/hooks/useAuthBranding";
@@ -21,6 +20,8 @@ function messageFromError(e: unknown): string {
 }
 
 export default function AuthCallback() {
+  const rememberMe = true;
+  const { isLoaded, isSignedIn, getToken } = useAuth();
   const branding = useAuthBranding();
   const [, setLocation] = useLocation();
   const [error, setError] = useState<string | null>(null);
@@ -30,58 +31,17 @@ export default function AuthCallback() {
     let cancelled = false;
 
     async function run() {
-      // Supabase can send errors/code in query (?...) or hash (#...) depending on flow
-      const queryParams = new URLSearchParams(window.location.search);
-      const hashParams = new URLSearchParams(window.location.hash.slice(1));
-      const get = (key: string) => queryParams.get(key) ?? hashParams.get(key);
-      const code = get("code");
-      const rememberMe = get("remember") !== "0";
-
-      const errDesc = get("error_description") || get("error");
-      const errCode = get("error_code");
-      if (errDesc || get("error")) {
-        const text = errDesc ? decodeURIComponent(errDesc.replace(/\+/g, " ")) : "Sign-in failed.";
-        const friendly =
-          errCode === "otp_expired"
-            ? "This magic link has expired. Please request a new one."
-            : text;
-        if (!cancelled) {
-          setError(friendly);
-          window.history.replaceState(null, "", window.location.pathname);
-        }
-        return;
-      }
-
-      // Prefer PKCE code exchange; fallback to access_token in hash (implicit flow, e.g. link opened in different browser)
-      let token: string | null = null;
-      if (code) {
-        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (cancelled) return;
-        if (exchangeError) {
-          setError(exchangeError.message);
-          return;
-        }
-        token = data?.session?.access_token ?? null;
-      } else {
-        const accessTokenFromHash = hashParams.get("access_token");
-        if (accessTokenFromHash) {
-          token = accessTokenFromHash;
-        }
-      }
-
-      if (!token) {
-        if (!cancelled) {
-          setError(
-            "No sign-in code received. Open the link from your email in the same browser where you requested it, or request a new link."
-          );
-        }
-        return;
-      }
+      if (!isLoaded) return;
+      if (!isSignedIn) return;
 
       try {
+        const token = await getToken();
+        if (!token) {
+          setError("No session token returned by Clerk.");
+          return;
+        }
         const result = await setSession.mutateAsync({ accessToken: token, rememberMe });
         if (cancelled) return;
-        window.history.replaceState(null, "", window.location.pathname);
         const r = result as { requiresPasswordSetup?: boolean; mandatoryForOwner?: boolean };
         if (r.requiresPasswordSetup) {
           const q = r.mandatoryForOwner ? "?from=oauth&mandatory=1" : "?from=oauth";
@@ -94,8 +54,8 @@ export default function AuthCallback() {
       }
     }
 
-    run();
-  }, [setLocation]);
+    void run();
+  }, [getToken, isLoaded, isSignedIn, setLocation, setSession]);
 
   if (error) {
     return (
@@ -124,6 +84,7 @@ export default function AuthCallback() {
       <div className="flex justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden />
       </div>
+      <AuthenticateWithRedirectCallback signInFallbackRedirectUrl="/login" />
     </AuthPageLayout>
   );
 }

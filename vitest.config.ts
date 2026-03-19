@@ -13,11 +13,19 @@ if (!process.env.APP_SECRET || process.env.APP_SECRET.length < 32) {
   process.env.APP_SECRET = "test_app_secret_32_chars_minimum_key";
 }
 const databaseUrl = process.env.DATABASE_URL?.trim();
-const hasDatabase = Boolean(
+const looksLikePostgresUrl =
   databaseUrl &&
-    !databaseUrl.includes("YOUR_PROJECT_REF") &&
-    !databaseUrl.includes("YOUR_PASSWORD"),
-);
+  /^postgres(ql)?:\/\//i.test(databaseUrl) &&
+  !databaseUrl.includes("YOUR_PROJECT_REF") &&
+  !databaseUrl.includes("YOUR_PASSWORD");
+let hasDatabase = Boolean(looksLikePostgresUrl);
+if (hasDatabase && databaseUrl) {
+  try {
+    new URL(databaseUrl.replace(/^postgres:/, "http:").replace(/^postgresql:/, "http:"));
+  } catch {
+    hasDatabase = false;
+  }
+}
 const dbRequiredTests = [
   "server/auth.password.test.ts",
   "server/auth.passwordReset.test.ts",

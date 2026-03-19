@@ -55,6 +55,7 @@ export const ENV = {
   supabaseUrl: (process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, ""),
   /** Supabase anon key for server-side auth client (e.g. dev-login). Prefer SUPABASE_ANON_KEY. */
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY ?? "",
+  clerkSecretKey: process.env.CLERK_SECRET_KEY ?? "",
   supabaseJwtSecret: process.env.SUPABASE_JWT_SECRET ?? "",
   supabaseJwtIssuer: process.env.SUPABASE_JWT_ISSUER ?? "",
   supabaseJwtAudience: process.env.SUPABASE_JWT_AUDIENCE ?? "",

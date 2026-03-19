@@ -79,4 +79,11 @@ Optional: `SUPABASE_JWT_ISSUER`, `SUPABASE_JWT_AUDIENCE` for stricter JWT claim 
 - **Session verification:** `server/_core/supabaseAuth.ts` — HS256 with `SUPABASE_JWT_SECRET`, then JWKS from `SUPABASE_URL` if needed.
 - **Cookie and auth:** `server/_core/authenticateRequest.ts` reads `app_session_id` or `Authorization: Bearer`; `server/routers/auth.ts` sets the cookie in `setSession`.
 
+---
+
+## 6. Clerk signup and instant sign-in
+
+- **After registration:** The app does not keep users on the signup page for verification. If Clerk returns a non-complete status (e.g. email verification required), the user is **redirected to `/login?registered=1`**. The login page shows: “Account created. Please sign in.”
+- **Disable email verification in Clerk:** To allow instant sign-in right after signup (no redirect to login), in [Clerk Dashboard](https://dashboard.clerk.com) go to **User & Authentication → Email, Phone, Username** and turn off **“Verify email address”** (or equivalent) so sign-up completes with `status === "complete"` and the user is signed in and sent to `/`.
+
 For full architecture and audit details, see **docs/SUPABASE_AUTH_AUDIT.md**.

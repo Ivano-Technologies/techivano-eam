@@ -1,26 +1,24 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { Link } from "wouter";
+import { useAuth, useSignIn } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ButtonLoader } from "@/components/ButtonLoader";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
-import { supabase } from "@/lib/supabase";
 import { env } from "@/lib/env";
 import { trpc } from "@/lib/trpc";
 import { AuthPageLayout, AuthLogo, AuthFooter } from "@/components/AuthPageLayout";
 import { useAuthBranding } from "@/hooks/useAuthBranding";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const useSupabaseAuth = typeof supabaseUrl === "string" && supabaseUrl.length > 0;
-
-const AUTH_CALLBACK_PATH = "/auth/callback";
 type OAuthProvider = "google" | "azure";
 
 const turnstileSiteKey = env.TURNSTILE_SITE_KEY?.trim() ?? "";
 
 export default function Login() {
+  const { isLoaded, signIn, setActive } = useSignIn();
+  const { getToken } = useAuth();
   const branding = useAuthBranding();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,8 +28,33 @@ export default function Login() {
   const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [showDevAdminButton, setShowDevAdminButton] = useState(false);
+  const [devAdminLoading, setDevAdminLoading] = useState(false);
   const verifyTurnstile = trpc.auth.verifyTurnstile.useMutation();
   const setSession = trpc.auth.setSession.useMutation();
+
+  // Dev-only: show "Open admin dashboard" when running on system hostname GM AMPD
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    fetch("/api/dev-hostname")
+      .then((r) => r.json())
+      .then((data: { hostname?: string }) => {
+        const hostname = (data.hostname ?? "").trim();
+        if (hostname.toUpperCase() === "GM AMPD") setShowDevAdminButton(true);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Show success message when redirected after registration (no verification step)
+  useEffect(() => {
+    const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+    if (params.get("registered") === "1") {
+      setMessage({ type: "success", text: "Account created. Please sign in." });
+      const url = new URL(window.location.href);
+      url.searchParams.delete("registered");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    }
+  }, []);
 
   const ensureTurnstileVerified = async (): Promise<boolean> => {
     if (!turnstileSiteKey) return true;
@@ -49,22 +72,17 @@ export default function Login() {
   };
 
   const handleOAuthSignIn = async (provider: OAuthProvider) => {
-    if (!useSupabaseAuth) return;
+    if (!isLoaded || !signIn) return;
     setMessage(null);
     if (!(await ensureTurnstileVerified())) return;
     setOauthLoading(provider);
     try {
-      const redirectTo = `${window.location.origin}${AUTH_CALLBACK_PATH}`;
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo },
+      const strategy = provider === "google" ? "oauth_google" : "oauth_microsoft";
+      await signIn.authenticateWithRedirect({
+        strategy,
+        redirectUrl: `${window.location.origin}/auth/callback`,
+        redirectUrlComplete: `${window.location.origin}/`,
       });
-      if (error) {
-        setMessage({ type: "error", text: error.message });
-        setOauthLoading(null);
-        return;
-      }
-      // Supabase redirects the browser; no further action here
     } catch (err) {
       setMessage({
         type: "error",
@@ -76,24 +94,23 @@ export default function Login() {
 
   const handleSignInWithPassword = async (e: FormEvent) => {
     e.preventDefault();
-    if (!useSupabaseAuth || !email.trim() || !password) return;
+    if (!isLoaded || !signIn || !email.trim() || !password) return;
     setMessage(null);
     if (!(await ensureTurnstileVerified())) return;
     setPasswordLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+      const result = await signIn.create({
+        identifier: email.trim(),
         password,
       });
-      if (error) {
-        setMessage({ type: "error", text: error.message });
-        setPasswordLoading(false);
+      if (result.status !== "complete" || !result.createdSessionId) {
+        setMessage({ type: "error", text: "Additional verification required. Please continue in Clerk flow." });
         return;
       }
-      const token = data?.session?.access_token;
+      await setActive({ session: result.createdSessionId });
+      const token = await getToken();
       if (!token) {
         setMessage({ type: "error", text: "Sign-in succeeded but no session. Please try again." });
-        setPasswordLoading(false);
         return;
       }
       await setSession.mutateAsync({ accessToken: token, rememberMe: true });
@@ -109,20 +126,19 @@ export default function Login() {
   };
 
   const sendMagicLink = async () => {
-    if (!useSupabaseAuth || !email.trim()) return;
+    if (!isLoaded || !signIn || !email.trim()) return;
     setMessage(null);
     if (!(await ensureTurnstileVerified())) return;
     setLoading(true);
     try {
-      const redirectTo = `${window.location.origin}/auth/callback`;
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: { emailRedirectTo: redirectTo },
+      // Clerk email-link sign-in (magic link)
+      await (signIn as unknown as {
+        create: (params: Record<string, unknown>) => Promise<unknown>;
+      }).create({
+        strategy: "email_link",
+        identifier: email.trim(),
+        redirectUrl: `${window.location.origin}/auth/callback`,
       });
-      if (error) {
-        setMessage({ type: "error", text: error.message });
-        return;
-      }
       setSent(true);
     } catch (err) {
       setMessage({
@@ -137,6 +153,23 @@ export default function Login() {
   const handleSendMagicLink = (e: FormEvent) => {
     e.preventDefault();
     void sendMagicLink();
+  };
+
+  const handleDevAdminLogin = async () => {
+    setDevAdminLoading(true);
+    try {
+      const res = await fetch("/api/dev-admin-login", { method: "POST", credentials: "include" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage({ type: "error", text: (data as { error?: string }).error ?? "Dev admin login failed." });
+        return;
+      }
+      window.location.href = "/";
+    } catch {
+      setMessage({ type: "error", text: "Dev admin login failed." });
+    } finally {
+      setDevAdminLoading(false);
+    }
   };
 
   const formColor = "#252525";
@@ -199,7 +232,7 @@ export default function Login() {
               variant="outline"
               className="w-full border-white/20 text-white hover:bg-white/10 hover:text-white"
               style={{ backgroundColor: formColor }}
-              disabled={!useSupabaseAuth || oauthLoading !== null || (!!turnstileSiteKey && !turnstileToken)}
+              disabled={!isLoaded || oauthLoading !== null || (!!turnstileSiteKey && !turnstileToken)}
               onClick={() => handleOAuthSignIn("google")}
             >
               {oauthLoading === "google" ? (
@@ -219,7 +252,7 @@ export default function Login() {
               variant="outline"
               className="w-full border-white/20 text-white hover:bg-white/10 hover:text-white"
               style={{ backgroundColor: formColor }}
-              disabled={!useSupabaseAuth || oauthLoading !== null || (!!turnstileSiteKey && !turnstileToken)}
+              disabled={!isLoaded || oauthLoading !== null || (!!turnstileSiteKey && !turnstileToken)}
               onClick={() => handleOAuthSignIn("azure")}
             >
               {oauthLoading === "azure" ? (
@@ -274,7 +307,7 @@ export default function Login() {
               type="submit"
               className="w-full text-white font-medium hover:opacity-90 text-xs"
               style={{ backgroundColor: formColor, borderColor: buttonBorder, borderWidth: 1 }}
-              disabled={passwordLoading || loading || !useSupabaseAuth || (!!turnstileSiteKey && !turnstileToken)}
+              disabled={passwordLoading || loading || !isLoaded || (!!turnstileSiteKey && !turnstileToken)}
             >
               {passwordLoading ? (
                 <>
@@ -288,7 +321,7 @@ export default function Login() {
             <div className="flex items-center justify-between text-xs">
               <button
                 type="button"
-                className="underline text-[#9ca3af] hover:text-[#DC2626] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-transparent border-0 p-0 cursor-pointer font-inherit text-inherit underline text-[#9ca3af] hover:text-[#DC2626] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => {
                   if (!loading && !passwordLoading) void sendMagicLink();
                 }}
@@ -316,6 +349,24 @@ export default function Login() {
               </Link>
             </div>
           </form>
+        </div>
+      )}
+      {showDevAdminButton && (
+        <div className="mt-6 pt-4 border-t border-white/10">
+          <p className="text-center text-xs mb-2" style={{ color: textMuted }}>
+            Dev only (GM AMPD)
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full border-amber-500/50 text-amber-400 hover:bg-amber-500/10"
+            disabled={devAdminLoading}
+            onClick={handleDevAdminLogin}
+          >
+            {devAdminLoading ? <ButtonLoader className="mr-2 h-4 w-4" /> : null}
+            Dev: Open admin dashboard (bypass auth)
+          </Button>
         </div>
       )}
     </AuthPageLayout>

@@ -164,6 +164,26 @@ export async function getAllUsers() {
   return await db.select().from(users).orderBy(desc(users.createdAt));
 }
 
+/** Dev-only: get an admin user for bypass login. Prefer DEV_ADMIN_EMAIL if set, else first admin. */
+export async function getDevAdminUser(devAdminEmail?: string | null) {
+  const database = getRootDb();
+  if (!database) return null;
+  if (devAdminEmail?.trim()) {
+    const byEmail = await database.select().from(users).where(eq(users.email, devAdminEmail.trim())).limit(1);
+    if (byEmail.length > 0) return byEmail[0];
+  }
+  const admins = await database.select().from(users).where(eq(users.role, "admin")).limit(1);
+  return admins.length > 0 ? admins[0] : null;
+}
+
+/** Get user by id using root DB (no tenant context). Used for dev bypass auth. */
+export async function getUserByIdRoot(id: number) {
+  const database = getRootDb();
+  if (!database) return null;
+  const result = await database.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
 export async function updateUserRole(userId: number, role: "admin" | "manager" | "technician" | "user") {
   const db = await getDb();
   if (!db) return null;

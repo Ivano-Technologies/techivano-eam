@@ -20,7 +20,9 @@ if (
 
 import { lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
+import { ClerkProvider } from "@clerk/clerk-react";
 import "./index.css";
+import { env } from "@/lib/env";
 
 const AppProviders = lazy(() => import("./providers/AppProviders"));
 
@@ -52,7 +54,13 @@ if (!rootEl) {
   }
   createRoot(rootEl).render(
     <Suspense fallback={<AppLoader />}>
-      <AppProviders />
+      <ClerkProvider
+        publishableKey={env.CLERK_PUBLISHABLE_KEY}
+        signInFallbackRedirectUrl="/"
+        signUpFallbackRedirectUrl="/"
+      >
+        <AppProviders />
+      </ClerkProvider>
     </Suspense>
   );
 }

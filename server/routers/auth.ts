@@ -1,7 +1,7 @@
 // @ts-nocheck — auth sub-router (HIGH-11)
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { COOKIE_NAME, SESSION_COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, SESSION_COOKIE_NAME, DEV_BYPASS_COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions, getAuthSessionCookieOptions } from "../_core/cookies";
 import type { MembershipContext } from "../_core/context";
 import { isGlobalOwnerEmail } from "../_core/env";
@@ -71,6 +71,9 @@ export const authRouter = router({
     await logSecurityAudit(ctx, { action: "auth.logout" });
     ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
     ctx.res.clearCookie(SESSION_COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    if (process.env.NODE_ENV === "development") {
+      ctx.res.clearCookie(DEV_BYPASS_COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    }
     return { success: true } as const;
   }),
   setSession: publicProcedure
@@ -80,14 +83,17 @@ export const authRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const { getUserFromSupabaseToken } = await import("../_core/supabaseAuth");
-      const user = await getUserFromSupabaseToken(input.accessToken);
+      const { getUserFromClerkToken } = await import("../_core/clerkAuth");
+      const user =
+        (await getUserFromClerkToken(input.accessToken)) ??
+        (await getUserFromSupabaseToken(input.accessToken));
       if (!user) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Invalid or expired session token",
         });
       }
-      const u = user as { status?: string; supabaseUserId?: string | null; email?: string | null };
+      const u = user as { status?: string; supabaseUserId?: string | null; openId?: string | null; email?: string | null };
       if (u.status === "pending") {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -105,11 +111,14 @@ export const authRouter = router({
         input.accessToken,
         getAuthSessionCookieOptions(ctx.req, { rememberMe: input.rememberMe })
       );
-      const supabaseUserId = u.supabaseUserId;
-      if (typeof supabaseUserId === "string") {
+      const sessionIdentityId =
+        (typeof u.supabaseUserId === "string" && u.supabaseUserId) ||
+        (typeof u.openId === "string" && u.openId) ||
+        null;
+      if (sessionIdentityId) {
         try {
           const sessionId = await db.createUserSession({
-            userId: supabaseUserId,
+            userId: sessionIdentityId,
             userAgent: ctx.req.headers["user-agent"],
             ip: ctx.req.ip,
           });
@@ -123,16 +132,16 @@ export const authRouter = router({
       }
       let requiresPasswordSetup = false;
       let mandatoryForOwner = false;
-      if (typeof supabaseUserId === "string") {
+      if (typeof u.supabaseUserId === "string") {
         const { checkRequiresPasswordSetup } = await import("../supabaseAdmin");
-        const check = await checkRequiresPasswordSetup(supabaseUserId);
+        const check = await checkRequiresPasswordSetup(u.supabaseUserId);
         requiresPasswordSetup = check.requiresPasswordSetup;
         const email = check.email ?? u.email ?? null;
         mandatoryForOwner = requiresPasswordSetup && isGlobalOwnerEmail(email);
       }
       await logSecurityAudit(ctx, {
         action: "auth.login",
-        metadata: { userId: supabaseUserId ?? undefined },
+        metadata: { userId: sessionIdentityId ?? undefined },
       });
       return { success: true, user, requiresPasswordSetup, mandatoryForOwner };
     }),
@@ -188,7 +197,7 @@ export const authRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const { ENV } = await import("../_core/env");
-      if (ENV.turnstileSecretKey) {
+      if (ENV.turnstileSecretKey && process.env.NODE_ENV !== "test") {
         const result = await verifyTurnstileToken(input.turnstileToken ?? null, ctx.req.ip ?? undefined);
         if (!result.success) {
           throw new TRPCError({

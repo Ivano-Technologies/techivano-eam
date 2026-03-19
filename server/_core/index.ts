@@ -326,6 +326,38 @@ async function startServer() {
     });
   }
 
+  // Dev-only: bypass auth and open admin dashboard (hostname GM AMPD; only in development).
+  if (process.env.NODE_ENV === "development") {
+    app.get("/api/dev-hostname", (_req, res) => {
+      const os = require("node:os");
+      res.json({ hostname: os.hostname() });
+    });
+    app.post("/api/dev-admin-login", async (req, res) => {
+      try {
+        const host = req.get("host") ?? "";
+        const isLocal = /^localhost(:\d+)?$/i.test(host) || /^127\.0\.0\.1(:\d+)?$/.test(host);
+        if (!isLocal) {
+          return res.status(403).json({ error: "Dev admin login only allowed from localhost" });
+        }
+        const { getDevAdminUser } = await import("../db");
+        const { DEV_BYPASS_COOKIE_NAME } = await import("@shared/const");
+        const { getSessionCookieOptions } = await import("./cookies");
+        const devAdmin = await getDevAdminUser(process.env.DEV_ADMIN_EMAIL ?? null);
+        if (!devAdmin) {
+          return res.status(503).json({
+            error: "No dev admin user found. Set DEV_ADMIN_EMAIL or ensure at least one user has role admin.",
+          });
+        }
+        const userId = (devAdmin as { id: number }).id;
+        const cookieOpts = { ...getSessionCookieOptions(req), maxAge: 24 * 60 * 60, httpOnly: true, path: "/" };
+        res.cookie(DEV_BYPASS_COOKIE_NAME, String(userId), cookieOpts);
+        return res.json({ success: true });
+      } catch (err) {
+        return res.status(500).json({ error: (err as Error).message });
+      }
+    });
+  }
+
   // Legacy OAuth callback deprecated — redirect to app login (Supabase Auth)
   app.get("/api/oauth/callback", (_req, res) => {
     res.redirect(302, "/login");

@@ -36,6 +36,16 @@ export function useAuth(options?: UseAuthOptions) {
       }
       throw error;
     } finally {
+      if (typeof window !== "undefined") {
+        const clerk = (window as Window & { Clerk?: { signOut: () => Promise<void> } }).Clerk;
+        if (clerk?.signOut) {
+          try {
+            await clerk.signOut();
+          } catch {
+            // ignore sign-out sync errors
+          }
+        }
+      }
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
     }
