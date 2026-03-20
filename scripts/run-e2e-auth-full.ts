@@ -32,7 +32,7 @@ async function main() {
     console.error("[e2e] seed-org-data failed (non-fatal, continuing)");
   }
 
-  // Auth E2E only: dev-login + session injection. RBAC specs use UI login (Clerk); run separately when Clerk E2E user is seeded.
+  // Auth E2E only: dev-login + session injection.
   console.log("[e2e] Running Playwright (auth only)...");
   const specs = ["tests/e2e/auth.spec.ts"];
   const playwright = spawnSync("pnpm", ["exec", "playwright", "test", ...specs], {
