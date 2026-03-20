@@ -196,16 +196,6 @@ export async function getPendingTransferRequests() {
     .orderBy(asc(assetTransfers.requestDate));
 }
 
-
-export async function getPendingTransferRequests() {
-  const db = await getDb();
-  if (!db) return [];
-  
-  return await db.select().from(assetTransfers)
-    .where(eq(assetTransfers.status, 'pending'))
-    .orderBy(asc(assetTransfers.requestDate));
-}
-
 export async function getAssetByTag(assetTag: string) {
   const db = await getDb();
   if (!db) return undefined;
