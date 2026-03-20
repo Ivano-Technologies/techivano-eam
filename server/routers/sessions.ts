@@ -57,9 +57,20 @@ export const sessionsRouter = router({
       });
     }
     const cookieOptions = getSessionCookieOptions(ctx.req);
-    ctx.res.clearCookie(SESSION_COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    const clearSession = `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${
+      cookieOptions.secure ? "; Secure" : ""
+    }`;
     const { COOKIE_NAME } = await import("@shared/const");
-    ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    const clearAuth = `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${
+      cookieOptions.secure ? "; Secure" : ""
+    }`;
+    const existingCookies = ctx.res.getHeader("Set-Cookie");
+    const updatedCookies = Array.isArray(existingCookies)
+      ? [...existingCookies.map(String), clearSession, clearAuth]
+      : existingCookies
+        ? [String(existingCookies), clearSession, clearAuth]
+        : [clearSession, clearAuth];
+    ctx.res.setHeader("Set-Cookie", updatedCookies);
     return { success: true };
   }),
 });

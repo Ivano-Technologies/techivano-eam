@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,11 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { CheckAnimation } from "@/components/CheckAnimation";
+import { uploadPhotoFile } from "@/lib/photoUploads";
 
 export default function WorkOrderDetail() {
   const [, params] = useRoute("/work-orders/:id");
   const [, setLocation] = useLocation();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const workOrderId = params?.id ? Number(params.id) : 0;
   const { data: rawWorkOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({ id: workOrderId });
@@ -36,8 +39,30 @@ export default function WorkOrderDetail() {
       refetch();
     },
   });
+  const createPhotoMutation = trpc.photos.create.useMutation();
 
   const [editForm, setEditForm] = useState({ status: "", completionNotes: "" });
+
+  const handleWorkOrderPhotoUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      const uploaded = await uploadPhotoFile(file, "inspection-images");
+      await createPhotoMutation.mutateAsync({
+        workOrderId,
+        photoUrl: uploaded.fileUrl,
+        photoKey: uploaded.fileKey,
+      });
+      toast.success("Photo uploaded");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Photo upload failed");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   const handleEdit = () => {
     if (workOrder) {
@@ -102,10 +127,22 @@ export default function WorkOrderDetail() {
       {/* Floating Action Buttons - Mobile Only */}
       {isMobile && (workOrder.status ?? "") !== "completed" && (
         <FloatingActionGroup position="bottom-right">
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleWorkOrderPhotoUpload(file);
+              e.currentTarget.value = "";
+            }}
+          />
           <FloatingActionButton
             icon={<Camera className="h-6 w-6" />}
-            label="Add Photo"
-            onClick={() => toast.info("Photo upload coming soon")}
+            label={uploadingPhoto ? "Uploading..." : "Add Photo"}
+            onClick={() => photoInputRef.current?.click()}
             variant="secondary"
             size="default"
           />

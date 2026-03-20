@@ -3,8 +3,6 @@ import path from "path";
 import "dotenv/config";
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
-import { alias } from "./config/aliases";
-
 const templateRoot = path.resolve(import.meta.dirname);
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
   process.env.JWT_SECRET = "test_jwt_secret_32_characters_min_key";
@@ -43,14 +41,22 @@ export default defineConfig({
   root: templateRoot,
   resolve: {
     alias: {
-      ...alias,
+      // `@/*` is client/src (see tsconfig); some unit tests import shared libs under repo `src/lib`.
+      "@/lib/telemetry": path.resolve(templateRoot, "src/lib/telemetry"),
+      "@/lib/tenant": path.resolve(templateRoot, "src/lib/tenant"),
+      "@/lib/services": path.resolve(templateRoot, "src/lib/services"),
+      "@/lib/jobs": path.resolve(templateRoot, "src/lib/jobs"),
+      "@/lib/validation": path.resolve(templateRoot, "src/lib/validation"),
+      "@/modules": path.resolve(templateRoot, "src/modules"),
+      "@": path.resolve(templateRoot, "client/src"),
+      "@server": path.resolve(templateRoot, "server"),
       "@shared": path.resolve(templateRoot, "shared"),
       "@assets": path.resolve(templateRoot, "attached_assets"),
     },
   },
   test: {
     environment: "node",
-    include: ["server/**/*.test.ts", "server/**/*.spec.ts"],
+    include: ["server/**/*.test.ts", "server/**/*.spec.ts", "tests/**/*.test.ts"],
     exclude: hasDatabase ? [] : dbRequiredTests,
     setupFiles: hasDatabase ? ["server/test/bootstrapLegacyTables.ts"] : [],
     testTimeout: 15000,

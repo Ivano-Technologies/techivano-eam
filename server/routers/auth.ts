@@ -1,7 +1,12 @@
 // @ts-nocheck — auth sub-router (HIGH-11)
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { COOKIE_NAME, SESSION_COOKIE_NAME, DEV_BYPASS_COOKIE_NAME } from "@shared/const";
+import {
+  COOKIE_NAME,
+  SESSION_COOKIE_NAME,
+  DEV_BYPASS_COOKIE_NAME,
+  REFRESH_TOKEN_COOKIE_NAME,
+} from "@shared/const";
 import { getSessionCookieOptions, getAuthSessionCookieOptions } from "../_core/cookies";
 import type { MembershipContext } from "../_core/context";
 import { isGlobalOwnerEmail } from "../_core/env";
@@ -70,6 +75,7 @@ export const authRouter = router({
     }
     await logSecurityAudit(ctx, { action: "auth.logout" });
     ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    ctx.res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
     ctx.res.clearCookie(SESSION_COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
     if (process.env.NODE_ENV === "development") {
       ctx.res.clearCookie(DEV_BYPASS_COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -83,10 +89,7 @@ export const authRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const { getUserFromSupabaseToken } = await import("../_core/supabaseAuth");
-      const { getUserFromClerkToken } = await import("../_core/clerkAuth");
-      const user =
-        (await getUserFromClerkToken(input.accessToken)) ??
-        (await getUserFromSupabaseToken(input.accessToken));
+      const user = await getUserFromSupabaseToken(input.accessToken);
       if (!user) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -162,21 +165,15 @@ export const authRouter = router({
       const { createSignupRequest } = await import("../magicLinkAuth");
       return await createSignupRequest(input.email, input.name);
     }),
-  /** @deprecated Prefer client-side Supabase magic link (signInWithOtp) on the login page. This sends an app-generated link; verification no longer sets a session cookie (Option A). */
+  /** Legacy route disabled: Supabase signInWithOtp is the only supported magic-link flow. */
   requestMagicLink: publicProcedure
     .input(z.object({ email: z.string().email() }))
-    .mutation(async ({ input }) => {
-      const user = await db.getUserByEmail(input.email);
-      if (!user) {
-        return { success: false, message: "No account found with this email" };
-      }
-      const { createMagicLinkToken, sendMagicLink } = await import("../magicLinkAuth");
-      const token = await createMagicLinkToken(user.id);
-      const sent = await sendMagicLink(input.email, token);
-      if (sent) {
-        return { success: true, message: "Magic link sent to your email" };
-      }
-      return { success: false, message: "Failed to send magic link" };
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message:
+          "Legacy magic-link flow is disabled. Use Supabase passwordless sign-in from the login page.",
+      });
     }),
   signupWithPassword: publicProcedure
     .input(z.object({

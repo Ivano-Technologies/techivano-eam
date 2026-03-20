@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { router } from "../_core/trpc";
 import { managerProcedure, viewerProcedure } from "./_shared";
-import * as db from "../db";
+import * as workOrdersDb from "../db/workorders";
 import * as notificationHelper from "../notificationHelper";
 
 export const workOrdersRouter = router({
@@ -17,7 +17,7 @@ export const workOrdersRouter = router({
         .optional()
     )
     .query(async ({ input, ctx }) => {
-      return await db.getAllWorkOrders({
+      return await workOrdersDb.getAllWorkOrders({
         ...input,
         organizationId: ctx.organizationId ?? undefined,
       });
@@ -25,14 +25,14 @@ export const workOrdersRouter = router({
   getById: viewerProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
-      return await db.getWorkOrderById(input.id);
+      return await workOrdersDb.getWorkOrderById(input.id);
     }),
   getByAssetId: viewerProcedure
     .input(z.object({ assetId: z.number() }))
     .query(async ({ input }) => {
       const [workOrders, summary] = await Promise.all([
-        db.getWorkOrdersByAssetId(input.assetId),
-        db.getMaintenanceSummary(input.assetId),
+        workOrdersDb.getWorkOrdersByAssetId(input.assetId),
+        workOrdersDb.getMaintenanceSummary(input.assetId),
       ]);
       return { workOrders, summary };
     }),
@@ -55,12 +55,12 @@ export const workOrdersRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const workOrder = await db.createWorkOrder({
+      const workOrder = await workOrdersDb.createWorkOrder({
         ...input,
         requestedBy: ctx.user.id,
         organizationId: ctx.organizationId ?? undefined,
       });
-      await db.createAuditLog({
+      await workOrdersDb.createAuditLog({
         userId: ctx.user.id,
         action: "create_work_order",
         entityType: "work_order",
@@ -106,15 +106,15 @@ export const workOrdersRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;
-      const existingWorkOrder = await db.getWorkOrderById(id);
-      await db.createAuditLog({
+      const existingWorkOrder = await workOrdersDb.getWorkOrderById(id);
+      await workOrdersDb.createAuditLog({
         userId: ctx.user.id,
         action: "update_work_order",
         entityType: "work_order",
         entityId: id,
         changes: JSON.stringify(data),
       });
-      const result = await db.updateWorkOrder(id, data);
+      const result = await workOrdersDb.updateWorkOrder(id, data);
       if (
         data.status === "completed" &&
         existingWorkOrder?.status !== "completed"

@@ -4,7 +4,6 @@ import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions, getAuthSessionCookieOptions } from "./_core/cookies";
 import { invalidateUserCache } from "./_core/userCache";
-import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { adminProcedure, managerOrAdminProcedure, viewerProcedure } from "./routers/_shared";
 import * as db from "./db";
@@ -38,18 +37,7 @@ import {
   vendorIntelligenceService,
   warehouseIntelligenceService
 } from "./modules";
-import { authRouter } from "./routers/auth";
-import { adminImpersonationRouter } from "./routers/adminImpersonation";
-import { sessionsRouter } from "./routers/sessions";
-import { sitesRouter } from "./routers/sites";
-import { assetsRouter } from "./routers/assets";
-import { workOrdersRouter } from "./routers/workOrders";
-import { usersRouter } from "./routers/users";
-import { assetCategoriesRouter } from "./routers/assetCategories";
-import { nrcsRouter } from "./routers/nrcs";
-import { dashboardRouter } from "./routers/dashboard";
-import { maintenanceRouter } from "./routers/maintenance";
-import { inventoryRouter } from "./routers/inventory";
+import { modularRouters } from "./routers/root";
 
 function resolveTenantIdFromContext(ctx: { tenantId: number | null; organizationId: string | null }) {
   void analyticsService;
@@ -79,30 +67,7 @@ function resolveTenantIdFromContext(ctx: { tenantId: number | null; organization
 }
 
 export const appRouter = router({
-  system: systemRouter,
-  auth: authRouter,
-  impersonation: adminImpersonationRouter,
-  sessions: sessionsRouter,
-
-  // ============= SITES MANAGEMENT =============
-  sites: sitesRouter,
-
-  // ============= ASSET CATEGORIES =============
-  assetCategories: assetCategoriesRouter,
-
-  // ============= NRCS REFERENCE DATA =============
-  nrcs: nrcsRouter,
-
-  // ============= ASSETS MANAGEMENT =============
-  assets: assetsRouter,
-
-  workOrders: workOrdersRouter,
-
-  // ============= MAINTENANCE SCHEDULES =============
-  maintenance: maintenanceRouter,
-
-  // ============= INVENTORY =============
-  inventory: inventoryRouter,
+  ...modularRouters,
 
   warehouseV1: router({
     rebalance: managerOrAdminProcedure
@@ -600,12 +565,6 @@ export const appRouter = router({
         return await db.updateComplianceRecord(id, data);
       }),
   }),
-
-  // ============= DASHBOARD =============
-  dashboard: dashboardRouter,
-
-  // ============= USERS MANAGEMENT =============
-  users: usersRouter,
 
   // ============= NOTIFICATIONS =============
   notifications: router({

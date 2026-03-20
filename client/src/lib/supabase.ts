@@ -1,4 +1,5 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js"
+import { createBrowserClient } from "@supabase/auth-helpers-react"
+import type { SupabaseClient } from "@supabase/supabase-js"
 import { env } from "./env"
 
 // Use placeholder when vars missing so the app (and login page) loads without throwing.
@@ -8,7 +9,7 @@ const key = env.SUPABASE_ANON_KEY || "placeholder-anon-key"
 
 // PKCE flow is required so magic link and OAuth redirects include ?code=... for exchangeCodeForSession.
 // Without flowType: 'pkce', Supabase may redirect without the code, causing "No sign-in code received".
-export const supabase: SupabaseClient = createClient(url, key, {
+export const supabase: SupabaseClient = createBrowserClient(url, key, {
   auth: {
     flowType: "pkce",
     detectSessionInUrl: false, // we handle the callback manually in AuthCallback

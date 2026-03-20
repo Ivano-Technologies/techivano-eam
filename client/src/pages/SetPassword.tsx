@@ -10,7 +10,7 @@ export default function SetPassword() {
       variant="authDark"
       icon={<AuthLogo branding={branding} />}
       title="Set password"
-      description="Password management is now handled by Clerk. Use the Sign in page for account recovery and password updates."
+      description="Password management is handled via Supabase Auth and the sign-in flow."
       footer={<AuthFooter branding={branding} />}
     >
       <div className="text-center text-xs" style={{ color: "#9ca3af" }}>

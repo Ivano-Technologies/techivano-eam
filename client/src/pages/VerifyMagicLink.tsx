@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 import { AuthPageLayout, AuthLogo, AuthFooter } from "@/components/AuthPageLayout";
 import { useAuthBranding } from "@/hooks/useAuthBranding";
@@ -8,7 +7,6 @@ import { Link } from "wouter";
 
 export default function VerifyMagicLink() {
   const branding = useAuthBranding();
-  const [, setLocation] = useLocation();
   const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
   const [message, setMessage] = useState("");
 
@@ -22,23 +20,23 @@ export default function VerifyMagicLink() {
       return;
     }
 
-    fetch(`/api/auth/verify-magic-link?token=${token}`, {
+    fetch("/api/auth/verify-magic-link", {
       method: "POST",
       credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
     })
       .then((res) => res.json().catch(() => ({})))
       .then((data) => {
-        if (data.success) {
+        if (data.success && typeof data.redirectTo === "string" && data.redirectTo) {
           setStatus("success");
-          setMessage("Successfully signed in! Redirecting...");
-          setTimeout(() => {
-            setLocation("/");
-          }, 2000);
+          setMessage("Verifying link and signing you in...");
+          window.location.href = data.redirectTo;
         } else {
           setStatus("error");
           setMessage(
             data.message ||
-              "This sign-in link is no longer supported. Please use the sign-in page and choose \"Send magic link\" to receive a new link."
+              "Unable to verify this sign-in link. Please request a new link."
           );
         }
       })
@@ -48,7 +46,7 @@ export default function VerifyMagicLink() {
           "Unable to verify this link. Please go to the sign-in page and use \"Send magic link\" to receive a new link."
         );
       });
-  }, [setLocation]);
+  }, []);
 
   if (status === "verifying") {
     return (

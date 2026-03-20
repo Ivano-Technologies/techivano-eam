@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { router } from "../_core/trpc";
 import { adminProcedure, managerOrAdminProcedure, viewerProcedure } from "./_shared";
-import * as db from "../db";
+import * as assetsDb from "../db/assets";
 import * as notificationHelper from "../notificationHelper";
 import { parseFileData, bulkImportAssets, generateAssetsTemplate } from "../bulkImport";
 import { exportToCSV, exportToExcel, formatAssetsForExport } from "../bulkExport";
@@ -20,7 +20,7 @@ export const assetsRouter = router({
         .optional()
     )
     .query(async ({ input, ctx }) => {
-      return await db.getAllAssets({
+      return await assetsDb.getAllAssets({
         ...input,
         organizationId: ctx.organizationId ?? undefined,
       });
@@ -28,17 +28,17 @@ export const assetsRouter = router({
   getById: viewerProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
-      return await db.getAssetById(input.id);
+      return await assetsDb.getAssetById(input.id);
     }),
   getByTag: viewerProcedure
     .input(z.object({ assetTag: z.string() }))
     .query(async ({ input }) => {
-      return await db.getAssetByTag(input.assetTag);
+      return await assetsDb.getAssetByTag(input.assetTag);
     }),
   search: viewerProcedure
     .input(z.object({ searchTerm: z.string() }))
     .query(async ({ input }) => {
-      return await db.searchAssets(input.searchTerm);
+      return await assetsDb.searchAssets(input.searchTerm);
     }),
   create: managerOrAdminProcedure
     .input(
@@ -84,7 +84,7 @@ export const assetsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      return await db.createAsset({
+      return await assetsDb.createAsset({
         ...input,
         organizationId: ctx.organizationId ?? undefined,
       });
@@ -93,10 +93,10 @@ export const assetsRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const { generateAssetQRCode } = await import("../qrcode");
-      const asset = await db.getAssetById(input.id);
+      const asset = await assetsDb.getAssetById(input.id);
       if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found" });
       const qrCode = await generateAssetQRCode(asset.id, asset.assetTag);
-      await db.updateAsset(asset.id, { qrCode });
+      await assetsDb.updateAsset(asset.id, { qrCode });
       return { qrCode };
     }),
   generateBulkQRCodeLabels: viewerProcedure
@@ -110,7 +110,7 @@ export const assetsRouter = router({
       const { generateBulkQRCodeLabels } = await import("../qrcode");
       const assets = [];
       for (const id of input.assetIds) {
-        const asset = await db.getAssetById(id);
+        const asset = await assetsDb.getAssetById(id);
         if (asset) {
           assets.push({
             id: asset.id,
@@ -139,7 +139,7 @@ export const assetsRouter = router({
       const parsed = parseAssetQRCode(input.qrData);
       if (!parsed)
         throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid QR code" });
-      const asset = await db.getAssetById(parsed.assetId);
+      const asset = await assetsDb.getAssetById(parsed.assetId);
       if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found" });
       return asset;
     }),
@@ -152,11 +152,11 @@ export const assetsRouter = router({
     )
     .mutation(async ({ input }) => {
       const { generateBarcode, generateBarcodeValue } = await import("../barcode");
-      const asset = await db.getAssetById(input.id);
+      const asset = await assetsDb.getAssetById(input.id);
       if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found" });
       const barcodeValue = generateBarcodeValue(asset.assetTag, input.format);
       const barcodeImage = generateBarcode(barcodeValue, input.format);
-      await db.updateAsset(input.id, {
+      await assetsDb.updateAsset(input.id, {
         barcode: barcodeValue,
         barcodeFormat: input.format,
       });
@@ -165,7 +165,7 @@ export const assetsRouter = router({
   scanBarcode: viewerProcedure
     .input(z.object({ barcode: z.string() }))
     .query(async ({ input }) => {
-      const asset = await db.getAssetByBarcode(input.barcode);
+      const asset = await assetsDb.getAssetByBarcode(input.barcode);
       if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found" });
       return asset;
     }),
@@ -215,14 +215,14 @@ export const assetsRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;
-      const currentAsset = await db.getAssetById(id);
+      const currentAsset = await assetsDb.getAssetById(id);
       if (currentAsset) {
         for (const [field, newValue] of Object.entries(data)) {
           const oldValue = currentAsset[field as keyof typeof currentAsset];
           const oldStr = oldValue != null ? String(oldValue) : null;
           const newStr = newValue != null ? String(newValue) : null;
           if (oldStr !== newStr) {
-            await db.logAssetEdit({
+            await assetsDb.logAssetEdit({
               assetId: id,
               userId: ctx.user.id,
               fieldName: field,
@@ -232,22 +232,22 @@ export const assetsRouter = router({
           }
         }
       }
-      await db.logAuditEntry({
+      await assetsDb.logAuditEntry({
         userId: ctx.user.id,
         action: "update",
         entityType: "asset",
         entityId: id,
         changes: JSON.stringify(data),
       });
-      return await db.updateAsset(id, data);
+      return await assetsDb.updateAsset(id, data);
     }),
   getExpiringWarranties: viewerProcedure.query(async () => {
-    return await db.getExpiringWarranties();
+    return await assetsDb.getExpiringWarranties();
   }),
   sendWarrantyAlert: managerOrAdminProcedure
     .input(z.object({ assetId: z.number() }))
     .mutation(async ({ input, ctx }) => {
-      const asset = await db.getAssetById(input.assetId);
+      const asset = await assetsDb.getAssetById(input.assetId);
       if (!asset || !asset.warrantyExpiry) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -275,8 +275,8 @@ export const assetsRouter = router({
       let deleted = 0;
       for (const id of input.ids) {
         try {
-          await db.deleteAsset(id);
-          await db.createAuditLog({
+          await assetsDb.deleteAsset(id);
+          await assetsDb.createAuditLog({
             userId: ctx.user.id,
             action: "bulk_delete_asset",
             entityType: "asset",
@@ -306,8 +306,8 @@ export const assetsRouter = router({
       let updated = 0;
       for (const id of input.ids) {
         try {
-          await db.updateAsset(id, { status: input.status });
-          await db.createAuditLog({
+          await assetsDb.updateAsset(id, { status: input.status });
+          await assetsDb.createAuditLog({
             userId: ctx.user.id,
             action: "bulk_update_asset_status",
             entityType: "asset",
@@ -336,8 +336,8 @@ export const assetsRouter = router({
       let updated = 0;
       for (const id of input.assetIds) {
         try {
-          await db.updateAsset(id, input.updates);
-          await db.createAuditLog({
+          await assetsDb.updateAsset(id, input.updates);
+          await assetsDb.createAuditLog({
             userId: ctx.user.id,
             action: "bulk_update_asset",
             entityType: "asset",
@@ -378,7 +378,7 @@ export const assetsRouter = router({
   export: viewerProcedure
     .input(z.object({ format: z.enum(["csv", "excel"]) }))
     .query(async ({ input, ctx }) => {
-      const assets = await db.getAllAssets({
+      const assets = await assetsDb.getAllAssets({
         organizationId: ctx.organizationId ?? undefined,
       });
       const formatted = formatAssetsForExport(assets);
@@ -395,6 +395,6 @@ export const assetsRouter = router({
   getEditHistory: viewerProcedure
     .input(z.object({ assetId: z.number() }))
     .query(async ({ input }) => {
-      return await db.getAssetEditHistory(input.assetId);
+      return await assetsDb.getAssetEditHistory(input.assetId);
     }),
 });

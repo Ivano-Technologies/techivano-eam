@@ -10,7 +10,7 @@ export default function ForgotPassword() {
       variant="authDark"
       icon={<AuthLogo branding={branding} />}
       title="Password reset"
-      description="Authentication is now handled by Clerk. Use the Sign in page and choose Forgot password."
+      description='Password reset is handled on the sign-in page. Use "Forgot password" there to request a reset link.'
       footer={<AuthFooter branding={branding} />}
     >
       <div className="text-center text-xs" style={{ color: "#9ca3af" }}>

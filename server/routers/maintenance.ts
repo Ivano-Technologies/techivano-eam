@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { router } from "../_core/trpc";
 import { managerOrAdminProcedure, resolveTenantIdFromContext, viewerProcedure } from "./_shared";
-import * as db from "../db";
+import * as workOrdersDb from "../db/workorders";
 import { enqueuePmEvaluationJob, enqueuePredictiveScoringJob } from "../jobs/queue";
 
 export const maintenanceRouter = router({
@@ -12,12 +12,12 @@ export const maintenanceRouter = router({
       isActive: z.boolean().optional(),
     }).optional())
     .query(async ({ input, ctx }) => {
-      return await db.getAllMaintenanceSchedules({ ...input, organizationId: ctx.organizationId ?? undefined });
+      return await workOrdersDb.getAllMaintenanceSchedules({ ...input, organizationId: ctx.organizationId ?? undefined });
     }),
   upcoming: viewerProcedure
     .input(z.object({ days: z.number().default(30) }))
     .query(async ({ input }) => {
-      return await db.getUpcomingMaintenance(input.days);
+      return await workOrdersDb.getUpcomingMaintenance(input.days);
     }),
   create: managerOrAdminProcedure
     .input(z.object({
@@ -32,8 +32,8 @@ export const maintenanceRouter = router({
       estimatedDuration: z.number().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      const schedule = await db.createMaintenanceSchedule({ ...input, organizationId: ctx.organizationId ?? undefined });
-      await db.createAuditLog({
+      const schedule = await workOrdersDb.createMaintenanceSchedule({ ...input, organizationId: ctx.organizationId ?? undefined });
+      await workOrdersDb.createAuditLog({
         userId: ctx.user.id,
         action: "create_maintenance_schedule",
         entityType: "maintenance_schedule",
@@ -57,14 +57,14 @@ export const maintenanceRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;
-      await db.createAuditLog({
+      await workOrdersDb.createAuditLog({
         userId: ctx.user.id,
         action: "update_maintenance_schedule",
         entityType: "maintenance_schedule",
         entityId: id,
         changes: JSON.stringify(data),
       });
-      return await db.updateMaintenanceSchedule(id, data);
+      return await workOrdersDb.updateMaintenanceSchedule(id, data);
     }),
   getPredictions: viewerProcedure.query(async () => {
     const { getAllMaintenancePredictions } = await import("../predictiveMaintenance");

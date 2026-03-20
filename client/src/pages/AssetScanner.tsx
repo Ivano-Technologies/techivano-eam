@@ -243,16 +243,6 @@ ${updateForm.notes}`
               </div>
             )}
 
-            {/* Camera View Placeholder */}
-            {scanMode === "camera" && (
-              <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                <div className="text-center">
-                  <Camera className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-muted-foreground">Camera scanning feature</p>
-                  <p className="text-sm text-muted-foreground">Coming soon</p>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -418,7 +408,7 @@ ${updateForm.notes}`
           </CardHeader>
           <CardContent className="text-sm space-y-2">
             <p>• Enter the asset tag exactly as it appears on the label</p>
-            <p>• Use the camera scan feature for barcode/QR code scanning (coming soon)</p>
+            <p>• Use camera scan for barcode/QR scanning when camera permission is granted</p>
             <p>• Update status and location quickly without navigating to full asset details</p>
             <p>• Notes are automatically timestamped and appended to asset history</p>
           </CardContent>

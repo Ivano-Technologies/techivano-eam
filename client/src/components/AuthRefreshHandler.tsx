@@ -1,6 +1,5 @@
 /**
  * On 401 (UNAUTHORIZED), redirect to login for re-authentication.
- * Clerk session tokens are sent per-request via Authorization header.
  */
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";

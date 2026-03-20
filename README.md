@@ -81,7 +81,7 @@ The NRCS Enterprise Asset Management (EAM) System is a full-featured web applica
 
 ### Backend
 - **Node.js** - Runtime environment
-- **Express 4** - Web server framework
+- **Serverless API routes (`api/*`)** - Runtime API surface
 - **tRPC 11** - Type-safe API layer
 - **Drizzle ORM** - Database toolkit
 - **Supabase (PostgreSQL)** - Database and authentication
@@ -90,6 +90,13 @@ The NRCS Enterprise Asset Management (EAM) System is a full-featured web applica
 - **Supabase Auth** is the single auth provider (email/password, magic link, OAuth).
 - **Required env:** `SUPABASE_JWT_SECRET` (from Supabase Dashboard → Project Settings → API → JWT Secret), `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
 - **Redirect URLs** (Supabase Dashboard → Authentication → URL Configuration): add `https://your-domain.com/auth/callback` and `http://localhost:3000/auth/callback` for dev.
+- **Architecture doc:** see `docs/AUTH_ARCHITECTURE.md`.
+
+### Auth End-to-End
+- Frontend initiates auth with Supabase.
+- Serverless handlers in `api/auth/*` complete callback/verification and set secure cookies.
+- Protected APIs validate Supabase JWT from `Authorization` header or `app_session_id` cookie.
+- CI blocks drift with `pnpm check:serverless-compliance` (also prevents reintroducing Clerk/Auth0/Firebase auth libs).
 
 ### Infrastructure
 - **Vite** - Fast build tool
@@ -129,11 +136,11 @@ The NRCS Enterprise Asset Management (EAM) System is a full-featured web applica
    # Database
    DATABASE_URL=mysql://user:password@host:port/database
    
-   # Authentication
+   # Authentication (Supabase)
    JWT_SECRET=your-jwt-secret-key
-   OAUTH_SERVER_URL=https://api.manus.im
-   VITE_OAUTH_PORTAL_URL=https://portal.manus.im
-   VITE_APP_ID=your-app-id
+   SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+   SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+   VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
    
    # Owner Information
    OWNER_OPEN_ID=owner-open-id

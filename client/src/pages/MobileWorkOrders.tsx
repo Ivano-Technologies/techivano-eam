@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,10 +6,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Clock, AlertCircle, XCircle, ChevronRight, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import { uploadPhotoFile } from "@/lib/photoUploads";
 
 export default function MobileWorkOrders() {
   const [, setLocation] = useLocation();
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [uploadingWorkOrderId, setUploadingWorkOrderId] = useState<number | null>(null);
+  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<number | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: workOrders = [], isLoading, refetch } = trpc.workOrders.list.useQuery({
     status: statusFilter === "all" ? undefined : statusFilter,
@@ -24,6 +28,7 @@ export default function MobileWorkOrders() {
       toast.error(`Error: ${error.message}`);
     },
   });
+  const createPhotoMutation = trpc.photos.create.useMutation();
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -74,6 +79,34 @@ export default function MobileWorkOrders() {
     updateStatusMutation.mutate({ id, status: newStatus as any });
   };
 
+  const openPhotoPicker = (workOrderId: number) => {
+    setSelectedWorkOrderId(workOrderId);
+    photoInputRef.current?.click();
+  };
+
+  const handleUploadPhoto = async (file: File) => {
+    if (!selectedWorkOrderId) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    setUploadingWorkOrderId(selectedWorkOrderId);
+    try {
+      const uploaded = await uploadPhotoFile(file, "inspection-images");
+      await createPhotoMutation.mutateAsync({
+        workOrderId: selectedWorkOrderId,
+        photoUrl: uploaded.fileUrl,
+        photoKey: uploaded.fileKey,
+      });
+      toast.success("Photo uploaded");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Photo upload failed");
+    } finally {
+      setUploadingWorkOrderId(null);
+      setSelectedWorkOrderId(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 p-4">
@@ -109,6 +142,18 @@ export default function MobileWorkOrders() {
 
       {/* Work Orders List */}
       <div className="p-4 space-y-3">
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void handleUploadPhoto(file);
+            e.currentTarget.value = "";
+          }}
+        />
         {workOrders.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
@@ -166,14 +211,14 @@ export default function MobileWorkOrders() {
                       size="sm"
                       variant="outline"
                       className="flex-1"
+                      disabled={uploadingWorkOrderId === wo.id}
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Open camera for photo
-                        toast.info("Camera feature coming soon");
+                        openPhotoPicker(wo.id);
                       }}
                     >
                       <Camera className="mr-2 h-4 w-4" />
-                      Photo
+                      {uploadingWorkOrderId === wo.id ? "Uploading..." : "Photo"}
                     </Button>
                     <Button
                       size="sm"

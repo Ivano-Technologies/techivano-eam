@@ -17,7 +17,7 @@ test("login page renders magic-link form", async ({ browser }) => {
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
   await page.goto("/login", { waitUntil: "domcontentloaded", timeout: 30_000 });
-  // Wait for app/Clerk to hydrate; form may appear after a short delay
+  // Wait for app/auth UI to hydrate; form may appear after a short delay
   await expect(page.locator("form")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: /send magic link/i })).toBeVisible({ timeout: 10_000 });
   await ctx.close();

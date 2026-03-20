@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { Link } from "wouter";
-import { useAuth, useSignIn } from "@clerk/clerk-react";
+import type { Provider } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { ButtonLoader } from "@/components/ButtonLoader";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { env } from "@/lib/env";
 import { trpc } from "@/lib/trpc";
+import { supabase } from "@/lib/supabase";
 import { AuthPageLayout, AuthLogo, AuthFooter } from "@/components/AuthPageLayout";
 import { useAuthBranding } from "@/hooks/useAuthBranding";
 
@@ -17,8 +18,7 @@ type OAuthProvider = "google" | "azure";
 const turnstileSiteKey = env.TURNSTILE_SITE_KEY?.trim() ?? "";
 
 export default function Login() {
-  const { isLoaded, signIn, setActive } = useSignIn();
-  const { getToken } = useAuth();
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const branding = useAuthBranding();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,6 +32,7 @@ export default function Login() {
   const [devAdminLoading, setDevAdminLoading] = useState(false);
   const verifyTurnstile = trpc.auth.verifyTurnstile.useMutation();
   const setSession = trpc.auth.setSession.useMutation();
+  const migrateLegacyPasswordUser = trpc.auth.migrateLegacyPasswordUser.useMutation();
 
   // Dev-only: show "Open admin dashboard" when running on system hostname GM AMPD
   useEffect(() => {
@@ -45,7 +46,38 @@ export default function Login() {
       .catch(() => {});
   }, []);
 
-  // Show success message when redirected after registration (no verification step)
+  // If Supabase already has a session (e.g. returning from OAuth), sync app session cookie.
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setSessionToken(data.session?.access_token ?? null);
+    });
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSessionToken(session?.access_token ?? null);
+    });
+    return () => {
+      active = false;
+      subscription.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    async function sync() {
+      if (!sessionToken) return;
+      try {
+        await setSession.mutateAsync({ accessToken: sessionToken, rememberMe: true });
+        if (typeof window !== "undefined" && window.location.pathname !== "/") {
+          window.location.href = "/";
+        }
+      } catch {
+        // Ignore; the user can still retry from the form.
+      }
+    }
+    void sync();
+  }, [sessionToken, setSession]);
+
+  // Show success message when redirected after registration.
   useEffect(() => {
     const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
     if (params.get("registered") === "1") {
@@ -72,17 +104,17 @@ export default function Login() {
   };
 
   const handleOAuthSignIn = async (provider: OAuthProvider) => {
-    if (!isLoaded || !signIn) return;
     setMessage(null);
     if (!(await ensureTurnstileVerified())) return;
     setOauthLoading(provider);
     try {
-      const strategy = provider === "google" ? "oauth_google" : "oauth_microsoft";
-      await signIn.authenticateWithRedirect({
-        strategy,
-        redirectUrl: `${window.location.origin}/auth/callback`,
-        redirectUrlComplete: `${window.location.origin}/`,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: provider as Provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
+      if (error) throw error;
     } catch (err) {
       setMessage({
         type: "error",
@@ -94,23 +126,31 @@ export default function Login() {
 
   const handleSignInWithPassword = async (e: FormEvent) => {
     e.preventDefault();
-    if (!isLoaded || !signIn || !email.trim() || !password) return;
+    if (!email.trim() || !password) return;
     setMessage(null);
     if (!(await ensureTurnstileVerified())) return;
     setPasswordLoading(true);
     try {
-      const result = await signIn.create({
-        identifier: email.trim(),
+      let authResult = await supabase.auth.signInWithPassword({
+        email: email.trim(),
         password,
       });
-      if (result.status !== "complete" || !result.createdSessionId) {
-        setMessage({ type: "error", text: "Additional verification required. Please continue in Clerk flow." });
-        return;
+      if (authResult.error?.message?.toLowerCase().includes("invalid login credentials")) {
+        const migrated = await migrateLegacyPasswordUser.mutateAsync({
+          email: email.trim(),
+          password,
+        });
+        if (migrated.success) {
+          authResult = await supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password,
+          });
+        }
       }
-      await setActive({ session: result.createdSessionId });
-      const token = await getToken();
+      if (authResult.error) throw authResult.error;
+      const token = authResult.data.session?.access_token;
       if (!token) {
-        setMessage({ type: "error", text: "Sign-in succeeded but no session. Please try again." });
+        setMessage({ type: "error", text: "Sign-in succeeded but no session was returned." });
         return;
       }
       await setSession.mutateAsync({ accessToken: token, rememberMe: true });
@@ -126,19 +166,18 @@ export default function Login() {
   };
 
   const sendMagicLink = async () => {
-    if (!isLoaded || !signIn || !email.trim()) return;
+    if (!email.trim()) return;
     setMessage(null);
     if (!(await ensureTurnstileVerified())) return;
     setLoading(true);
     try {
-      // Clerk email-link sign-in (magic link)
-      await (signIn as unknown as {
-        create: (params: Record<string, unknown>) => Promise<unknown>;
-      }).create({
-        strategy: "email_link",
-        identifier: email.trim(),
-        redirectUrl: `${window.location.origin}/auth/callback`,
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
+      if (error) throw error;
       setSent(true);
     } catch (err) {
       setMessage({
@@ -148,11 +187,6 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSendMagicLink = (e: FormEvent) => {
-    e.preventDefault();
-    void sendMagicLink();
   };
 
   const handleDevAdminLogin = async () => {
@@ -207,9 +241,7 @@ export default function Login() {
       {sent ? (
         <div className="space-y-4">
           <Alert>
-            <AlertDescription>
-              Check your email for the sign-in link. Click the link to sign in.
-            </AlertDescription>
+            <AlertDescription>Check your email for the sign-in link. Click the link to sign in.</AlertDescription>
           </Alert>
           <button
             type="button"
@@ -225,14 +257,13 @@ export default function Login() {
         </div>
       ) : (
         <div className="space-y-4">
-          {/* OAuth: Google & Azure — same callback as magic link */}
           <div className="grid grid-cols-2 gap-3">
             <Button
               type="button"
               variant="outline"
               className="w-full border-white/20 text-white hover:bg-white/10 hover:text-white"
               style={{ backgroundColor: formColor }}
-              disabled={!isLoaded || oauthLoading !== null || (!!turnstileSiteKey && !turnstileToken)}
+              disabled={oauthLoading !== null || (!!turnstileSiteKey && !turnstileToken)}
               onClick={() => handleOAuthSignIn("google")}
             >
               {oauthLoading === "google" ? (
@@ -252,7 +283,7 @@ export default function Login() {
               variant="outline"
               className="w-full border-white/20 text-white hover:bg-white/10 hover:text-white"
               style={{ backgroundColor: formColor }}
-              disabled={!isLoaded || oauthLoading !== null || (!!turnstileSiteKey && !turnstileToken)}
+              disabled={oauthLoading !== null || (!!turnstileSiteKey && !turnstileToken)}
               onClick={() => handleOAuthSignIn("azure")}
             >
               {oauthLoading === "azure" ? (
@@ -307,7 +338,7 @@ export default function Login() {
               type="submit"
               className="w-full text-white font-medium hover:opacity-90 text-xs"
               style={{ backgroundColor: formColor, borderColor: buttonBorder, borderWidth: 1 }}
-              disabled={passwordLoading || loading || !isLoaded || (!!turnstileSiteKey && !turnstileToken)}
+              disabled={passwordLoading || loading || (!!turnstileSiteKey && !turnstileToken)}
             >
               {passwordLoading ? (
                 <>

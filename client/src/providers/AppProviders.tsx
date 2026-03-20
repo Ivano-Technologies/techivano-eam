@@ -30,14 +30,7 @@ const trpcClient = trpc.createClient({
         return token ? { "x-impersonation": token } : {};
       },
       async fetch(input, init) {
-        const clerkToken =
-          typeof window !== "undefined" && (window as Window & { Clerk?: { session?: { getToken: () => Promise<string | null> } } }).Clerk?.session
-            ? await (window as Window & { Clerk?: { session?: { getToken: () => Promise<string | null> } } }).Clerk!.session!.getToken()
-            : null;
         const headers = new Headers(init?.headers ?? {});
-        if (clerkToken) {
-          headers.set("Authorization", `Bearer ${clerkToken}`);
-        }
         const res = await globalThis.fetch(input, {
           ...(init ?? {}),
           headers,
