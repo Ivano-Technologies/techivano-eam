@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { useAuth, useSignUp } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +8,7 @@ import { Checkbox, RedCheckIcon } from "@/components/ui/checkbox";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { trpc } from "@/lib/trpc";
 import { env } from "@/lib/env";
+import { supabase } from "@/lib/supabase";
 import { ButtonLoader } from "@/components/ButtonLoader";
 import { AuthPageLayout, AuthLogo, AuthFooter } from "@/components/AuthPageLayout";
 import { PasswordStrength, PasswordRequirements } from "@/components/PasswordStrength";
@@ -17,8 +17,7 @@ import { useAuthBranding } from "@/hooks/useAuthBranding";
 const turnstileSiteKey = env.TURNSTILE_SITE_KEY?.trim() ?? "";
 
 export default function Signup() {
-  const { isLoaded: authLoaded, signUp, setActive } = useSignUp();
-  const { isLoaded: clerkLoaded, isSignedIn, getToken, signOut } = useAuth();
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const branding = useAuthBranding();
   const [signingOut, setSigningOut] = useState(false);
   const [goingToDashboard, setGoingToDashboard] = useState(false);
@@ -33,8 +32,24 @@ export default function Signup() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const signupWithPassword = trpc.auth.signupWithPassword.useMutation();
   const setSessionMutation = trpc.auth.setSession.useMutation();
   const logoutMutation = trpc.auth.logout.useMutation();
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setSessionToken(data.session?.access_token ?? null);
+    });
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSessionToken(session?.access_token ?? null);
+    });
+    return () => {
+      active = false;
+      subscription.subscription.unsubscribe();
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,86 +58,63 @@ export default function Signup() {
 
     if (!name?.trim()) {
       setMessage({ type: "error", text: "Please enter your name" });
+      setIsSubmitting(false);
       return;
     }
     if (!email?.trim()) {
       setMessage({ type: "error", text: "Please enter your email" });
+      setIsSubmitting(false);
       return;
     }
     if (email !== confirmEmail) {
       setMessage({ type: "error", text: "Email addresses do not match" });
+      setIsSubmitting(false);
       return;
     }
     if (password.length < 8) {
       setMessage({ type: "error", text: "Password must be at least 8 characters" });
+      setIsSubmitting(false);
       return;
     }
     if (!agreedToTerms) {
       setMessage({ type: "error", text: "You must agree to the Terms of Use and Privacy Policy" });
+      setIsSubmitting(false);
       return;
     }
     if (turnstileSiteKey && !turnstileToken) {
       setMessage({ type: "error", text: "Please complete the verification check." });
+      setIsSubmitting(false);
       return;
     }
 
-    if (!authLoaded || !signUp) return;
     try {
-      const result = await signUp.create({
-        emailAddress: email.trim(),
+      await signupWithPassword.mutateAsync({
+        email: email.trim(),
+        name: name.trim(),
         password,
-        firstName: name.trim(),
-        unsafeMetadata: {
-          organization: organization.trim() || undefined,
-          designation: designation.trim() || undefined,
-        },
+        turnstileToken: turnstileToken ?? undefined,
+        jobTitle: designation.trim() || undefined,
+        agency: organization.trim() || undefined,
       });
-      if (result.status !== "complete" || !result.createdSessionId) {
-        // Clerk requires verification (e.g. email); redirect to login. Disable "Verify email address" in Clerk Dashboard for instant sign-in.
-        window.location.href = "/login?registered=1";
-        return;
-      }
-      // Instant sign-in: session is complete, sync app session and redirect to dashboard.
-      await setActive({ session: result.createdSessionId });
-      const token = await getToken();
-      if (!token) {
-        setMessage({ type: "error", text: "Account created, but no session token was returned." });
-        return;
-      }
-      await setSessionMutation.mutateAsync({ accessToken: token, rememberMe: true });
-      window.location.href = "/";
+      window.location.href = "/login?registered=1";
     } catch (error) {
-      const msg =
-        typeof error === "object" &&
-        error &&
-        "errors" in error &&
-        Array.isArray((error as { errors?: Array<{ message?: string }> }).errors)
-          ? (error as { errors: Array<{ message?: string }> }).errors[0]?.message
-          : null;
-      const isSessionExists = typeof msg === "string" && /session already exists/i.test(msg);
-      setMessage({
-        type: "error",
-        text: isSessionExists
-          ? "You're already signed in. Sign out below to register a different account."
-          : msg || "Registration failed. Please try again.",
-      });
+      const msg = error instanceof Error ? error.message : "Registration failed. Please try again.";
+      setMessage({ type: "error", text: msg });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const isPending = isSubmitting || setSessionMutation.isPending;
-  const isSigningIn = setSessionMutation.isPending;
+  const isPending = isSubmitting || signupWithPassword.isPending || setSessionMutation.isPending;
 
   const handleSignOutToRegister = async () => {
     setSigningOut(true);
     try {
       await logoutMutation.mutateAsync();
-      if (typeof signOut === "function") await signOut({ redirectUrl: window.location.origin + "/signup" });
-      else window.location.href = "/signup";
+      await supabase.auth.signOut();
+      window.location.href = "/signup";
     } catch {
-      if (typeof signOut === "function") await signOut({ redirectUrl: window.location.origin + "/signup" });
-      else window.location.href = "/login";
+      window.location.href = "/login";
     } finally {
       setSigningOut(false);
     }
@@ -131,12 +123,11 @@ export default function Signup() {
   const handleGoToDashboard = async () => {
     setGoingToDashboard(true);
     try {
-      const token = await getToken();
-      if (!token) {
+      if (!sessionToken) {
         window.location.href = "/login";
         return;
       }
-      await setSessionMutation.mutateAsync({ accessToken: token, rememberMe: true });
+      await setSessionMutation.mutateAsync({ accessToken: sessionToken, rememberMe: true });
       window.location.href = "/";
     } catch {
       window.location.href = "/login";
@@ -145,7 +136,7 @@ export default function Signup() {
     }
   };
 
-  if (clerkLoaded && authLoaded && isSignedIn) {
+  if (sessionToken) {
     return (
       <AuthPageLayout
         variant="authDark"
@@ -192,48 +183,22 @@ export default function Signup() {
 
         <div className="space-y-2">
           <Label htmlFor="name">Full Name</Label>
-          <Input
-            id="name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            disabled={isPending}
-            required
-          />
+          <Input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} disabled={isPending} required />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="organization">Organization</Label>
-          <Input
-            id="organization"
-            type="text"
-            value={organization}
-            onChange={(e) => setOrganization(e.target.value)}
-            disabled={isPending}
-          />
+          <Input id="organization" type="text" value={organization} onChange={(e) => setOrganization(e.target.value)} disabled={isPending} />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="designation">Designation</Label>
-          <Input
-            id="designation"
-            type="text"
-            value={designation}
-            onChange={(e) => setDesignation(e.target.value)}
-            disabled={isPending}
-          />
+          <Input id="designation" type="text" value={designation} onChange={(e) => setDesignation(e.target.value)} disabled={isPending} />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="email">Email Address</Label>
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={isPending}
-            required
-          />
+          <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isPending} required />
         </div>
 
         <div className="space-y-2">
@@ -250,15 +215,7 @@ export default function Signup() {
 
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={isPending}
-            required
-            minLength={8}
-          />
+          <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isPending} required minLength={8} />
           <PasswordStrength password={password} />
           <PasswordRequirements password={password} />
         </div>
@@ -295,15 +252,11 @@ export default function Signup() {
           />
         )}
 
-        <Button
-          type="submit"
-          className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white"
-          disabled={isPending || (!!turnstileSiteKey && !turnstileToken)}
-        >
+        <Button type="submit" className="w-full bg-[#DC2626] hover:bg-[#DC2626]/90 text-white" disabled={isPending || (!!turnstileSiteKey && !turnstileToken)}>
           {isPending ? (
             <>
               <ButtonLoader className="mr-2" />
-              {isSigningIn ? "Signing you in…" : "Creating account…"}
+              Creating account…
             </>
           ) : (
             "Register"

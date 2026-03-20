@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, CheckCircle2, Camera, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { uploadPhotoFile } from "@/lib/photoUploads";
 
 export default function MobileWorkOrderDetail() {
   const [, params] = useRoute("/mobile-work-order/:id");
   const [, setLocation] = useLocation();
   const [notes, setNotes] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const workOrderId = params?.id ? Number(params.id) : 0;
   const { data: rawWorkOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({ id: workOrderId });
@@ -27,6 +30,7 @@ export default function MobileWorkOrderDetail() {
       toast.error(`Error: ${error.message}`);
     },
   });
+  const createPhotoMutation = trpc.photos.create.useMutation();
 
   const handleStatusUpdate = (newStatus: string) => {
     updateMutation.mutate({
@@ -46,6 +50,27 @@ export default function MobileWorkOrderDetail() {
       completionNotes: notes,
     });
     setNotes("");
+  };
+
+  const handleUploadPhoto = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      const uploaded = await uploadPhotoFile(file, "inspection-images");
+      await createPhotoMutation.mutateAsync({
+        workOrderId,
+        photoUrl: uploaded.fileUrl,
+        photoKey: uploaded.fileKey,
+      });
+      toast.success("Photo uploaded");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Photo upload failed");
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   if (isLoading) {
@@ -115,6 +140,18 @@ export default function MobileWorkOrderDetail() {
 
       {/* Content */}
       <div className="p-4 space-y-4">
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void handleUploadPhoto(file);
+            e.currentTarget.value = "";
+          }}
+        />
         {/* Status and Priority */}
         <Card>
           <CardContent className="p-4">
@@ -143,10 +180,10 @@ export default function MobileWorkOrderDetail() {
                 <Button
                   className="w-full"
                   variant="outline"
-                  onClick={() => toast.info("Camera feature coming soon")}
+                  onClick={() => photoInputRef.current?.click()}
                 >
                   <Camera className="mr-2 h-4 w-4" />
-                  Take Photo
+                  {uploadingPhoto ? "Uploading..." : "Take Photo"}
                 </Button>
                 <Button
                   className="w-full"

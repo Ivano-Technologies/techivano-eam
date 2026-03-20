@@ -97,6 +97,8 @@ const PRESET_WIDTHS = {
 };
 
 const PUBLIC_AUTH_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/set-password", "/verify-magic-link", "/auth/callback", "/mfa/setup", "/mfa/verify"];
+// Emergency mode only: set VITE_AUTH_BYPASS=1 to skip the login gate (never ship to production).
+const AUTH_BYPASS_ENABLED = import.meta.env.VITE_AUTH_BYPASS === "1";
 
 export default function DashboardLayout({
   children,
@@ -125,6 +127,14 @@ export default function DashboardLayout({
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
 
+  // In bypass mode, route auth pages straight to dashboard.
+  if (AUTH_BYPASS_ENABLED && isPublicAuthPath) {
+    if (typeof window !== "undefined" && window.location.pathname !== "/") {
+      window.location.replace("/");
+    }
+    return <DashboardLayoutSkeleton />;
+  }
+
   // Public auth pages: render only the route content (login form, etc.) with no sidebar/skeleton.
   // This guarantees /login opens even when auth.me is slow or never resolves.
   if (isPublicAuthPath) {
@@ -148,7 +158,7 @@ export default function DashboardLayout({
     return <DashboardLayoutSkeleton />;
   }
 
-  if (!user) {
+  if (!user && !AUTH_BYPASS_ENABLED) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-white via-blue-50 to-red-50">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full bg-white rounded-2xl shadow-2xl border border-border">

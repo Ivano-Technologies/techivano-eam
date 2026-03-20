@@ -1,11 +1,11 @@
 /**
- * Clerk OAuth/email-link callback.
- * Clerk completes the auth redirect; then we sync an app session cookie via auth.setSession.
+ * Supabase OAuth / magic-link callback.
+ * Exchanges PKCE code (or hash access token fallback) and syncs app session cookie via auth.setSession.
  */
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { AuthenticateWithRedirectCallback, useAuth } from "@clerk/clerk-react";
 import { trpc } from "@/lib/trpc";
+import { supabase } from "@/lib/supabase";
 import { AuthPageLayout, AuthLogo, AuthFooter } from "@/components/AuthPageLayout";
 import { useAuthBranding } from "@/hooks/useAuthBranding";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,6 @@ function messageFromError(e: unknown): string {
 }
 
 export default function AuthCallback() {
-  const rememberMe = true;
-  const { isLoaded, isSignedIn, getToken } = useAuth();
   const branding = useAuthBranding();
   const [, setLocation] = useLocation();
   const [error, setError] = useState<string | null>(null);
@@ -31,31 +29,64 @@ export default function AuthCallback() {
     let cancelled = false;
 
     async function run() {
-      if (!isLoaded) return;
-      if (!isSignedIn) return;
-
       try {
-        const token = await getToken();
-        if (!token) {
-          setError("No session token returned by Clerk.");
+        const url = new URL(window.location.href);
+        const queryError = url.searchParams.get("error");
+        const hashParams = new URLSearchParams((window.location.hash || "").replace(/^#/, ""));
+        const hashError = hashParams.get("error");
+        const errorCode = hashParams.get("error_code") ?? url.searchParams.get("error_code");
+        const errorDescription =
+          hashParams.get("error_description") ??
+          url.searchParams.get("error_description") ??
+          undefined;
+
+        if (queryError || hashError) {
+          if (errorCode === "otp_expired") {
+            setError("This sign-in link has expired. Please request a new magic link and try again.");
+            return;
+          }
+          setError(errorDescription || "Sign-in was denied. Please try again.");
           return;
         }
-        const result = await setSession.mutateAsync({ accessToken: token, rememberMe });
+
+        let accessToken: string | null = null;
+        const code = url.searchParams.get("code");
+        const remember = url.searchParams.get("remember") !== "0";
+
+        if (code) {
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) throw exchangeError;
+          accessToken = data.session?.access_token ?? null;
+        } else {
+          const hashAccessToken = hashParams.get("access_token");
+          accessToken = hashAccessToken || null;
+        }
+
+        if (!accessToken) {
+          throw new Error("No sign-in code received.");
+        }
+
+        const result = await setSession.mutateAsync({ accessToken, rememberMe: remember });
         if (cancelled) return;
         const r = result as { requiresPasswordSetup?: boolean; mandatoryForOwner?: boolean };
         if (r.requiresPasswordSetup) {
           const q = r.mandatoryForOwner ? "?from=oauth&mandatory=1" : "?from=oauth";
           setLocation(`/set-password${q}`);
-        } else {
-          setLocation("/");
+          return;
         }
+
+        setLocation("/");
       } catch (e) {
         setError(messageFromError(e));
       }
     }
 
     void run();
-  }, [getToken, isLoaded, isSignedIn, setLocation, setSession]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setLocation, setSession]);
 
   if (error) {
     return (
@@ -84,7 +115,6 @@ export default function AuthCallback() {
       <div className="flex justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden />
       </div>
-      <AuthenticateWithRedirectCallback signInFallbackRedirectUrl="/login" />
     </AuthPageLayout>
   );
 }
