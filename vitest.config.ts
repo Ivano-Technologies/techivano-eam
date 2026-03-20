@@ -50,7 +50,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["server/**/*.test.ts", "server/**/*.spec.ts"],
+    include: ["server/**/*.test.ts", "server/**/*.spec.ts", "tests/**/*.test.ts"],
     exclude: hasDatabase ? [] : dbRequiredTests,
     setupFiles: hasDatabase ? ["server/test/bootstrapLegacyTables.ts"] : [],
     testTimeout: 15000,
