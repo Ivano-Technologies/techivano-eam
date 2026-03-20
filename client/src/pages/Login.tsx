@@ -10,6 +10,7 @@ import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { env } from "@/lib/env";
 import { trpc } from "@/lib/trpc";
 import { supabase } from "@/lib/supabase";
+import { useAuthSession } from "@/contexts/AuthContext";
 import { AuthPageLayout, AuthLogo, AuthFooter } from "@/components/AuthPageLayout";
 import { useAuthBranding } from "@/hooks/useAuthBranding";
 
@@ -18,7 +19,7 @@ type OAuthProvider = "google" | "azure";
 const turnstileSiteKey = env.TURNSTILE_SITE_KEY?.trim() ?? "";
 
 export default function Login() {
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const { session } = useAuthSession();
   const branding = useAuthBranding();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,36 +47,21 @@ export default function Login() {
       .catch(() => {});
   }, []);
 
-  // If Supabase already has a session (e.g. returning from OAuth), sync app session cookie.
-  useEffect(() => {
-    let active = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      setSessionToken(data.session?.access_token ?? null);
-    });
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSessionToken(session?.access_token ?? null);
-    });
-    return () => {
-      active = false;
-      subscription.subscription.unsubscribe();
-    };
-  }, []);
-
   useEffect(() => {
     async function sync() {
+      const sessionToken = session?.access_token;
       if (!sessionToken) return;
       try {
         await setSession.mutateAsync({ accessToken: sessionToken, rememberMe: true });
-        if (typeof window !== "undefined" && window.location.pathname !== "/") {
-          window.location.href = "/";
+        if (typeof window !== "undefined" && window.location.pathname !== "/dashboard") {
+          window.location.href = "/dashboard";
         }
       } catch {
         // Ignore; the user can still retry from the form.
       }
     }
     void sync();
-  }, [sessionToken, setSession]);
+  }, [session, setSession]);
 
   // Show success message when redirected after registration.
   useEffect(() => {
@@ -154,7 +140,7 @@ export default function Login() {
         return;
       }
       await setSession.mutateAsync({ accessToken: token, rememberMe: true });
-      window.location.href = "/";
+      window.location.href = "/dashboard";
     } catch (err) {
       setMessage({
         type: "error",
@@ -198,7 +184,7 @@ export default function Login() {
         setMessage({ type: "error", text: (data as { error?: string }).error ?? "Dev admin login failed." });
         return;
       }
-      window.location.href = "/";
+      window.location.href = "/dashboard";
     } catch {
       setMessage({ type: "error", text: "Dev admin login failed." });
     } finally {

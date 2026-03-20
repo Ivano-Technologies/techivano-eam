@@ -18,10 +18,26 @@ import type {
 } from "./types";
 
 const QUEUE_NAME = "eam-background-jobs";
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 let backgroundQueue: Queue<BackgroundJobPayload, unknown, BackgroundJobName> | null = null;
+let hasLoggedDevDisable = false;
+
+function queueEnabled(): boolean {
+  if (!IS_PRODUCTION) {
+    if (!hasLoggedDevDisable) {
+      logger.info("Queue disabled in development");
+      hasLoggedDevDisable = true;
+    }
+    return false;
+  }
+  return true;
+}
 
 function getQueue(): Queue<BackgroundJobPayload, unknown, BackgroundJobName> {
+  if (!queueEnabled()) {
+    throw new Error("Background queue is disabled outside production");
+  }
   if (process.env.E2E === "1") {
     throw new Error("Background queue is disabled in E2E mode (Redis not used)");
   }
@@ -54,6 +70,14 @@ type EnqueueParams<T extends BackgroundJobPayload> = {
 async function enqueueJob<T extends BackgroundJobPayload>(params: EnqueueParams<T>) {
   if (!params.payload.tenantId || params.payload.tenantId <= 0) {
     throw new Error("Tenant ID required");
+  }
+  if (!queueEnabled() || process.env.E2E === "1") {
+    return {
+      runId: null,
+      queueJobId: null,
+      jobName: params.jobName,
+      skipped: true,
+    };
   }
 
   const runId = await createJobRun({
@@ -230,5 +254,8 @@ export function getQueueName() {
 }
 
 export function getBackgroundQueue() {
+  if (!queueEnabled()) {
+    return null;
+  }
   return getQueue();
 }

@@ -9,6 +9,7 @@ import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { trpc } from "@/lib/trpc";
 import { env } from "@/lib/env";
 import { supabase } from "@/lib/supabase";
+import { useAuthSession } from "@/contexts/AuthContext";
 import { ButtonLoader } from "@/components/ButtonLoader";
 import { AuthPageLayout, AuthLogo, AuthFooter } from "@/components/AuthPageLayout";
 import { PasswordStrength, PasswordRequirements } from "@/components/PasswordStrength";
@@ -17,7 +18,8 @@ import { useAuthBranding } from "@/hooks/useAuthBranding";
 const turnstileSiteKey = env.TURNSTILE_SITE_KEY?.trim() ?? "";
 
 export default function Signup() {
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const { session } = useAuthSession();
+  const sessionToken = session?.access_token ?? null;
   const branding = useAuthBranding();
   const [signingOut, setSigningOut] = useState(false);
   const [goingToDashboard, setGoingToDashboard] = useState(false);
@@ -35,21 +37,6 @@ export default function Signup() {
   const signupWithPassword = trpc.auth.signupWithPassword.useMutation();
   const setSessionMutation = trpc.auth.setSession.useMutation();
   const logoutMutation = trpc.auth.logout.useMutation();
-
-  useEffect(() => {
-    let active = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      setSessionToken(data.session?.access_token ?? null);
-    });
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSessionToken(session?.access_token ?? null);
-    });
-    return () => {
-      active = false;
-      subscription.subscription.unsubscribe();
-    };
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,7 +115,7 @@ export default function Signup() {
         return;
       }
       await setSessionMutation.mutateAsync({ accessToken: sessionToken, rememberMe: true });
-      window.location.href = "/";
+      window.location.href = "/dashboard";
     } catch {
       window.location.href = "/login";
     } finally {
