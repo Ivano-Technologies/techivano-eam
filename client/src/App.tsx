@@ -1,6 +1,8 @@
 import { lazy, Suspense } from "react";
+import type { ComponentType } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useAuthSession } from "@/contexts/AuthContext";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthRefreshHandler } from "./components/AuthRefreshHandler";
@@ -74,11 +76,47 @@ function PageFallback() {
   );
 }
 
+function ProtectedRoute({ path, component: Component }: { path: string; component: ComponentType }) {
+  const { session, loading } = useAuthSession();
+  return (
+    <Route path={path}>
+      {() => {
+        if (loading) return <PageFallback />;
+        if (!session) {
+          if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+            window.location.replace("/login");
+          }
+          return <PageFallback />;
+        }
+        return <Component />;
+      }}
+    </Route>
+  );
+}
+
+function PublicOnlyRoute({ path, component: Component }: { path: string; component: ComponentType }) {
+  const { session, loading } = useAuthSession();
+  return (
+    <Route path={path}>
+      {() => {
+        if (loading) return <PageFallback />;
+        if (session) {
+          if (typeof window !== "undefined" && window.location.pathname !== "/dashboard") {
+            window.location.replace("/dashboard");
+          }
+          return <PageFallback />;
+        }
+        return <Component />;
+      }}
+    </Route>
+  );
+}
+
 function Router() {
   return (
       <Switch>
-        <Route path="/signup" component={Signup} />
-        <Route path="/login" component={Login} />
+        <PublicOnlyRoute path="/signup" component={Signup} />
+        <PublicOnlyRoute path="/login" component={Login} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
         <Route path="/set-password" component={SetPassword} />
@@ -86,50 +124,51 @@ function Router() {
         <Route path="/auth/callback" component={AuthCallback} />
         <Route path="/mfa/setup" component={MfaSetup} />
         <Route path="/mfa/verify" component={MfaVerify} />
-        <Route path="/welcome" component={Welcome} />
-      <Route path="/" component={Home} />
-      <Route path="/assets" component={Assets} />
-        <Route path="/assets/:id" component={AssetDetail} />
-        <Route path="/scanner" component={AssetScanner} />
-        <Route path="/offline-queue" component={OfflineQueue} />
-        <Route path="/settings/theme" component={ThemeSettings} />
-        <Route path="/settings/sessions" component={Sessions} />
-        <Route path="/profile" component={Profile} />
-        <Route path="/biometric-setup" component={BiometricSetup} />
-        <Route path="/smart-scanner" component={SmartScanner} />
-      <Route path="/asset-map" component={AssetMap} />
-      <Route path="/warranty-alerts" component={WarrantyAlerts} />
-      <Route path="/cost-analytics" component={CostAnalytics} />
-      <Route path="/audit-trail" component={AuditTrail} />
-      <Route path="/activity-log" component={ActivityLog} />
-      <Route path="/work-orders" component={WorkOrders} />
-      <Route path="/work-orders/:id" component={WorkOrderDetail} />
-      <Route path="/mobile-work-orders" component={MobileWorkOrders} />
-      <Route path="/mobile-work-order/:id" component={MobileWorkOrderDetail} />
-      <Route path="/work-order-templates" component={WorkOrderTemplates} />
-      <Route path="/maintenance" component={Maintenance} />
-      <Route path="/inventory" component={Inventory} />
-      <Route path="/warehouse" component={WarehouseDashboard} />
-      <Route path="/warehouse-rebalance" component={WarehouseRebalanceDashboard} />
-      <Route path="/vendor-intelligence" component={VendorIntelligenceDashboard} />
-      <Route path="/procurement" component={ProcurementDashboard} />
-      <Route path="/supply-chain-risk" component={SupplyChainRiskDashboard} />
-      <Route path="/fleet-operations" component={FleetOperationsDashboard} />
-      <Route path="/executive" component={ExecutiveDashboard} />
-      <Route path="/vendors" component={Vendors} />
-      <Route path="/financial" component={Financial} />
-      <Route path="/depreciation" component={DepreciationDashboard} />
-      <Route path="/compliance" component={Compliance} />
-      <Route path="/sites" component={Sites} />
-      <Route path="/users" component={Users} />
-      <Route path="/pending-users" component={PendingUsers} />
-      <Route path="/notification-preferences" component={NotificationPreferences} />
-      <Route path="/reports" component={Reports} />
-      <Route path="/report-scheduling" component={ReportScheduling} />
-      <Route path="/quickbooks" component={QuickBooksSettings} />
-      <Route path="/quickbooks/callback" component={QuickBooksCallback} />
-        <Route path="/email-notifications" component={EmailNotifications} />
-        <Route path="/dashboard-settings" component={DashboardSettings} />
+        <ProtectedRoute path="/welcome" component={Welcome} />
+      <ProtectedRoute path="/dashboard" component={Home} />
+      <ProtectedRoute path="/" component={Home} />
+      <ProtectedRoute path="/assets" component={Assets} />
+        <ProtectedRoute path="/assets/:id" component={AssetDetail} />
+        <ProtectedRoute path="/scanner" component={AssetScanner} />
+        <ProtectedRoute path="/offline-queue" component={OfflineQueue} />
+        <ProtectedRoute path="/settings/theme" component={ThemeSettings} />
+        <ProtectedRoute path="/settings/sessions" component={Sessions} />
+        <ProtectedRoute path="/profile" component={Profile} />
+        <ProtectedRoute path="/biometric-setup" component={BiometricSetup} />
+        <ProtectedRoute path="/smart-scanner" component={SmartScanner} />
+      <ProtectedRoute path="/asset-map" component={AssetMap} />
+      <ProtectedRoute path="/warranty-alerts" component={WarrantyAlerts} />
+      <ProtectedRoute path="/cost-analytics" component={CostAnalytics} />
+      <ProtectedRoute path="/audit-trail" component={AuditTrail} />
+      <ProtectedRoute path="/activity-log" component={ActivityLog} />
+      <ProtectedRoute path="/work-orders" component={WorkOrders} />
+      <ProtectedRoute path="/work-orders/:id" component={WorkOrderDetail} />
+      <ProtectedRoute path="/mobile-work-orders" component={MobileWorkOrders} />
+      <ProtectedRoute path="/mobile-work-order/:id" component={MobileWorkOrderDetail} />
+      <ProtectedRoute path="/work-order-templates" component={WorkOrderTemplates} />
+      <ProtectedRoute path="/maintenance" component={Maintenance} />
+      <ProtectedRoute path="/inventory" component={Inventory} />
+      <ProtectedRoute path="/warehouse" component={WarehouseDashboard} />
+      <ProtectedRoute path="/warehouse-rebalance" component={WarehouseRebalanceDashboard} />
+      <ProtectedRoute path="/vendor-intelligence" component={VendorIntelligenceDashboard} />
+      <ProtectedRoute path="/procurement" component={ProcurementDashboard} />
+      <ProtectedRoute path="/supply-chain-risk" component={SupplyChainRiskDashboard} />
+      <ProtectedRoute path="/fleet-operations" component={FleetOperationsDashboard} />
+      <ProtectedRoute path="/executive" component={ExecutiveDashboard} />
+      <ProtectedRoute path="/vendors" component={Vendors} />
+      <ProtectedRoute path="/financial" component={Financial} />
+      <ProtectedRoute path="/depreciation" component={DepreciationDashboard} />
+      <ProtectedRoute path="/compliance" component={Compliance} />
+      <ProtectedRoute path="/sites" component={Sites} />
+      <ProtectedRoute path="/users" component={Users} />
+      <ProtectedRoute path="/pending-users" component={PendingUsers} />
+      <ProtectedRoute path="/notification-preferences" component={NotificationPreferences} />
+      <ProtectedRoute path="/reports" component={Reports} />
+      <ProtectedRoute path="/report-scheduling" component={ReportScheduling} />
+      <ProtectedRoute path="/quickbooks" component={QuickBooksSettings} />
+      <ProtectedRoute path="/quickbooks/callback" component={QuickBooksCallback} />
+        <ProtectedRoute path="/email-notifications" component={EmailNotifications} />
+        <ProtectedRoute path="/dashboard-settings" component={DashboardSettings} />
       <Route path="/legal/terms" component={TermsOfService} />
       <Route path="/legal/privacy" component={PrivacyPolicy} />
       <Route path="/404" component={NotFound} />
