@@ -97,6 +97,9 @@ jspm_packages/
 .out
 .storybook-out
 
+# Root scratch screenshots / artifacts
+tmp-*.png
+
 # Temporary folders
 tmp/
 temp/
