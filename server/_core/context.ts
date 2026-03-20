@@ -1,6 +1,5 @@
 import { parse as parseCookie } from "cookie";
-import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
-import type { Request as ExpressRequest } from "express";
+import type { IncomingMessage, ServerResponse } from "http";
 import type { User } from "../../drizzle/schema";
 import { COOKIE_NAME, SESSION_COOKIE_NAME } from "@shared/const";
 import { normalizeOrganizationId, getUserBySupabaseUserId, getSessionById, touchSessionLastSeen } from "../db";
@@ -19,8 +18,11 @@ export type MembershipContext = {
 export type AppVariant = "admin" | "nrcs" | "marketing";
 
 export type TrpcContext = {
-  req: CreateExpressContextOptions["req"];
-  res: CreateExpressContextOptions["res"];
+  req: IncomingMessage & { [key: string]: unknown };
+  res: ServerResponse & {
+    [key: string]: unknown;
+    clearCookie?: (name: string, opts?: Record<string, unknown>) => void;
+  };
   user: User | null;
   tenantId: number | null;
   organizationId: string | null;
@@ -59,6 +61,10 @@ function parsePositiveInteger(raw: unknown): number | null {
     return parsed;
   }
   return null;
+}
+
+function buildClearingCookie(name: string, secure: boolean): string {
+  return `${name}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure ? "; Secure" : ""}`;
 }
 
 function normalizeOrganizationInput(raw: unknown): string | null {
@@ -135,7 +141,10 @@ function getOrganizationContextFromHost(host: string): { organizationId: string 
 
 /** Uses Express Request so types are stable when used from api/trpc (Vercel) and server. */
 type ResolveOrganizationContextOptions = {
-  req: ExpressRequest & { session?: { organizationId?: unknown; tenantId?: unknown } };
+  req: (IncomingMessage & { [key: string]: unknown }) & {
+    query?: Record<string, unknown>;
+    session?: { organizationId?: unknown; tenantId?: unknown };
+  };
   user?: User | null;
   explicitOrganizationId?: unknown;
   explicitTenantId?: unknown;
@@ -154,25 +163,26 @@ export function resolveOrganizationContext({
   }
 
   const requestAsAny = req;
+  const query = req.query ?? {};
   const userAsAny = user as (User & { organizationId?: unknown; tenantId?: unknown }) | null | undefined;
 
   const organizationId =
     normalizeOrganizationInput(explicitOrganizationId) ??
     normalizeOrganizationInput(req.headers["x-organization-id"]) ??
     normalizeOrganizationInput(req.headers["x-org-id"]) ??
-    normalizeOrganizationInput(req.query.organizationId) ??
+    normalizeOrganizationInput(query.organizationId) ??
     normalizeOrganizationInput(requestAsAny.session?.organizationId) ??
     normalizeOrganizationInput(userAsAny?.organizationId) ??
     normalizeOrganizationInput(explicitTenantId) ??
     normalizeOrganizationInput(req.headers["x-tenant-id"]) ??
-    normalizeOrganizationInput(req.query.tenantId) ??
+    normalizeOrganizationInput(query.tenantId) ??
     normalizeOrganizationInput(requestAsAny.session?.tenantId) ??
     normalizeOrganizationInput(userAsAny?.tenantId);
 
   const tenantId =
     parsePositiveInteger(explicitTenantId) ??
     parsePositiveInteger(req.headers["x-tenant-id"]) ??
-    parsePositiveInteger(req.query.tenantId) ??
+    parsePositiveInteger(query.tenantId) ??
     parsePositiveInteger(requestAsAny.session?.tenantId) ??
     parsePositiveInteger(userAsAny?.tenantId) ??
     tenantIdFromCanonicalOrganizationId(organizationId);
@@ -181,13 +191,16 @@ export function resolveOrganizationContext({
 }
 
 export async function createContext(
-  opts: CreateExpressContextOptions
+  opts: {
+    req: IncomingMessage & { [key: string]: unknown; query?: Record<string, unknown> };
+    res: ServerResponse & { [key: string]: unknown };
+  }
 ): Promise<TrpcContext> {
-  const req = opts.req as ExpressRequest;
+  const req = opts.req;
   const res = opts.res;
   const host = getHostFromRequest(req);
   const appVariant = getAppVariantFromHost(host);
-  (req as ExpressRequest & { appVariant?: AppVariant }).appVariant = appVariant;
+  (req as IncomingMessage & { appVariant?: AppVariant }).appVariant = appVariant;
   const user = await authenticateRequest(req);
 
   let userToUse: User | null = user;
@@ -198,8 +211,15 @@ export async function createContext(
     const sessionRow = await getSessionById(currentSessionId);
     if (sessionRow?.revoked) {
       const cookieOptions = getSessionCookieOptions(req);
-      res.clearCookie(SESSION_COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      const clearSessionCookie = buildClearingCookie(SESSION_COOKIE_NAME, cookieOptions.secure);
+      const clearAuthCookie = buildClearingCookie(COOKIE_NAME, cookieOptions.secure);
+      const existing = res.getHeader("Set-Cookie");
+      const cookies = Array.isArray(existing)
+        ? [...existing.map(String), clearSessionCookie, clearAuthCookie]
+        : existing
+          ? [String(existing), clearSessionCookie, clearAuthCookie]
+          : [clearSessionCookie, clearAuthCookie];
+      res.setHeader("Set-Cookie", cookies);
       userToUse = null;
     } else {
       touchSessionLastSeen(currentSessionId).catch(() => {});

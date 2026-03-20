@@ -1,4 +1,4 @@
-import type { Request } from "express";
+import type { IncomingMessage } from "http";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
@@ -8,7 +8,9 @@ function isIpAddress(host: string) {
   return host.includes(":");
 }
 
-function isSecureRequest(req: Request): boolean {
+type RequestLike = IncomingMessage & { protocol?: string };
+
+function isSecureRequest(req: RequestLike): boolean {
   if (req.protocol === "https") return true;
 
   const forwardedProto = req.headers["x-forwarded-proto"];
@@ -37,7 +39,7 @@ export type SessionCookieOptions = {
  * httpOnly: true, secure: true in prod, sameSite: "lax" to reduce CSRF.
  * We do not set domain so the cookie is host-scoped (admin.techivano.com and nrcseam.techivano.com do not share sessions).
  */
-export function getSessionCookieOptions(req: Request): SessionCookieOptions {
+export function getSessionCookieOptions(req: RequestLike): SessionCookieOptions {
   const isProduction = process.env.NODE_ENV === "production";
   return {
     httpOnly: true,
@@ -56,7 +58,7 @@ export type AuthSessionCookieOptions = SessionCookieOptions & { maxAge?: number 
  * - rememberMe=false: session cookie (expires on browser close)
  */
 export function getAuthSessionCookieOptions(
-  req: Request,
+  req: RequestLike,
   opts?: { rememberMe?: boolean }
 ): AuthSessionCookieOptions {
   const rememberMe = opts?.rememberMe ?? true;

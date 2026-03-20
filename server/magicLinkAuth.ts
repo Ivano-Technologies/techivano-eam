@@ -1,76 +1,13 @@
 // @ts-nocheck — schema pg-core vs getDb mysql2, query result types
-import crypto from "crypto";
 import * as db from "./db";
 import { sendEmail } from "./emailService";
 import { ENV } from "./_core/env";
-import { authTokens, pendingUsers, users } from "../drizzle/schema";
-import { eq, and, gt } from "drizzle-orm";
+import { pendingUsers, users } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
+import { createMagicLinkToken } from "./_core/magicLinkTokens";
 
-const MAGIC_LINK_EXPIRY_MINUTES = 15;
 const BASE_URL = ENV.appUrl;
-
-/**
- * Generate a secure random token
- */
-function generateToken(): string {
-  return crypto.randomBytes(32).toString("hex");
-}
-
-/**
- * Create a magic link token for a user
- */
-export async function createMagicLinkToken(userId: number): Promise<string> {
-  const database = db.getRootDb();
-  if (!database) throw new Error("Database not available");
-
-  const token = generateToken();
-  const expiresAt = new Date(Date.now() + MAGIC_LINK_EXPIRY_MINUTES * 60 * 1000);
-
-  await database.insert(authTokens).values({
-    userId,
-    token,
-    type: "magic_link",
-    expiresAt,
-  });
-
-  return token;
-}
-
-/**
- * Verify and consume a magic link token
- */
-export async function verifyMagicLinkToken(token: string): Promise<number | null> {
-  const database = db.getRootDb();
-  if (!database) return null;
-
-  // Find unused, non-expired token
-  const result = await database
-    .select()
-    .from(authTokens)
-    .where(
-      and(
-        eq(authTokens.token, token),
-        eq(authTokens.type, "magic_link"),
-        gt(authTokens.expiresAt, new Date())
-      )
-    )
-    .limit(1);
-
-  if (result.length === 0 || !result[0].userId) return null;
-
-  const authToken = result[0];
-
-  // Check if already used
-  if (authToken.usedAt) return null;
-
-  // Mark token as used
-  await database
-    .update(authTokens)
-    .set({ usedAt: new Date() })
-    .where(eq(authTokens.id, authToken.id));
-
-  return authToken.userId;
-}
+export { createMagicLinkToken };
 
 /**
  * Send magic link email to user
@@ -88,7 +25,7 @@ export async function sendMagicLink(email: string, token: string): Promise<boole
       <div style="background: #f8f9fa; border-radius: 8px; padding: 30px; margin: 20px 0;">
         <h2 style="color: #333; margin-top: 0;">Sign in to your account</h2>
         <p style="color: #666; line-height: 1.6;">
-          Click the button below to sign in to your NRCS EAM account. This link will expire in ${MAGIC_LINK_EXPIRY_MINUTES} minutes.
+          Click the button below to sign in to your NRCS EAM account. This link will expire in 15 minutes.
         </p>
         
         <div style="text-align: center; margin: 30px 0;">
