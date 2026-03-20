@@ -31,8 +31,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Conflict marker check
+        run: pnpm check:conflicts
+
       - name: Serverless compliance
         run: pnpm check:serverless-compliance
+
+      - name: Architecture (DB split / router imports)
+        run: pnpm check:architecture
 
       - name: Typecheck
         run: pnpm typecheck
