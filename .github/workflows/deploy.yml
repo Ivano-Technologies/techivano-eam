@@ -1,6 +1,6 @@
 # Single Vercel project: push to main → run unit tests + smoke + auth E2E → deploy once → all domains updated.
 # Domains: admin.techivano.com, nrcseam.techivano.com, techivano.com (host-based routing in app).
-# Requires: VERCEL_TOKEN; Redis service + REDIS_URL; CLERK_* for /login E2E; Supabase + DATABASE + E2E creds.
+# Requires: VERCEL_TOKEN; Redis service + REDIS_URL; Supabase + DATABASE + E2E creds.
 name: Techivano Auto Deploy
 
 on:
@@ -23,8 +23,6 @@ jobs:
 
     env:
       REDIS_URL: redis://127.0.0.1:6379
-      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-      VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -51,6 +49,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Serverless compliance
+        run: pnpm check:serverless-compliance
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -58,6 +59,9 @@ jobs:
         run: pnpm test:ci
 
       - run: pnpm build
+
+      - name: API route integration tests (serverless handlers)
+        run: pnpm test:api:routes
 
       - name: Run migrations
         run: pnpm db:migrate
@@ -78,6 +82,9 @@ jobs:
 
       - name: Install Playwright
         run: pnpm exec playwright install --with-deps
+
+      - name: Run serverless auth/API Playwright tests (Vercel-like)
+        run: pnpm run test:e2e:serverless
 
       - name: Run zero-regression pipeline (auth + RBAC E2E)
         run: pnpm run test:e2e:auth:full

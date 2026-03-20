@@ -31,9 +31,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Serverless compliance
+        run: pnpm check:serverless-compliance
+
       - name: Typecheck
         run: pnpm typecheck
       - name: Test
         run: pnpm test:ci
+      - name: API route integration tests (serverless handlers)
+        run: pnpm test:api:routes
       - name: Build
         run: pnpm build && pnpm build:worker
