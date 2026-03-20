@@ -52,6 +52,7 @@ const allMenuItems = [
   { icon: Mail, label: "Email Notifications", path: "/email-notifications", adminOnly: true },
   { icon: NairaIcon, label: "Financial", path: "/financial", adminOnly: false },
   { icon: TrendingUp, label: "Inventory", path: "/inventory", adminOnly: false },
+  { icon: Package, label: "Warehouse Dashboard", path: "/warehouse", adminOnly: false },
   { icon: ArrowRightLeft, label: "Warehouse Rebalance", path: "/warehouse-rebalance", adminOnly: false },
   { icon: BarChart3, label: "Vendor Intelligence", path: "/vendor-intelligence", adminOnly: false },
   { icon: DollarSign, label: "Procurement", path: "/procurement", adminOnly: false },

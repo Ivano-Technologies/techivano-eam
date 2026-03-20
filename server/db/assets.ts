@@ -370,4 +370,7 @@ export async function logAssetEdit(params: {
     fieldName: params.fieldName,
     oldValue: params.oldValue,
     newValue: params.newValue,
-  });
+  });
+
+  return true;
+}

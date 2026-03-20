@@ -58,6 +58,7 @@ const SmartScanner = lazy(() => import("./pages/SmartScanner"));
 const BiometricSetup = lazy(() => import("./pages/BiometricSetup"));
 const DepreciationDashboard = lazy(() => import("./pages/DepreciationDashboard"));
 const WarehouseRebalanceDashboard = lazy(() => import("@/pages/WarehouseRebalanceDashboard"));
+const WarehouseDashboard = lazy(() => import("@/pages/warehouse/WarehouseDashboard"));
 const VendorIntelligenceDashboard = lazy(() => import("./pages/VendorIntelligenceDashboard"));
 const ProcurementDashboard = lazy(() => import("@/pages/ProcurementDashboard"));
 const SupplyChainRiskDashboard = lazy(() => import("@/pages/SupplyChainRiskDashboard"));
@@ -108,6 +109,7 @@ function Router() {
       <Route path="/work-order-templates" component={WorkOrderTemplates} />
       <Route path="/maintenance" component={Maintenance} />
       <Route path="/inventory" component={Inventory} />
+      <Route path="/warehouse" component={WarehouseDashboard} />
       <Route path="/warehouse-rebalance" component={WarehouseRebalanceDashboard} />
       <Route path="/vendor-intelligence" component={VendorIntelligenceDashboard} />
       <Route path="/procurement" component={ProcurementDashboard} />

@@ -126,6 +126,47 @@ export async function getCostAnalytics(days: number) {
   };
 }
 
+export async function getInventoryConsumptionTrends(params?: {
+  days?: number;
+  siteId?: number;
+  organizationId?: string | null;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const days = Math.max(1, Math.min(365, params?.days ?? 30));
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+
+  const conditions = [
+    eq(inventoryTransactions.type, "out"),
+    gte(inventoryTransactions.transactionDate, startDate),
+  ];
+
+  if (params?.siteId) {
+    conditions.push(eq(inventoryTransactions.fromSiteId, params.siteId));
+  }
+  if (params?.organizationId != null && params.organizationId !== "") {
+    conditions.push(eq(inventoryItems.organizationId, normalizeOrganizationId(params.organizationId)));
+  }
+
+  const rows = await db
+    .select({
+      date: sql<string>`DATE(${inventoryTransactions.transactionDate})`.as("date"),
+      consumption: sql<number>`COALESCE(SUM(${inventoryTransactions.quantity}), 0)`.as("consumption"),
+    })
+    .from(inventoryTransactions)
+    .innerJoin(inventoryItems, eq(inventoryTransactions.itemId, inventoryItems.id))
+    .where(and(...conditions))
+    .groupBy(sql`DATE(${inventoryTransactions.transactionDate})`)
+    .orderBy(asc(sql`DATE(${inventoryTransactions.transactionDate})`));
+
+  return rows.map((row) => ({
+    date: row.date,
+    consumption: Number(row.consumption),
+  }));
+}
+
 // ============= TELEMETRY & ANALYTICS =============
 
 function hourStart(date: Date): Date {
@@ -351,4 +392,4 @@ export async function createPredictiveScore(params: {
     scoredAt: new Date(),
   }).returning({ id: predictiveScores.id });
   return Number(result[0]?.id ?? 0) || null;
-}
+}

@@ -9,6 +9,7 @@ import { assetsRouter } from "./assets";
 import { workOrdersRouter } from "./workOrders";
 import { maintenanceRouter } from "./maintenance";
 import { inventoryRouter } from "./inventory";
+import { warehouseRouter } from "./warehouse";
 import { dashboardRouter } from "./dashboard";
 import { usersRouter } from "./users";
 
@@ -28,6 +29,7 @@ export const modularRouters = {
   workOrders: workOrdersRouter,
   maintenance: maintenanceRouter,
   inventory: inventoryRouter,
+  warehouse: warehouseRouter,
   dashboard: dashboardRouter,
   users: usersRouter,
 } as const;

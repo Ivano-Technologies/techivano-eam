@@ -5,5 +5,5 @@ export * from "./assets";
 export * from "./workorders";
 export * from "./inventory";
 export * from "./vendors";
-export * from "./platform";
+export * from "./finance";
 export * from "./analytics";

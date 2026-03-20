@@ -36,8 +36,10 @@
     "test:e2e:serverless": "cross-env E2E_BASE_URL=http://localhost:33123 playwright test -c playwright.serverless.config.ts",
     "test:api:routes": "vitest run tests/api/serverless-routes.test.ts",
     "check:conflicts": "tsx scripts/check-conflicts.ts",
+    "check:auth": "tsx scripts/check-auth-safety.ts",
     "check:serverless-compliance": "tsx scripts/check-serverless-compliance.ts",
     "check:architecture": "tsx scripts/check-architecture.ts",
+    "check:all": "pnpm check:conflicts && pnpm check:architecture && pnpm check:auth",
 
     "e2e:local": "start-server-and-test \"cross-env PORT=33123 E2E=1 pnpm start\" http://localhost:33123/login \"dotenv -e .env.local -- cross-env E2E_BASE_URL=http://localhost:33123 E2E=1 pnpm tsx scripts/run-e2e-auth-full.ts\"",
 
