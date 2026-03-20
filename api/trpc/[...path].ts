@@ -1,69 +1,56 @@
 /**
- * Vercel serverless handler for /api/trpc so tRPC requests return JSON instead of 404 HTML.
- * Ensures auth.setSession and auth.me work when the app is deployed on Vercel.
- * Rate limiting (100 req/15 min per IP) reduces abuse on login/signup and other procedures.
- * Error middleware ensures any uncaught error returns JSON so the client never receives plain text.
- * Uses Express Request/Response types explicitly so TS does not pick Web API Request/Response.
+ * Serverless tRPC handler for /api/trpc without Express dependency.
+ * Uses standalone adapter so runtime matches Vercel/serverless execution model.
  */
 import "dotenv/config";
 import dotenv from "dotenv";
-dotenv.config({ path: ".env.local", override: true });
-import express, {
-  type Request as ExpressRequest,
-  type Response as ExpressResponse,
-  type NextFunction,
-} from "express";
-import rateLimit from "express-rate-limit";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
+dotenv.config({ path: ".env.local" });
+import type { IncomingMessage, ServerResponse } from "http";
+import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import { appRouter } from "../../server/routers";
 import { createContext } from "../../server/_core/context";
 
-const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-const trpcLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { error: "Too many requests; try again later." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use("/api/trpc", trpcLimiter);
-app.use("/api/trpc", createExpressMiddleware({ router: appRouter, createContext }));
-
-// Ensure all errors return JSON so the client never gets "A server error..." as plain text
-app.use((err: unknown, _req: ExpressRequest, res: ExpressResponse, _next: NextFunction) => {
-  if (res.headersSent) return;
-  res.setHeader("Content-Type", "application/json");
-  res.status(500).end(
-    JSON.stringify({
-      error: {
-        json: {
-          message: err instanceof Error ? err.message : "A server error occurred",
-          code: "INTERNAL_SERVER_ERROR",
-        },
-      },
-    })
-  );
-});
-
-export default function handler(req: ExpressRequest, res: ExpressResponse): void {
-  try {
-    app(req, res);
-  } catch (err) {
-    if (!res.headersSent) {
-      res.setHeader("Content-Type", "application/json");
-      res.status(500).end(
-        JSON.stringify({
-          error: {
-            json: {
-              message: err instanceof Error ? err.message : "A server error occurred",
-              code: "INTERNAL_SERVER_ERROR",
-            },
-          },
-        })
-      );
-    }
+function getClientIp(req: IncomingMessage): string {
+  const forwarded = req.headers["x-forwarded-for"];
+  const value = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+  if (typeof value === "string" && value.trim()) {
+    return value.split(",")[0]?.trim() || "";
   }
+  return (req.socket.remoteAddress ?? "").trim();
+}
+
+const trpcHandler = createHTTPHandler({
+  router: appRouter,
+  createContext: async (opts) => {
+    const req = opts.req as IncomingMessage & {
+      protocol?: string;
+      ip?: string;
+      path?: string;
+      query?: Record<string, string>;
+      get?: (name: string) => string;
+    };
+    const proto = req.headers["x-forwarded-proto"];
+    const firstProto = Array.isArray(proto) ? proto[0] : proto;
+    req.protocol = firstProto === "https" ? "https" : "http";
+    req.ip = getClientIp(req);
+    req.path = req.url?.split("?")[0] ?? "/api/trpc";
+    req.query = {};
+    req.get = (name: string) => {
+      const header = req.headers[name.toLowerCase()];
+      return Array.isArray(header) ? (header[0] ?? "") : (header ?? "");
+    };
+    return createContext({
+      req: req as never,
+      res: opts.res as never,
+    });
+  },
+  onError: ({ error, req, path }) => {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[trpc][serverless]", req.method, path, error.message);
+    }
+  },
+});
+
+export default function handler(req: IncomingMessage, res: ServerResponse): void {
+  trpcHandler(req, res);
 }
