@@ -1,4 +1,6 @@
 export const COOKIE_NAME = "app_session_id";
+/** HttpOnly cookie for Supabase refresh token (OAuth bridge; never expose to JS or URLs). */
+export const REFRESH_TOKEN_COOKIE_NAME = "app_session_refresh";
 /** Session row id cookie for device/session tracking and revoke. */
 export const SESSION_COOKIE_NAME = "app_session_uuid";
 /** Dev-only: bypass auth and act as dev admin (hostname GM AMPD + NODE_ENV=development). */

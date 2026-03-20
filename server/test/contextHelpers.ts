@@ -34,7 +34,7 @@ export function createTestContextWithOrg(
     req: {
       protocol: "https",
       headers: {},
-    } as TrpcContext["req"],
+    } as unknown as TrpcContext["req"],
     res: {} as TrpcContext["res"],
     organizationId: TEST_ORG_ID,
     tenantId: TEST_TENANT_ID,
