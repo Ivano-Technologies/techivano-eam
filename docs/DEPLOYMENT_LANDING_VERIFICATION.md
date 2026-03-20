@@ -52,7 +52,7 @@ So “landing not available” usually means either:
 | Cause | What to check |
 |--------|----------------|
 | **Auth never settles** | `auth.me` (tRPC) must run and eventually resolve (success or 401). If the API is unreachable, wrong origin, or CORS blocks the request, the app can stay in a loading state. Ensure the frontend’s API base URL and CORS on the server match the deployment origin. |
-| **Missing or wrong env at build time** | `getLoginUrl()` uses `VITE_OAUTH_PORTAL_URL` and `VITE_APP_ID`. If these are empty in the build, the Sign In button may point to a bad URL or break. Set them in the Vercel (or other) project env and redeploy. |
+| **Missing or wrong env at build time** | Supabase client config (`SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) must be present. If missing, login/session setup can fail and the app may stay in a loading state. |
 | **Runtime error before layout** | An error in `main.tsx`, `AppProviders`, or before `DashboardLayout` renders can result in a blank screen. Check the browser console and any error reporting (e.g. Sentry) for the deployment URL. |
 | **Static assets 404** | If `/nrcs-logo.png` (or other assets) 404, the layout can still render; only the image fails. Confirm `client/public` (or your build’s public output) is deployed and that paths match (e.g. `/nrcs-logo.png`). |
 
@@ -77,7 +77,7 @@ There is no separate “NRCS client dashboard” URL; the **client dashboard** i
 
 1. **`vercel.json`** in repo root with the rewrites above; redeploy.
 2. **Build:** Vercel build must produce the client (e.g. Vite build output in `dist/public` or whatever your config uses) so `index.html` and assets exist.
-3. **Env in Vercel:** `VITE_OAUTH_PORTAL_URL`, `VITE_APP_ID` (and any other `VITE_*` used at runtime) set for the environment that serves the frontend.
+3. **Env in Vercel:** `SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (and any other required `VITE_*`) set for the environment that serves the frontend.
 4. **API reachable:** From the browser at the deployment origin, `/api/trpc/...` (and `/api/health` if you use it) must be reachable and not blocked by CORS.
 5. **Console/Network:** No 404 for `index.html` on `/` or `/login`; no persistent loading or errors blocking the first paint of `DashboardLayout`.
 

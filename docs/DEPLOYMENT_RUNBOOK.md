@@ -171,9 +171,9 @@ Set in **`/var/www/nrcseam/shared/.env`** (never in the repo):
 | `NODE_ENV` | `production` |
 | `DATABASE_URL` | Supabase Postgres connection string |
 | `JWT_SECRET` | Secret for JWT (min 32 chars) |
-| `VITE_APP_ID` | Manus OAuth app ID |
-| `VITE_OAUTH_PORTAL_URL` | `https://manus.im` |
-| `OAUTH_SERVER_URL` | `https://api.manus.im` |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Supabase anon key |
+| `VITE_SUPABASE_ANON_KEY` | Client-side Supabase anon key |
 | `REDIS_URL` | Redis connection string (BullMQ) |
 | `PHASE3_WORKERS_ENABLED` | `true` for intelligence workers |
 | `SUPABASE_URL` | Supabase project URL |

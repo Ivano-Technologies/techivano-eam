@@ -81,9 +81,9 @@ Optional: `SUPABASE_JWT_ISSUER`, `SUPABASE_JWT_AUDIENCE` for stricter JWT claim 
 
 ---
 
-## 6. Clerk signup and instant sign-in
+## 6. Signup behavior
 
-- **After registration:** The app does not keep users on the signup page for verification. If Clerk returns a non-complete status (e.g. email verification required), the user is **redirected to `/login?registered=1`**. The login page shows: “Account created. Please sign in.”
-- **Disable email verification in Clerk:** To allow instant sign-in right after signup (no redirect to login), in [Clerk Dashboard](https://dashboard.clerk.com) go to **User & Authentication → Email, Phone, Username** and turn off **“Verify email address”** (or equivalent) so sign-up completes with `status === "complete"` and the user is signed in and sent to `/`.
+- **After registration:** Signup creates the account request and redirects to **`/login?registered=1`**. The login page shows: “Account created. Please sign in.”
+- **Verification flow:** Password resets and sign-in verification are handled through Supabase Auth callbacks (`/auth/callback`) and server session cookie sync (`auth.setSession`).
 
 For full architecture and audit details, see **docs/SUPABASE_AUTH_AUDIT.md**.
