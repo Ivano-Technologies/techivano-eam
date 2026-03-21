@@ -63,20 +63,26 @@ jobs:
       - name: Verify schema (organization_members.permissions)
         run: node scripts/verify-permissions-column.mjs
 
-      - name: Start server
-        run: pnpm start &
-
-      - name: Wait for server
-        run: npx wait-on http://localhost:33123/login
-
       - name: Install Playwright
         run: pnpm exec playwright install --with-deps
 
-      - name: Run serverless auth/API Playwright tests (Vercel-like)
-        run: pnpm run test:e2e:serverless
-
-      - name: Run auth tests (seed user, seed org, session injection, Playwright)
-        run: pnpm run test:e2e:auth:full
+      # GitHub Actions terminates background processes when a step ends.
+      # Keep `pnpm start` in the SAME step as wait-on + Playwright so the server stays up.
+      - name: Start server, wait for /login, run E2E
+        run: |
+          set -e
+          pnpm start > /tmp/eam-server.log 2>&1 &
+          SERVER_PID=$!
+          cleanup() { kill "$SERVER_PID" 2>/dev/null || true; }
+          trap cleanup EXIT
+          # CI cold start (BullMQ/Redis, first HTTP) can exceed 2m; allow 3m before failing.
+          npx wait-on -t 180000 http://localhost:33123/login || (
+            echo "--- Server failed to become ready (wait-on timeout) ---"
+            cat /tmp/eam-server.log || true
+            exit 1
+          )
+          pnpm run test:e2e:serverless
+          pnpm run test:e2e:auth:full
 
       - name: Upload Playwright artifacts
         if: failure()
