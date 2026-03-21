@@ -84,7 +84,8 @@ jobs:
           SERVER_PID=$!
           cleanup() { kill "$SERVER_PID" 2>/dev/null || true; }
           trap cleanup EXIT
-          npx wait-on -t 120000 http://localhost:33123/login || (
+          # CI cold start can exceed 2m; allow 3m before failing.
+          npx wait-on -t 180000 http://localhost:33123/login || (
             echo "--- Server failed to become ready (wait-on timeout) ---"
             cat /tmp/eam-server.log || true
             exit 1
