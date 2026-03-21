@@ -72,25 +72,31 @@ jobs:
       - name: Verify schema (organization_members.permissions)
         run: node scripts/verify-permissions-column.mjs
 
-      - name: Start server
-        run: pnpm start &
-
-      - name: Wait for server
-        run: npx wait-on http://localhost:33123/login
-
-      - name: Smoke test (login page)
-        run: |
-          code=$(curl -sS -o /dev/null -w "%{http_code}" http://localhost:33123/login)
-          if [ "$code" != "200" ]; then echo "Smoke test failed: /login returned $code"; exit 1; fi
-
       - name: Install Playwright
         run: pnpm exec playwright install --with-deps
 
-      - name: Run serverless auth/API Playwright tests (Vercel-like)
-        run: pnpm run test:e2e:serverless
-
-      - name: Run zero-regression pipeline (auth + RBAC E2E)
-        run: pnpm run test:e2e:auth:full
+      # GitHub Actions terminates background processes when a step ends.
+      # Single step: start prod server, smoke /login, then Playwright (reuseExistingServer picks up same port).
+      - name: Smoke + E2E (server stays alive for full block)
+        run: |
+          set -e
+          pnpm start > /tmp/eam-server.log 2>&1 &
+          SERVER_PID=$!
+          cleanup() { kill "$SERVER_PID" 2>/dev/null || true; }
+          trap cleanup EXIT
+          npx wait-on -t 120000 http://localhost:33123/login || (
+            echo "--- Server failed to become ready (wait-on timeout) ---"
+            cat /tmp/eam-server.log || true
+            exit 1
+          )
+          code=$(curl -sS -o /dev/null -w "%{http_code}" http://localhost:33123/login)
+          if [ "$code" != "200" ]; then
+            echo "Smoke test failed: /login returned $code"
+            cat /tmp/eam-server.log || true
+            exit 1
+          fi
+          pnpm run test:e2e:serverless
+          pnpm run test:e2e:auth:full
 
       - name: Upload Playwright artifacts
         if: failure()
