@@ -39,7 +39,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return json(res, 405, { error: "Method not allowed" });
   }
 
-  if (process.env.NODE_ENV === "production") {
+  // Real Vercel/production must never enable this. GitHub Actions sets ALLOW_E2E_DEV_LOGIN=1 while running
+  // `pnpm start` (NODE_ENV=production) so Playwright globalSetup can POST /api/dev-login for session injection.
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_E2E_DEV_LOGIN !== "1") {
     return json(res, 404, { error: "Not found" });
   }
 
